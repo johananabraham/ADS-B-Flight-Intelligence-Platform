@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: adsb-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: adsb_intel
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: adsb-backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/adsb_intel
+      DUMP1090_URL: http://host.docker.internal:8080/data/aircraft.json
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  ingestion:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ingestion
+    container_name: adsb-ingestion
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/adsb_intel
+      DUMP1090_URL: http://host.docker.internal:8080/data/aircraft.json
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  anomaly-detection:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.anomaly
+    container_name: adsb-anomaly
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/adsb_intel
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: adsb-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:

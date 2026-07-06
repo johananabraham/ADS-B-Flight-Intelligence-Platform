@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Leaflet overrides for dark theme */
+.leaflet-container {
+  background: #0a1628;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #1f2937;
+  color: white;
+  border-radius: 8px;
+}
+
+.leaflet-popup-tip {
+  background: #1f2937;
+}
+
+.leaflet-popup-close-button {
+  color: #9ca3af !important;
+}
+
+.leaflet-control-zoom a {
+  background: #1f2937 !important;
+  color: white !important;
+  border-color: #374151 !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #374151 !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(31, 41, 55, 0.8) !important;
+  color: #9ca3af !important;
+}
+
+.leaflet-control-attribution a {
+  color: #60a5fa !important;
+}
+
+/* Aircraft icon animation */
+.aircraft-icon {
+  transition: transform 0.3s ease;
+}
+
+/* Pulse animation for critical alerts */
+@keyframes pulse-alert {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-alert {
+  animation: pulse-alert 1s ease-in-out infinite;
+}
