@@ -1,28 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useAircraft, useFlightTrail } from '@/hooks';
 import type { Aircraft } from '@/types';
 
-// Custom aircraft icon
-const createAircraftIcon = (track: number | null, isSelected: boolean) => {
+// Aircraft icon SVG - clean, minimal design
+const createAircraftIcon = (track: number | null, isSelected: boolean, isEmergency: boolean) => {
   const rotation = track ?? 0;
-  const color = isSelected ? '#22c55e' : '#3b82f6';
+
+  // Color based on state
+  let color = '#00d4ff'; // default cyan
+  if (isEmergency) {
+    color = '#ef4444'; // red for emergency
+  } else if (isSelected) {
+    color = '#10b981'; // green for selected
+  }
+
+  const size = isSelected ? 28 : 22;
+  const shadowBlur = isSelected ? 8 : 4;
 
   return L.divIcon({
-    className: 'aircraft-icon',
+    className: `aircraft-marker ${isEmergency ? 'emergency' : ''}`,
     html: `
-      <svg width="24" height="24" viewBox="0 0 24 24" style="transform: rotate(${rotation}deg)">
+      <svg width="${size}" height="${size}" viewBox="0 0 24 24" style="transform: rotate(${rotation}deg); filter: drop-shadow(0 0 ${shadowBlur}px ${color});">
         <path
-          d="M12 2L4 12h3v8h10v-8h3L12 2z"
+          d="M12 2 L14 8 L20 10 L14 12 L14 18 L12 16 L10 18 L10 12 L4 10 L10 8 Z"
           fill="${color}"
-          stroke="#fff"
-          stroke-width="1"
+          stroke="rgba(255,255,255,0.3)"
+          stroke-width="0.5"
         />
       </svg>
     `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   });
 };
 
@@ -37,21 +47,61 @@ function AircraftMarker({ aircraft, isSelected, onSelect }: AircraftMarkerProps)
     return null;
   }
 
+  const isEmergency = ['7500', '7600', '7700'].includes(aircraft.squawk ?? '');
+
   return (
     <Marker
       position={[aircraft.latitude, aircraft.longitude]}
-      icon={createAircraftIcon(aircraft.track, isSelected)}
+      icon={createAircraftIcon(aircraft.track, isSelected, isEmergency)}
       eventHandlers={{
         click: () => onSelect(aircraft.icao_hex),
       }}
     >
       <Popup>
-        <div className="text-sm">
-          <p className="font-bold">{aircraft.callsign || aircraft.icao_hex}</p>
-          <p>ICAO: {aircraft.icao_hex}</p>
-          <p>Altitude: {aircraft.altitude?.toLocaleString() ?? 'N/A'} ft</p>
-          <p>Speed: {aircraft.ground_speed ?? 'N/A'} kts</p>
-          <p>Squawk: {aircraft.squawk ?? 'N/A'}</p>
+        <div className="min-w-[180px]">
+          <div className="flex items-center justify-between border-b border-surface-3 pb-2 mb-2">
+            <span className="font-mono font-bold text-accent-primary">
+              {aircraft.callsign || aircraft.icao_hex}
+            </span>
+            {aircraft.squawk && (
+              <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${
+                isEmergency ? 'bg-status-critical text-white' : 'bg-surface-3 text-slate-400'
+              }`}>
+                {aircraft.squawk}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            <div>
+              <span className="text-slate-500">ICAO</span>
+              <span className="ml-2 font-mono">{aircraft.icao_hex}</span>
+            </div>
+            <div>
+              <span className="text-slate-500">ALT</span>
+              <span className="ml-2 font-mono text-cyan-400">
+                {aircraft.altitude?.toLocaleString() ?? '—'} ft
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500">SPD</span>
+              <span className="ml-2 font-mono">{aircraft.ground_speed ?? '—'} kts</span>
+            </div>
+            <div>
+              <span className="text-slate-500">HDG</span>
+              <span className="ml-2 font-mono">{aircraft.track?.toFixed(0) ?? '—'}°</span>
+            </div>
+            <div>
+              <span className="text-slate-500">V/S</span>
+              <span className="ml-2 font-mono">
+                {aircraft.vertical_rate ? `${aircraft.vertical_rate > 0 ? '+' : ''}${aircraft.vertical_rate}` : '—'} fpm
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500">MSGS</span>
+              <span className="ml-2 font-mono">{aircraft.messages_received}</span>
+            </div>
+          </div>
         </div>
       </Popup>
     </Marker>
@@ -69,44 +119,47 @@ function FlightTrailLine({ icao }: FlightTrailLineProps) {
     return null;
   }
 
-  const positions: [number, number][] = trail.positions.map((p) => [
-    p.latitude,
-    p.longitude,
-  ]);
+  // Create segments with fading opacity (radar persistence effect)
+  const positions = trail.positions;
+  const segments: JSX.Element[] = [];
 
-  return (
-    <Polyline
-      positions={positions}
-      pathOptions={{
-        color: '#22c55e',
-        weight: 2,
-        opacity: 0.7,
-        dashArray: '5, 5',
-      }}
-    />
-  );
+  for (let i = 1; i < positions.length; i++) {
+    const opacity = 0.2 + (i / positions.length) * 0.6; // Fade from 0.2 to 0.8
+
+    segments.push(
+      <Polyline
+        key={i}
+        positions={[
+          [positions[i - 1].latitude, positions[i - 1].longitude],
+          [positions[i].latitude, positions[i].longitude],
+        ]}
+        pathOptions={{
+          color: '#00d4ff',
+          weight: 2,
+          opacity: opacity,
+        }}
+      />
+    );
+  }
+
+  return <>{segments}</>;
 }
 
-// Component to fit map to aircraft bounds
-function MapBoundsUpdater({ aircraft }: { aircraft: Aircraft[] }) {
+// Component to set initial map bounds
+function MapController({ aircraft }: { aircraft: Aircraft[] }) {
   const map = useMap();
 
   useEffect(() => {
-    if (aircraft.length === 0) return;
-
+    // Only adjust on first load with data
     const validAircraft = aircraft.filter(
       (a) => a.latitude !== null && a.longitude !== null
     );
 
-    if (validAircraft.length === 0) return;
-
-    const bounds = L.latLngBounds(
-      validAircraft.map((a) => [a.latitude!, a.longitude!])
-    );
-
-    // Only fit bounds on initial load
-    if (map.getZoom() === undefined) {
-      map.fitBounds(bounds, { padding: [50, 50] });
+    if (validAircraft.length > 0 && map.getZoom() === 8) {
+      const bounds = L.latLngBounds(
+        validAircraft.map((a) => [a.latitude!, a.longitude!])
+      );
+      map.fitBounds(bounds, { padding: [80, 80], maxZoom: 9 });
     }
   }, [aircraft.length > 0]);
 
@@ -121,7 +174,7 @@ interface FlightMapProps {
 export function FlightMap({ selectedAircraft, onSelectAircraft }: FlightMapProps) {
   const { data: aircraft = [] } = useAircraft();
 
-  // Default center on Columbus, Ohio
+  // Center on Columbus, Ohio (where the SDR is)
   const defaultCenter: [number, number] = [39.9612, -82.9988];
 
   return (
@@ -129,15 +182,20 @@ export function FlightMap({ selectedAircraft, onSelectAircraft }: FlightMapProps
       center={defaultCenter}
       zoom={8}
       className="h-full w-full"
-      style={{ background: '#0a1628' }}
+      zoomControl={false}
     >
+      {/* Dark map tiles */}
       <TileLayer
         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       />
 
-      <MapBoundsUpdater aircraft={aircraft} />
+      <MapController aircraft={aircraft} />
 
+      {/* Flight trail for selected aircraft */}
+      {selectedAircraft && <FlightTrailLine icao={selectedAircraft} />}
+
+      {/* Aircraft markers */}
       {aircraft.map((a) => (
         <AircraftMarker
           key={a.icao_hex}
@@ -146,8 +204,6 @@ export function FlightMap({ selectedAircraft, onSelectAircraft }: FlightMapProps
           onSelect={onSelectAircraft}
         />
       ))}
-
-      {selectedAircraft && <FlightTrailLine icao={selectedAircraft} />}
     </MapContainer>
   );
 }

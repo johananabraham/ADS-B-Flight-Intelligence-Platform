@@ -1,78 +1,241 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Barlow:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Deep slate base */
+  --surface-0: #0a0e14;
+  --surface-1: #0d1117;
+  --surface-2: #151b23;
+  --surface-3: #1c232d;
+
+  /* Cyan accent - like modern avionics HUD */
+  --accent-primary: #00d4ff;
+  --accent-primary-dim: #00d4ff40;
+  --accent-secondary: #0891b2;
+
+  /* Status colors */
+  --status-nominal: #10b981;
+  --status-caution: #f59e0b;
+  --status-warning: #f97316;
+  --status-critical: #ef4444;
+
+  /* Text hierarchy */
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+
+  /* Grid overlay */
+  --grid-line: #1e293b;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: 'Barlow', system-ui, sans-serif;
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+
+/* Monospace for data */
+.font-data {
+  font-family: 'JetBrains Mono', monospace;
+  font-feature-settings: 'tnum' 1;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: var(--surface-1);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 4px;
+  background: var(--surface-3);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: #2d3748;
 }
 
-/* Leaflet overrides for dark theme */
+/* Leaflet overrides for radar aesthetic */
 .leaflet-container {
-  background: #0a1628;
+  background: var(--surface-0);
+  font-family: 'Barlow', system-ui, sans-serif;
+}
+
+.leaflet-tile-pane {
+  filter: saturate(0.3) brightness(0.4) contrast(1.1);
 }
 
 .leaflet-popup-content-wrapper {
-  background: #1f2937;
-  color: white;
-  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border-radius: 4px;
+  border: 1px solid var(--accent-primary-dim);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
 }
 
 .leaflet-popup-tip {
-  background: #1f2937;
+  background: var(--surface-2);
+  border-left: 1px solid var(--accent-primary-dim);
+  border-bottom: 1px solid var(--accent-primary-dim);
 }
 
 .leaflet-popup-close-button {
-  color: #9ca3af !important;
+  color: var(--text-secondary) !important;
 }
 
 .leaflet-control-zoom a {
-  background: #1f2937 !important;
-  color: white !important;
-  border-color: #374151 !important;
+  background: var(--surface-2) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--surface-3) !important;
 }
 
 .leaflet-control-zoom a:hover {
-  background: #374151 !important;
+  background: var(--surface-3) !important;
 }
 
 .leaflet-control-attribution {
-  background: rgba(31, 41, 55, 0.8) !important;
-  color: #9ca3af !important;
+  background: rgba(10, 14, 20, 0.8) !important;
+  color: var(--text-tertiary) !important;
+  font-size: 10px;
 }
 
-.leaflet-control-attribution a {
-  color: #60a5fa !important;
+/* Aircraft marker styles */
+.aircraft-marker {
+  transition: transform 0.3s ease-out;
 }
 
-/* Aircraft icon animation */
-.aircraft-icon {
-  transition: transform 0.3s ease;
+.aircraft-marker svg {
+  filter: drop-shadow(0 0 4px var(--accent-primary));
 }
 
-/* Pulse animation for critical alerts */
-@keyframes pulse-alert {
+.aircraft-marker.emergency svg {
+  filter: drop-shadow(0 0 8px var(--status-critical));
+}
+
+/* Radar sweep animation */
+@keyframes radar-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.radar-sweep {
+  animation: radar-sweep 4s linear infinite;
+}
+
+/* Pulse animation for live indicator */
+@keyframes pulse-live {
   0%, 100% {
     opacity: 1;
   }
   50% {
+    opacity: 0.4;
+  }
+}
+
+.pulse-live {
+  animation: pulse-live 2s ease-in-out infinite;
+}
+
+/* Scan line effect */
+@keyframes scan-line {
+  0% {
+    top: 0;
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    top: 100%;
     opacity: 0.5;
   }
 }
 
-.animate-pulse-alert {
-  animation: pulse-alert 1s ease-in-out infinite;
+.scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+  animation: scan-line 8s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Grid overlay on map */
+.map-grid-overlay {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 100px 100px;
+  pointer-events: none;
+  opacity: 0.3;
+  z-index: 400;
+}
+
+/* Panel glass effect */
+.panel {
+  background: rgba(13, 17, 23, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  box-shadow:
+    0 0 1px rgba(0, 212, 255, 0.3),
+    0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Data readout styling */
+.readout {
+  background: var(--surface-1);
+  border: 1px solid var(--surface-3);
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.readout-value {
+  color: var(--accent-primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Status indicator dot */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Focus states */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .radar-sweep,
+  .pulse-live,
+  .scan-line {
+    animation: none;
+  }
+
+  .aircraft-marker {
+    transition: none;
+  }
 }

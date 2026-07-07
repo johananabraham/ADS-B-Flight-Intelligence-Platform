@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { FlightMap, AircraftList, AnomalyPanel, StatsBar } from '@/components';
+import { FlightMap } from '@/components/FlightMap';
+import { AircraftPanel } from '@/components/AircraftPanel';
+import { AlertsPanel } from '@/components/AlertsPanel';
+import { StatusBar } from '@/components/StatusBar';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -11,93 +14,51 @@ const queryClient = new QueryClient({
   },
 });
 
-type SidebarTab = 'aircraft' | 'alerts';
-
 function AppContent() {
   const [selectedAircraft, setSelectedAircraft] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<SidebarTab>('aircraft');
+  const [showAlerts, setShowAlerts] = useState(false);
 
   return (
-    <div className="h-screen flex flex-col bg-radar-dark text-white">
-      {/* Header */}
-      <header className="bg-gray-900 border-b border-gray-700 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold">ADS-B Flight Intelligence</h1>
-              <p className="text-xs text-gray-400">
-                Real-time aircraft tracking & anomaly detection
-              </p>
-            </div>
-          </div>
+    <div className="h-screen w-screen overflow-hidden bg-surface-0 text-slate-200">
+      {/* Scan line effect */}
+      <div className="scan-line" />
+
+      {/* Full-screen map */}
+      <div className="absolute inset-0">
+        <FlightMap
+          selectedAircraft={selectedAircraft}
+          onSelectAircraft={setSelectedAircraft}
+        />
+        {/* Grid overlay */}
+        <div className="map-grid-overlay" />
+      </div>
+
+      {/* Status bar - top */}
+      <div className="absolute top-0 left-0 right-0 z-[1000]">
+        <StatusBar onToggleAlerts={() => setShowAlerts(!showAlerts)} alertsOpen={showAlerts} />
+      </div>
+
+      {/* Aircraft panel - left */}
+      <div className="absolute top-16 left-4 bottom-4 w-80 z-[1000]">
+        <AircraftPanel
+          selectedAircraft={selectedAircraft}
+          onSelectAircraft={setSelectedAircraft}
+        />
+      </div>
+
+      {/* Alerts panel - right (conditional) */}
+      {showAlerts && (
+        <div className="absolute top-16 right-4 bottom-4 w-80 z-[1000]">
+          <AlertsPanel onClose={() => setShowAlerts(false)} />
         </div>
-      </header>
+      )}
 
-      {/* Stats Bar */}
-      <StatsBar />
-
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Map */}
-        <div className="flex-1 relative">
-          <FlightMap
-            selectedAircraft={selectedAircraft}
-            onSelectAircraft={setSelectedAircraft}
-          />
-        </div>
-
-        {/* Sidebar */}
-        <div className="w-80 bg-gray-900 border-l border-gray-700 flex flex-col">
-          {/* Tabs */}
-          <div className="flex border-b border-gray-700">
-            <button
-              onClick={() => setActiveTab('aircraft')}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'aircraft'
-                  ? 'text-white border-b-2 border-blue-500 bg-gray-800'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Aircraft
-            </button>
-            <button
-              onClick={() => setActiveTab('alerts')}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'alerts'
-                  ? 'text-white border-b-2 border-red-500 bg-gray-800'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Alerts
-            </button>
-          </div>
-
-          {/* Tab Content */}
-          <div className="flex-1 overflow-hidden">
-            {activeTab === 'aircraft' ? (
-              <AircraftList
-                selectedAircraft={selectedAircraft}
-                onSelectAircraft={setSelectedAircraft}
-              />
-            ) : (
-              <AnomalyPanel />
-            )}
-          </div>
+      {/* Coordinates display - bottom right */}
+      <div className="absolute bottom-4 right-4 z-[1000] panel rounded px-3 py-2">
+        <div className="flex items-center gap-4 text-xs">
+          <span className="text-slate-500">RECEIVER</span>
+          <span className="font-mono text-accent-primary">39.9612°N</span>
+          <span className="font-mono text-accent-primary">82.9988°W</span>
         </div>
       </div>
     </div>
