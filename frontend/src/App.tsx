@@ -6,6 +6,7 @@ import { AircraftDetail } from '@/components/AircraftDetail';
 import { AlertsPanel } from '@/components/AlertsPanel';
 import { StatusBar } from '@/components/StatusBar';
 import { FilterPanel } from '@/components/FilterPanel';
+import { StatsPanel } from '@/components/StatsPanel';
 import { useWebSocket } from '@/hooks';
 import type { Aircraft } from '@/types';
 
@@ -44,6 +45,7 @@ function AppContent() {
   const [showOverlays, setShowOverlays] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
 
   // Use WebSocket for real-time updates
@@ -90,6 +92,7 @@ function AppContent() {
         setSelectedAircraft(null);
         setShowAlerts(false);
         setShowFilters(false);
+        setShowStats(false);
       }
       if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
         setShowAlerts(prev => !prev);
@@ -102,6 +105,9 @@ function AppContent() {
       }
       if (e.key === 'h' && !e.metaKey && !e.ctrlKey) {
         setShowHeatmap(prev => !prev);
+      }
+      if (e.key === 's' && !e.metaKey && !e.ctrlKey) {
+        setShowStats(prev => !prev);
       }
     };
 
@@ -187,6 +193,17 @@ function AppContent() {
         </div>
       )}
 
+      {/* Stats panel - right side (conditional) */}
+      {showStats && !showAlerts && (
+        <div className="absolute top-16 right-4 z-[1000]">
+          <StatsPanel
+            aircraft={aircraft}
+            stats={stats}
+            onClose={() => setShowStats(false)}
+          />
+        </div>
+      )}
+
       {/* Connection status indicator */}
       <div className={`absolute top-16 right-4 z-[999] flex items-center gap-2 px-2 py-1 rounded text-2xs ${
         connected ? 'text-green-400' : 'text-red-400'
@@ -197,7 +214,7 @@ function AppContent() {
 
       {/* Keyboard shortcuts hint */}
       <div className="absolute bottom-4 right-4 z-[1000] text-2xs text-slate-600">
-        <span className="opacity-50">ESC</span> clear · <span className="opacity-50">A</span> alerts · <span className="opacity-50">O</span> overlays · <span className="opacity-50">F</span> filter · <span className="opacity-50">H</span> heatmap
+        <span className="opacity-50">ESC</span> clear · <span className="opacity-50">A</span> alerts · <span className="opacity-50">S</span> stats · <span className="opacity-50">F</span> filter · <span className="opacity-50">H</span> heatmap · <span className="opacity-50">O</span> overlays
       </div>
     </div>
   );

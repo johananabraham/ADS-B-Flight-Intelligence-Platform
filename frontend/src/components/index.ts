@@ -4,4 +4,5 @@ export { AircraftDetail } from './AircraftDetail';
 export { AlertsPanel } from './AlertsPanel';
 export { StatusBar } from './StatusBar';
 export { FilterPanel } from './FilterPanel';
+export { StatsPanel } from './StatsPanel';
 export { RangeRings, AirportMarkers } from './MapOverlays';
