@@ -22,6 +22,7 @@ export function useWebSocket(): UseWebSocketReturn {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectDelayRef = useRef(1000); // Start at 1 second
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -29,38 +30,49 @@ export function useWebSocket(): UseWebSocketReturn {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.hostname}:8000/api/v1/ws/aircraft`;
 
-    const ws = new WebSocket(wsUrl);
+    try {
+      const ws = new WebSocket(wsUrl);
 
-    ws.onopen = () => {
-      setConnected(true);
-      console.log('WebSocket connected');
-    };
+      ws.onopen = () => {
+        setConnected(true);
+        reconnectDelayRef.current = 1000; // Reset delay on successful connection
+        console.log('WebSocket connected');
+      };
 
-    ws.onmessage = (event) => {
-      try {
-        const data: WebSocketMessage = JSON.parse(event.data);
-        if (data.type === 'update') {
-          setAircraft(data.aircraft);
-          setStats(data.stats);
-          setLastUpdate(new Date());
+      ws.onmessage = (event) => {
+        try {
+          const data: WebSocketMessage = JSON.parse(event.data);
+          if (data.type === 'update') {
+            setAircraft(data.aircraft);
+            setStats(data.stats);
+            setLastUpdate(new Date());
+          }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e);
         }
-      } catch (e) {
-        console.error('Failed to parse WebSocket message:', e);
-      }
-    };
+      };
 
-    ws.onclose = () => {
-      setConnected(false);
-      console.log('WebSocket disconnected, reconnecting...');
-      reconnectTimeoutRef.current = setTimeout(connect, 3000);
-    };
+      ws.onclose = () => {
+        setConnected(false);
+        // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
+        const delay = Math.min(reconnectDelayRef.current, 30000);
+        console.log(`WebSocket disconnected, reconnecting in ${delay / 1000}s...`);
+        reconnectTimeoutRef.current = setTimeout(connect, delay);
+        reconnectDelayRef.current = Math.min(reconnectDelayRef.current * 2, 30000);
+      };
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      ws.close();
-    };
+      ws.onerror = () => {
+        // Don't log error spam, just close and let onclose handle reconnect
+        ws.close();
+      };
 
-    wsRef.current = ws;
+      wsRef.current = ws;
+    } catch {
+      // Connection failed, schedule retry
+      const delay = Math.min(reconnectDelayRef.current, 30000);
+      reconnectTimeoutRef.current = setTimeout(connect, delay);
+      reconnectDelayRef.current = Math.min(reconnectDelayRef.current * 2, 30000);
+    }
   }, []);
 
   useEffect(() => {

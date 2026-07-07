@@ -71,9 +71,7 @@ body {
   font-family: 'Barlow', system-ui, sans-serif;
 }
 
-.leaflet-tile-pane {
-  filter: saturate(0.3) brightness(0.4) contrast(1.1);
-}
+/* Removed heavy filter - was causing lag and making map too dark */
 
 .leaflet-popup-content-wrapper {
   background: var(--surface-2);
@@ -150,53 +148,21 @@ body {
   animation: pulse-live 2s ease-in-out infinite;
 }
 
-/* Scan line effect */
-@keyframes scan-line {
-  0% {
-    top: 0;
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 0.8;
-  }
-  100% {
-    top: 100%;
-    opacity: 0.5;
-  }
-}
-
+/* Scan line effect - disabled for performance */
 .scan-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
-  animation: scan-line 8s linear infinite;
-  pointer-events: none;
-  z-index: 1000;
+  display: none;
 }
 
-/* Grid overlay on map */
+/* Grid overlay - disabled for performance */
 .map-grid-overlay {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 100px 100px;
-  pointer-events: none;
-  opacity: 0.3;
-  z-index: 400;
+  display: none;
 }
 
-/* Panel glass effect */
+/* Panel styling - removed heavy backdrop-filter for performance */
 .panel {
-  background: rgba(13, 17, 23, 0.85);
-  backdrop-filter: blur(12px);
+  background: rgba(13, 17, 23, 0.95);
   border: 1px solid rgba(0, 212, 255, 0.15);
-  box-shadow:
-    0 0 1px rgba(0, 212, 255, 0.3),
-    0 4px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
 /* Data readout styling */
