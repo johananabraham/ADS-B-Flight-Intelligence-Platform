@@ -2,15 +2,14 @@
 """
 ADS-B Data Ingestion Service
 
-Pulls aircraft data from dump1090 JSON endpoint and stores in PostgreSQL.
+Connects to dump1090 SBS output (port 30003) and stores in PostgreSQL.
 Run this continuously to maintain live tracking data.
 """
 
 import asyncio
-import httpx
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict
 import sys
 import os
 
@@ -36,78 +35,117 @@ settings = get_settings()
 engine = create_engine(settings.database_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# In-memory aircraft state
+aircraft_state: Dict[str, dict] = {}
 
-class AircraftData:
-    """Parsed aircraft data from dump1090."""
 
-    def __init__(self, data: dict):
-        self.icao_hex = data.get("hex", "").upper()
-        self.callsign = self._clean_callsign(data.get("flight"))
-        self.latitude = data.get("lat")
-        self.longitude = data.get("lon")
-        self.altitude = data.get("alt_baro") or data.get("altitude")
-        self.ground_speed = data.get("gs")
-        self.track = data.get("track")
-        self.vertical_rate = data.get("baro_rate") or data.get("vert_rate")
-        self.squawk = data.get("squawk")
-        self.seen = data.get("seen", 0)  # seconds since last message
-        self.messages = data.get("messages", 0)
+def parse_sbs_message(line: str) -> Optional[dict]:
+    """Parse SBS BaseStation format message."""
+    try:
+        parts = line.strip().split(',')
+        if len(parts) < 11:
+            return None
 
-    def _clean_callsign(self, callsign: Optional[str]) -> Optional[str]:
-        if callsign:
-            return callsign.strip()
+        msg_type = parts[0]
+        if msg_type != 'MSG':
+            return None
+
+        icao_hex = parts[4].upper()
+        if not icao_hex or len(icao_hex) != 6:
+            return None
+
+        data = {'hex': icao_hex}
+
+        # Callsign (field 10)
+        if len(parts) > 10 and parts[10].strip():
+            data['flight'] = parts[10].strip()
+
+        # Altitude (field 11)
+        if len(parts) > 11 and parts[11].strip():
+            try:
+                data['altitude'] = int(parts[11])
+            except ValueError:
+                pass
+
+        # Ground speed (field 12)
+        if len(parts) > 12 and parts[12].strip():
+            try:
+                data['gs'] = float(parts[12])
+            except ValueError:
+                pass
+
+        # Track/heading (field 13)
+        if len(parts) > 13 and parts[13].strip():
+            try:
+                data['track'] = float(parts[13])
+            except ValueError:
+                pass
+
+        # Latitude (field 14)
+        if len(parts) > 14 and parts[14].strip():
+            try:
+                data['lat'] = float(parts[14])
+            except ValueError:
+                pass
+
+        # Longitude (field 15)
+        if len(parts) > 15 and parts[15].strip():
+            try:
+                data['lon'] = float(parts[15])
+            except ValueError:
+                pass
+
+        # Vertical rate (field 16)
+        if len(parts) > 16 and parts[16].strip():
+            try:
+                data['vert_rate'] = int(parts[16])
+            except ValueError:
+                pass
+
+        # Squawk (field 17)
+        if len(parts) > 17 and parts[17].strip():
+            data['squawk'] = parts[17].strip()
+
+        return data
+
+    except Exception as e:
+        logger.debug(f"Failed to parse SBS message: {e}")
         return None
 
-    def is_valid(self) -> bool:
-        """Check if we have minimum required data."""
-        return bool(self.icao_hex) and len(self.icao_hex) == 6
 
-    def has_position(self) -> bool:
-        """Check if we have valid position data."""
-        return self.latitude is not None and self.longitude is not None
+def merge_aircraft_state(icao: str, new_data: dict) -> dict:
+    """Merge new data into existing aircraft state."""
+    if icao not in aircraft_state:
+        aircraft_state[icao] = {'hex': icao, 'last_update': datetime.utcnow()}
 
-    def __repr__(self):
-        return f"<Aircraft {self.icao_hex} {self.callsign or 'N/A'}>"
+    state = aircraft_state[icao]
+    for key, value in new_data.items():
+        if value is not None:
+            state[key] = value
+    state['last_update'] = datetime.utcnow()
 
-
-async def fetch_aircraft_data(client: httpx.AsyncClient) -> list[dict]:
-    """Fetch aircraft data from dump1090 JSON endpoint."""
-    try:
-        response = await client.get(settings.dump1090_url, timeout=5.0)
-        response.raise_for_status()
-        data = response.json()
-
-        # dump1090 returns {"aircraft": [...], "now": timestamp}
-        return data.get("aircraft", [])
-
-    except httpx.RequestError as e:
-        logger.error(f"Failed to fetch from dump1090: {e}")
-        return []
-    except Exception as e:
-        logger.error(f"Error parsing dump1090 data: {e}")
-        return []
+    return state
 
 
-def upsert_aircraft(db, aircraft_data: AircraftData):
+def upsert_aircraft(db, data: dict):
     """Insert or update aircraft record."""
     now = datetime.utcnow()
 
     stmt = insert(Aircraft).values(
-        icao_hex=aircraft_data.icao_hex,
-        callsign=aircraft_data.callsign,
-        latitude=aircraft_data.latitude,
-        longitude=aircraft_data.longitude,
-        altitude=aircraft_data.altitude,
-        ground_speed=aircraft_data.ground_speed,
-        track=aircraft_data.track,
-        vertical_rate=aircraft_data.vertical_rate,
-        squawk=aircraft_data.squawk,
+        icao_hex=data.get('hex'),
+        callsign=data.get('flight'),
+        latitude=data.get('lat'),
+        longitude=data.get('lon'),
+        altitude=data.get('altitude'),
+        ground_speed=data.get('gs'),
+        track=data.get('track'),
+        vertical_rate=data.get('vert_rate'),
+        squawk=data.get('squawk'),
         last_seen=now,
         first_seen=now,
-        messages_received=aircraft_data.messages,
+        messages_received=1,
     )
 
-    # On conflict, update the existing record
     stmt = stmt.on_conflict_do_update(
         index_elements=["icao_hex"],
         set_={
@@ -120,90 +158,100 @@ def upsert_aircraft(db, aircraft_data: AircraftData):
             "vertical_rate": stmt.excluded.vertical_rate,
             "squawk": stmt.excluded.squawk,
             "last_seen": stmt.excluded.last_seen,
-            "messages_received": stmt.excluded.messages_received,
+            "messages_received": Aircraft.messages_received + 1,
         },
     )
 
     db.execute(stmt)
 
 
-def insert_position(db, aircraft_data: AircraftData):
+def insert_position(db, data: dict):
     """Insert position record for flight trail."""
-    if not aircraft_data.has_position():
+    if data.get('lat') is None or data.get('lon') is None:
         return
 
     position = AircraftPosition(
-        icao_hex=aircraft_data.icao_hex,
-        latitude=aircraft_data.latitude,
-        longitude=aircraft_data.longitude,
-        altitude=aircraft_data.altitude,
-        ground_speed=aircraft_data.ground_speed,
-        track=aircraft_data.track,
-        vertical_rate=aircraft_data.vertical_rate,
+        icao_hex=data.get('hex'),
+        latitude=data.get('lat'),
+        longitude=data.get('lon'),
+        altitude=data.get('altitude'),
+        ground_speed=data.get('gs'),
+        track=data.get('track'),
+        vertical_rate=data.get('vert_rate'),
         timestamp=datetime.utcnow(),
     )
     db.add(position)
 
 
-async def ingest_loop():
-    """Main ingestion loop."""
-    logger.info(f"Starting ingestion from {settings.dump1090_url}")
+async def connect_and_ingest():
+    """Connect to dump1090 SBS port and ingest data."""
+    host = 'localhost'
+    port = 30003
 
-    async with httpx.AsyncClient() as client:
-        while True:
+    logger.info(f"Connecting to dump1090 SBS output at {host}:{port}")
+
+    while True:
+        try:
+            reader, writer = await asyncio.open_connection(host, port)
+            logger.info("Connected to dump1090")
+
+            db = SessionLocal()
+            batch_count = 0
+            position_count = 0
+            last_commit = datetime.utcnow()
+
             try:
-                raw_data = await fetch_aircraft_data(client)
+                while True:
+                    line = await reader.readline()
+                    if not line:
+                        logger.warning("Connection closed by dump1090")
+                        break
 
-                if not raw_data:
-                    logger.debug("No aircraft data received")
-                    await asyncio.sleep(1)
-                    continue
+                    line = line.decode('utf-8', errors='ignore')
+                    data = parse_sbs_message(line)
 
-                db = SessionLocal()
-                try:
-                    aircraft_count = 0
-                    position_count = 0
+                    if data:
+                        icao = data['hex']
+                        merged = merge_aircraft_state(icao, data)
 
-                    for raw in raw_data:
-                        aircraft = AircraftData(raw)
+                        upsert_aircraft(db, merged)
+                        batch_count += 1
 
-                        if not aircraft.is_valid():
-                            continue
-
-                        # Skip if we haven't seen this aircraft recently
-                        if aircraft.seen > 60:
-                            continue
-
-                        upsert_aircraft(db, aircraft)
-                        aircraft_count += 1
-
-                        if aircraft.has_position():
-                            insert_position(db, aircraft)
+                        if merged.get('lat') and merged.get('lon'):
+                            insert_position(db, merged)
                             position_count += 1
 
-                    db.commit()
-                    logger.info(
-                        f"Processed {aircraft_count} aircraft, "
-                        f"{position_count} positions"
-                    )
-
-                except Exception as e:
-                    logger.error(f"Database error: {e}")
-                    db.rollback()
-                finally:
-                    db.close()
+                        # Commit every 2 seconds or every 100 messages
+                        now = datetime.utcnow()
+                        if batch_count >= 100 or (now - last_commit).seconds >= 2:
+                            db.commit()
+                            if batch_count > 0:
+                                logger.info(f"Committed {batch_count} updates, {position_count} positions, {len(aircraft_state)} aircraft tracked")
+                            batch_count = 0
+                            position_count = 0
+                            last_commit = now
 
             except Exception as e:
-                logger.error(f"Ingestion error: {e}")
+                logger.error(f"Error during ingestion: {e}")
+                db.rollback()
+            finally:
+                db.close()
+                writer.close()
+                await writer.wait_closed()
 
-            # Poll every second
-            await asyncio.sleep(1)
+        except ConnectionRefusedError:
+            logger.error(f"Cannot connect to dump1090 at {host}:{port}. Is it running with --net?")
+        except Exception as e:
+            logger.error(f"Connection error: {e}")
+
+        logger.info("Reconnecting in 5 seconds...")
+        await asyncio.sleep(5)
 
 
 def main():
     """Entry point."""
     try:
-        asyncio.run(ingest_loop())
+        asyncio.run(connect_and_ingest())
     except KeyboardInterrupt:
         logger.info("Shutting down ingestion service")
 
