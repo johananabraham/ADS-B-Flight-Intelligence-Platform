@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Polyline, useMap, Circle } from 'react
 import L from 'leaflet';
 import { useFlightTrail } from '@/hooks';
 import type { Aircraft } from '@/types';
+import type { Geofence } from './GeofencePanel';
 import { RangeRings, AirportMarkers } from './MapOverlays';
 
 // Cache icons to prevent recreation
@@ -115,7 +116,33 @@ interface FlightMapProps {
   onSelectAircraft: (icao: string | null) => void;
   showOverlays?: boolean;
   showHeatmap?: boolean;
+  geofences?: Geofence[];
 }
+
+// Nautical miles to meters conversion
+const NM_TO_METERS = 1852;
+
+// Geofence layer component
+const GeofenceLayer = memo(function GeofenceLayer({ geofences }: { geofences: Geofence[] }) {
+  return (
+    <>
+      {geofences.filter(f => f.active && f.type === 'circle' && f.center && f.radius).map(fence => (
+        <Circle
+          key={fence.id}
+          center={[fence.center!.lat, fence.center!.lng]}
+          radius={fence.radius! * NM_TO_METERS}
+          pathOptions={{
+            color: fence.color,
+            fillColor: fence.color,
+            fillOpacity: 0.1,
+            weight: 2,
+            dashArray: '5, 10',
+          }}
+        />
+      ))}
+    </>
+  );
+});
 
 // Simple heatmap visualization using circles
 const HeatmapLayer = memo(function HeatmapLayer({ aircraft }: { aircraft: Aircraft[] }) {
@@ -158,7 +185,7 @@ const HeatmapLayer = memo(function HeatmapLayer({ aircraft }: { aircraft: Aircra
   );
 });
 
-export function FlightMap({ aircraft, selectedAircraft, onSelectAircraft, showOverlays = true, showHeatmap = false }: FlightMapProps) {
+export function FlightMap({ aircraft, selectedAircraft, onSelectAircraft, showOverlays = true, showHeatmap = false, geofences = [] }: FlightMapProps) {
 
   const defaultCenter: [number, number] = [39.9612, -82.9988];
 
@@ -182,6 +209,9 @@ export function FlightMap({ aircraft, selectedAircraft, onSelectAircraft, showOv
 
       {/* Heatmap layer */}
       {showHeatmap && <HeatmapLayer aircraft={aircraft} />}
+
+      {/* Geofence layer */}
+      {geofences.length > 0 && <GeofenceLayer geofences={geofences} />}
 
       {/* Map overlays */}
       {showOverlays && (

@@ -5,4 +5,6 @@ export { AlertsPanel } from './AlertsPanel';
 export { StatusBar } from './StatusBar';
 export { FilterPanel } from './FilterPanel';
 export { StatsPanel } from './StatsPanel';
+export { GeofencePanel } from './GeofencePanel';
+export type { Geofence } from './GeofencePanel';
 export { RangeRings, AirportMarkers } from './MapOverlays';

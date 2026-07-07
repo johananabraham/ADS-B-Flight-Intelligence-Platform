@@ -7,6 +7,8 @@ import { AlertsPanel } from '@/components/AlertsPanel';
 import { StatusBar } from '@/components/StatusBar';
 import { FilterPanel } from '@/components/FilterPanel';
 import { StatsPanel } from '@/components/StatsPanel';
+import { GeofencePanel } from '@/components/GeofencePanel';
+import type { Geofence } from '@/components/GeofencePanel';
 import { useWebSocket } from '@/hooks';
 import type { Aircraft } from '@/types';
 
@@ -46,7 +48,9 @@ function AppContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showGeofences, setShowGeofences] = useState(false);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [geofences, setGeofences] = useState<Geofence[]>([]);
 
   // Use WebSocket for real-time updates
   const { aircraft: rawAircraft, stats, connected, lastUpdate } = useWebSocket();
@@ -93,6 +97,7 @@ function AppContent() {
         setShowAlerts(false);
         setShowFilters(false);
         setShowStats(false);
+        setShowGeofences(false);
       }
       if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
         setShowAlerts(prev => !prev);
@@ -108,6 +113,9 @@ function AppContent() {
       }
       if (e.key === 's' && !e.metaKey && !e.ctrlKey) {
         setShowStats(prev => !prev);
+      }
+      if (e.key === 'g' && !e.metaKey && !e.ctrlKey) {
+        setShowGeofences(prev => !prev);
       }
     };
 
@@ -132,6 +140,7 @@ function AppContent() {
           onSelectAircraft={handleSelectAircraft}
           showOverlays={showOverlays}
           showHeatmap={showHeatmap}
+          geofences={geofences}
         />
         {/* Grid overlay */}
         <div className="map-grid-overlay" />
@@ -194,12 +203,26 @@ function AppContent() {
       )}
 
       {/* Stats panel - right side (conditional) */}
-      {showStats && !showAlerts && (
+      {showStats && !showAlerts && !showGeofences && (
         <div className="absolute top-16 right-4 z-[1000]">
           <StatsPanel
             aircraft={aircraft}
             stats={stats}
             onClose={() => setShowStats(false)}
+          />
+        </div>
+      )}
+
+      {/* Geofence panel - right side (conditional) */}
+      {showGeofences && !showAlerts && (
+        <div className="absolute top-16 right-4 z-[1000]">
+          <GeofencePanel
+            geofences={geofences}
+            aircraft={aircraft}
+            onAddGeofence={(fence) => setGeofences(prev => [...prev, fence])}
+            onRemoveGeofence={(id) => setGeofences(prev => prev.filter(f => f.id !== id))}
+            onToggleGeofence={(id) => setGeofences(prev => prev.map(f => f.id === id ? { ...f, active: !f.active } : f))}
+            onClose={() => setShowGeofences(false)}
           />
         </div>
       )}
@@ -214,7 +237,7 @@ function AppContent() {
 
       {/* Keyboard shortcuts hint */}
       <div className="absolute bottom-4 right-4 z-[1000] text-2xs text-slate-600">
-        <span className="opacity-50">ESC</span> clear · <span className="opacity-50">A</span> alerts · <span className="opacity-50">S</span> stats · <span className="opacity-50">F</span> filter · <span className="opacity-50">H</span> heatmap · <span className="opacity-50">O</span> overlays
+        <span className="opacity-50">A</span>lerts · <span className="opacity-50">S</span>tats · <span className="opacity-50">G</span>eofence · <span className="opacity-50">F</span>ilter · <span className="opacity-50">H</span>eatmap · <span className="opacity-50">O</span>verlays · <span className="opacity-50">ESC</span>
       </div>
     </div>
   );
