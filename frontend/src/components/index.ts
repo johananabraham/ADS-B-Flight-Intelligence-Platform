@@ -1,4 +1,7 @@
 export { FlightMap } from './FlightMap';
 export { AircraftPanel } from './AircraftPanel';
+export { AircraftDetail } from './AircraftDetail';
 export { AlertsPanel } from './AlertsPanel';
 export { StatusBar } from './StatusBar';
+export { FilterPanel } from './FilterPanel';
+export { RangeRings, AirportMarkers } from './MapOverlays';

@@ -1,14 +1,15 @@
-import { useMemo, memo, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
+import { useMemo, memo, useEffect, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, Polyline, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
-import { useAircraft, useFlightTrail } from '@/hooks';
+import { useFlightTrail } from '@/hooks';
 import type { Aircraft } from '@/types';
+import { RangeRings, AirportMarkers } from './MapOverlays';
 
 // Cache icons to prevent recreation
 const iconCache = new Map<string, L.DivIcon>();
 
 function getAircraftIcon(track: number | null, isSelected: boolean, isEmergency: boolean): L.DivIcon {
-  const rotation = Math.round((track ?? 0) / 5) * 5; // Round to nearest 5 degrees
+  const rotation = Math.round((track ?? 0) / 5) * 5;
   const key = `${rotation}-${isSelected}-${isEmergency}`;
 
   if (iconCache.has(key)) {
@@ -48,17 +49,27 @@ const AircraftMarker = memo(function AircraftMarker({ aircraft, isSelected, onSe
   const isEmergency = ['7500', '7600', '7700'].includes(aircraft.squawk ?? '');
   const icon = getAircraftIcon(aircraft.track, isSelected, isEmergency);
 
+  const handleClick = useCallback((e: L.LeafletMouseEvent) => {
+    L.DomEvent.stopPropagation(e.originalEvent);
+    onSelect(aircraft.icao_hex);
+  }, [aircraft.icao_hex, onSelect]);
+
   return (
     <Marker
       position={[aircraft.latitude, aircraft.longitude]}
       icon={icon}
-      eventHandlers={{
-        click: (e) => {
-          L.DomEvent.stopPropagation(e.originalEvent);
-          onSelect(aircraft.icao_hex);
-        },
-      }}
+      eventHandlers={{ click: handleClick }}
     />
+  );
+}, (prev, next) => {
+  // Custom comparison for memo
+  return (
+    prev.aircraft.icao_hex === next.aircraft.icao_hex &&
+    prev.aircraft.latitude === next.aircraft.latitude &&
+    prev.aircraft.longitude === next.aircraft.longitude &&
+    prev.aircraft.track === next.aircraft.track &&
+    prev.aircraft.squawk === next.aircraft.squawk &&
+    prev.isSelected === next.isSelected
   );
 });
 
@@ -84,37 +95,76 @@ const FlightTrail = memo(function FlightTrail({ icao }: { icao: string }) {
   );
 });
 
-function MapBounds({ aircraft }: { aircraft: Aircraft[] }) {
+function MapClickHandler({ onClick }: { onClick: () => void }) {
   const map = useMap();
 
-  const validAircraft = aircraft.filter(a => a.latitude !== null && a.longitude !== null);
-
-  if (validAircraft.length > 0) {
-    const bounds = L.latLngBounds(validAircraft.map(a => [a.latitude!, a.longitude!]));
-    const currentBounds = map.getBounds();
-
-    // Only fit bounds if aircraft are outside current view
-    if (!currentBounds.contains(bounds)) {
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10, animate: false });
-    }
-  }
+  useEffect(() => {
+    const handler = () => onClick();
+    map.on('click', handler);
+    return () => {
+      map.off('click', handler);
+    };
+  }, [map, onClick]);
 
   return null;
 }
 
 interface FlightMapProps {
+  aircraft: Aircraft[];
   selectedAircraft: string | null;
   onSelectAircraft: (icao: string | null) => void;
+  showOverlays?: boolean;
+  showHeatmap?: boolean;
 }
 
-export function FlightMap({ selectedAircraft, onSelectAircraft }: FlightMapProps) {
-  const { data: aircraft = [] } = useAircraft();
+// Simple heatmap visualization using circles
+const HeatmapLayer = memo(function HeatmapLayer({ aircraft }: { aircraft: Aircraft[] }) {
+  // Create density grid
+  const heatmapData = useMemo(() => {
+    const grid = new Map<string, { lat: number; lng: number; count: number }>();
+    const gridSize = 0.1; // ~10km grid cells
+
+    aircraft.forEach(a => {
+      if (a.latitude === null || a.longitude === null) return;
+      const gridLat = Math.floor(a.latitude / gridSize) * gridSize;
+      const gridLng = Math.floor(a.longitude / gridSize) * gridSize;
+      const key = `${gridLat},${gridLng}`;
+
+      if (grid.has(key)) {
+        grid.get(key)!.count++;
+      } else {
+        grid.set(key, { lat: gridLat + gridSize / 2, lng: gridLng + gridSize / 2, count: 1 });
+      }
+    });
+
+    return Array.from(grid.values());
+  }, [aircraft]);
+
+  return (
+    <>
+      {heatmapData.map(cell => (
+        <Circle
+          key={`${cell.lat},${cell.lng}`}
+          center={[cell.lat, cell.lng]}
+          radius={cell.count * 2000}
+          pathOptions={{
+            color: 'transparent',
+            fillColor: cell.count > 3 ? '#ef4444' : cell.count > 1 ? '#f59e0b' : '#22c55e',
+            fillOpacity: 0.3,
+          }}
+        />
+      ))}
+    </>
+  );
+});
+
+export function FlightMap({ aircraft, selectedAircraft, onSelectAircraft, showOverlays = true, showHeatmap = false }: FlightMapProps) {
 
   const defaultCenter: [number, number] = [39.9612, -82.9988];
 
-  const handleMapClick = () => {
+  const handleMapClick = useCallback(() => {
     onSelectAircraft(null);
-  };
+  }, [onSelectAircraft]);
 
   return (
     <MapContainer
@@ -130,8 +180,21 @@ export function FlightMap({ selectedAircraft, onSelectAircraft }: FlightMapProps
 
       <MapClickHandler onClick={handleMapClick} />
 
+      {/* Heatmap layer */}
+      {showHeatmap && <HeatmapLayer aircraft={aircraft} />}
+
+      {/* Map overlays */}
+      {showOverlays && (
+        <>
+          <RangeRings />
+          <AirportMarkers />
+        </>
+      )}
+
+      {/* Flight trail for selected aircraft */}
       {selectedAircraft && <FlightTrail icao={selectedAircraft} />}
 
+      {/* Aircraft markers */}
       {aircraft.map((a) => (
         <AircraftMarker
           key={a.icao_hex}
@@ -142,17 +205,4 @@ export function FlightMap({ selectedAircraft, onSelectAircraft }: FlightMapProps
       ))}
     </MapContainer>
   );
-}
-
-function MapClickHandler({ onClick }: { onClick: () => void }) {
-  const map = useMap();
-
-  useEffect(() => {
-    map.on('click', onClick);
-    return () => {
-      map.off('click', onClick);
-    };
-  }, [map, onClick]);
-
-  return null;
 }

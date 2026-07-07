@@ -1,9 +1,8 @@
-import { useAircraft } from '@/hooks';
 import type { Aircraft } from '@/types';
-import { formatDistanceToNow } from 'date-fns';
 import clsx from 'clsx';
 
 interface AircraftPanelProps {
+  aircraft: Aircraft[];
   selectedAircraft: string | null;
   onSelectAircraft: (icao: string | null) => void;
 }
@@ -104,10 +103,10 @@ function AircraftRow({
 }
 
 export function AircraftPanel({
+  aircraft,
   selectedAircraft,
   onSelectAircraft,
 }: AircraftPanelProps) {
-  const { data: aircraft = [], isLoading } = useAircraft();
 
   // Sort: emergencies first, then by altitude descending
   const sortedAircraft = [...aircraft].sort((a, b) => {
@@ -137,11 +136,7 @@ export function AircraftPanel({
 
       {/* List */}
       <div className="flex-1 overflow-y-auto">
-        {isLoading ? (
-          <div className="p-4 text-center text-slate-500 text-sm">
-            Scanning...
-          </div>
-        ) : aircraft.length === 0 ? (
+        {aircraft.length === 0 ? (
           <div className="p-4 text-center">
             <p className="text-slate-500 text-sm">No aircraft detected</p>
             <p className="text-slate-600 text-xs mt-1">
