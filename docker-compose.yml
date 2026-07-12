@@ -29,11 +29,16 @@ services:
       DATABASE_URL: postgresql://postgres:password@db:5432/adsb_intel
       DUMP1090_URL: http://host.docker.internal:8080/data/aircraft.json
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai/}
+      LLM_MODEL: ${LLM_MODEL:-gemini-2.0-flash}
+      CHROMA_PERSIST_DIRECTORY: /app/data/chroma
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - ./data:/app/data
 
   ingestion:
     build:
