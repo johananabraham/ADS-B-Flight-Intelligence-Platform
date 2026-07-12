@@ -185,8 +185,8 @@ def insert_position(db, data: dict):
 
 async def connect_and_ingest():
     """Connect to dump1090 SBS port and ingest data."""
-    host = 'localhost'
-    port = 30003
+    host = os.environ.get('DUMP1090_HOST', 'localhost')
+    port = int(os.environ.get('DUMP1090_PORT', 30003))
 
     logger.info(f"Connecting to dump1090 SBS output at {host}:{port}")
 

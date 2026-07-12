@@ -15,6 +15,22 @@ interface UseWebSocketReturn {
   lastUpdate: Date | null;
 }
 
+// Fallback: fetch via REST API
+async function fetchAircraftREST(): Promise<{ aircraft: Aircraft[]; stats: Stats | null }> {
+  try {
+    const [aircraftRes, statsRes] = await Promise.all([
+      fetch('/api/v1/aircraft/'),
+      fetch('/api/v1/aircraft/stats/overview'),
+    ]);
+    const aircraft = await aircraftRes.json();
+    const stats = await statsRes.json();
+    return { aircraft, stats };
+  } catch (e) {
+    console.error('REST fetch failed:', e);
+    return { aircraft: [], stats: null };
+  }
+}
+
 export function useWebSocket(): UseWebSocketReturn {
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -22,20 +38,50 @@ export function useWebSocket(): UseWebSocketReturn {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reconnectDelayRef = useRef(1000); // Start at 1 second
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reconnectDelayRef = useRef(1000);
+
+  // Fallback polling when WebSocket fails
+  const startPolling = useCallback(() => {
+    if (pollIntervalRef.current) return;
+    console.log('Starting REST polling fallback...');
+
+    // Immediate fetch
+    fetchAircraftREST().then(({ aircraft, stats }) => {
+      setAircraft(aircraft);
+      setStats(stats);
+      setLastUpdate(new Date());
+    });
+
+    // Poll every 2 seconds
+    pollIntervalRef.current = setInterval(async () => {
+      const { aircraft, stats } = await fetchAircraftREST();
+      setAircraft(aircraft);
+      setStats(stats);
+      setLastUpdate(new Date());
+    }, 2000);
+  }, []);
+
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, []);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.hostname}:8000/api/v1/ws/aircraft`;
+    const wsUrl = `${protocol}//${window.location.host}/api/v1/ws/aircraft`;
 
     try {
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         setConnected(true);
-        reconnectDelayRef.current = 1000; // Reset delay on successful connection
+        reconnectDelayRef.current = 1000;
+        stopPolling(); // Stop polling when WS connects
         console.log('WebSocket connected');
       };
 
@@ -54,7 +100,7 @@ export function useWebSocket(): UseWebSocketReturn {
 
       ws.onclose = () => {
         setConnected(false);
-        // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
+        startPolling(); // Start polling as fallback
         const delay = Math.min(reconnectDelayRef.current, 30000);
         console.log(`WebSocket disconnected, reconnecting in ${delay / 1000}s...`);
         reconnectTimeoutRef.current = setTimeout(connect, delay);
@@ -62,23 +108,30 @@ export function useWebSocket(): UseWebSocketReturn {
       };
 
       ws.onerror = () => {
-        // Don't log error spam, just close and let onclose handle reconnect
         ws.close();
       };
 
       wsRef.current = ws;
     } catch {
-      // Connection failed, schedule retry
+      startPolling(); // Start polling as fallback
       const delay = Math.min(reconnectDelayRef.current, 30000);
       reconnectTimeoutRef.current = setTimeout(connect, delay);
       reconnectDelayRef.current = Math.min(reconnectDelayRef.current * 2, 30000);
     }
-  }, []);
+  }, [startPolling, stopPolling]);
 
   useEffect(() => {
+    // Start with REST fetch immediately, then try WebSocket
+    fetchAircraftREST().then(({ aircraft, stats }) => {
+      setAircraft(aircraft);
+      setStats(stats);
+      setLastUpdate(new Date());
+    });
+
     connect();
 
     return () => {
+      stopPolling();
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
@@ -86,7 +139,7 @@ export function useWebSocket(): UseWebSocketReturn {
         wsRef.current.close();
       }
     };
-  }, [connect]);
+  }, [connect, stopPolling]);
 
   return { aircraft, stats, connected, lastUpdate };
 }

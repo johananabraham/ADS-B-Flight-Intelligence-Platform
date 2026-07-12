@@ -43,6 +43,8 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:password@db:5432/adsb_intel
       DUMP1090_URL: http://host.docker.internal:8080/data/aircraft.json
+      DUMP1090_HOST: host.docker.internal
+      DUMP1090_PORT: 30003
     depends_on:
       db:
         condition: service_healthy
