@@ -18,3 +18,8 @@ asyncpg==0.29.0
 redis==5.0.1
 pytest==7.4.4
 pytest-asyncio==0.23.3
+
+# Safety Research Agent dependencies
+chromadb==0.4.22
+tiktoken==0.5.2
+openai==1.12.0

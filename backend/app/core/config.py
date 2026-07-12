@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Literal
 
 
 class Settings(BaseSettings):
@@ -13,7 +14,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
 
     # App settings
-    app_name: str = "ADS-B Flight Intelligence Platform"
+    app_name: str = "Aviation Intelligence Platform"
     debug: bool = True
 
     # Anomaly detection thresholds
@@ -21,8 +22,26 @@ class Settings(BaseSettings):
     speed_anomaly_threshold: float = 0.3  # 30% deviation from expected
     ghost_flight_timeout: int = 300  # seconds before marking as ghost
 
+    # ChromaDB Configuration
+    chroma_persist_directory: str = "./data/chroma"
+
+    # LLM Configuration (Groq or OpenAI compatible)
+    llm_api_key: str = ""
+    llm_base_url: str = "https://api.groq.com/openai/v1"
+    llm_model: str = "llama-3.3-70b-versatile"
+    openai_api_key: str = ""  # Fallback
+
+    # Agent Settings
+    agent_max_iterations: int = 10
+    agent_temperature: float = 0.1
+
+    # Data Ingestion URLs
+    ntsb_data_url: str = "https://data.ntsb.gov/avdata/FileDirectory/DownloadFile?fileID=C%3A%5Cavdata%5Cavall.zip"
+    ecfr_api_base_url: str = "https://www.ecfr.gov/api/versioner/v1"
+
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 @lru_cache()

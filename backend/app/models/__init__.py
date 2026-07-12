@@ -6,6 +6,7 @@ from .aircraft import (
     AnomalySeverity,
     DailySummary,
 )
+from .safety import Incident, Regulation
 
 __all__ = [
     "Aircraft",
@@ -14,4 +15,6 @@ __all__ = [
     "AnomalyType",
     "AnomalySeverity",
     "DailySummary",
+    "Incident",
+    "Regulation",
 ]
