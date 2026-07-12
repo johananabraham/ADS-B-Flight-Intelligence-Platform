@@ -28,7 +28,7 @@ Unified aviation intelligence platform combining real-time ADS-B flight tracking
 1. [DONE] Add Safety Agent database models and ChromaDB setup
 2. [DONE] Port Safety Agent tools and RAG logic
 3. [DONE] Create integrated API endpoints
-4. [PENDING] Add frontend Safety Research panel
+4. [DONE] Add frontend Safety Research panel
 5. [PENDING] Integrate safety context into aircraft details
 6. [PENDING] Add anomaly-triggered safety research
 
@@ -102,6 +102,7 @@ docker compose up -d
 - 2026-07-11: Added Incident/Regulation models, ChromaDB vectorstore
 - 2026-07-11: Ported Safety Agent tools (5 tools) and ReAct agent
 - 2026-07-11: Added /api/v1/safety/* endpoints (query, context, stats)
+- 2026-07-11: Added SafetyPanel frontend component (press R to toggle)
 
 ## Notes
 - dump1090 must bind to 0.0.0.0 for Docker containers to connect
