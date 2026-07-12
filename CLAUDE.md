@@ -105,6 +105,7 @@ docker compose up -d
 - 2026-07-11: Added SafetyPanel frontend component (press R to toggle)
 - 2026-07-11: Added safety context section to AircraftDetail (expandable)
 - 2026-07-11: Added historical incident lookup to AlertsPanel anomalies
+- 2026-07-11: Merged to main, copied ChromaDB data, updated docker-compose
 
 ## Notes
 - dump1090 must bind to 0.0.0.0 for Docker containers to connect
