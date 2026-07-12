@@ -42,3 +42,6 @@ htmlcov/
 # Local config
 .env.local
 .env.*.local
+
+# Data files (NTSB, ChromaDB)
+data/
