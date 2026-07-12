@@ -8,6 +8,7 @@ import { StatusBar } from '@/components/StatusBar';
 import { FilterPanel } from '@/components/FilterPanel';
 import { StatsPanel } from '@/components/StatsPanel';
 import { GeofencePanel } from '@/components/GeofencePanel';
+import { SafetyPanel } from '@/components/SafetyPanel';
 import type { Geofence } from '@/components/GeofencePanel';
 import { useWebSocket } from '@/hooks';
 import type { Aircraft } from '@/types';
@@ -49,6 +50,7 @@ function AppContent() {
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showGeofences, setShowGeofences] = useState(false);
+  const [showSafety, setShowSafety] = useState(false);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [geofences, setGeofences] = useState<Geofence[]>([]);
 
@@ -98,6 +100,7 @@ function AppContent() {
         setShowFilters(false);
         setShowStats(false);
         setShowGeofences(false);
+        setShowSafety(false);
       }
       if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
         setShowAlerts(prev => !prev);
@@ -116,6 +119,9 @@ function AppContent() {
       }
       if (e.key === 'g' && !e.metaKey && !e.ctrlKey) {
         setShowGeofences(prev => !prev);
+      }
+      if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
+        setShowSafety(prev => !prev);
       }
     };
 
@@ -214,7 +220,7 @@ function AppContent() {
       )}
 
       {/* Geofence panel - right side (conditional) */}
-      {showGeofences && !showAlerts && (
+      {showGeofences && !showAlerts && !showSafety && (
         <div className="absolute top-16 right-4 z-[1000]">
           <GeofencePanel
             geofences={geofences}
@@ -224,6 +230,13 @@ function AppContent() {
             onToggleGeofence={(id) => setGeofences(prev => prev.map(f => f.id === id ? { ...f, active: !f.active } : f))}
             onClose={() => setShowGeofences(false)}
           />
+        </div>
+      )}
+
+      {/* Safety Research panel - right side (conditional) */}
+      {showSafety && (
+        <div className="z-[1001]">
+          <SafetyPanel onClose={() => setShowSafety(false)} />
         </div>
       )}
 
@@ -237,7 +250,7 @@ function AppContent() {
 
       {/* Keyboard shortcuts hint */}
       <div className="absolute bottom-4 right-4 z-[1000] text-2xs text-slate-600">
-        <span className="opacity-50">A</span>lerts · <span className="opacity-50">S</span>tats · <span className="opacity-50">G</span>eofence · <span className="opacity-50">F</span>ilter · <span className="opacity-50">H</span>eatmap · <span className="opacity-50">O</span>verlays · <span className="opacity-50">ESC</span>
+        <span className="opacity-50">A</span>lerts · <span className="opacity-50">S</span>tats · <span className="opacity-50">G</span>eofence · <span className="opacity-50">R</span>esearch · <span className="opacity-50">F</span>ilter · <span className="opacity-50">H</span>eatmap · <span className="opacity-50">O</span>verlays · <span className="opacity-50">ESC</span>
       </div>
     </div>
   );
