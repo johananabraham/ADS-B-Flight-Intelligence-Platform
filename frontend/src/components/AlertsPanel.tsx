@@ -1,7 +1,16 @@
+import { useState, useCallback } from 'react';
 import { useCriticalAnomalies } from '@/hooks';
 import type { Anomaly, AnomalySeverity } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import clsx from 'clsx';
+
+interface HistoricalMatch {
+  ntsb_id: string;
+  excerpt: string;
+  event_date: string;
+  aircraft: string;
+  fatal_injuries: number;
+}
 
 interface AlertsPanelProps {
   onClose: () => void;
@@ -29,6 +38,55 @@ const anomalyLabels: Record<string, string> = {
 function AlertCard({ anomaly }: { anomaly: Anomaly }) {
   const config = severityConfig[anomaly.severity];
   const isSquawk = anomaly.anomaly_type.startsWith('SQUAWK_');
+  const [expanded, setExpanded] = useState(false);
+  const [historicalMatches, setHistoricalMatches] = useState<HistoricalMatch[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchHistorical = useCallback(async () => {
+    if (historicalMatches !== null) return;
+    setLoading(true);
+
+    // Map anomaly type to search query
+    const queryMap: Record<string, string> = {
+      RAPID_DESCENT: 'rapid descent loss of control',
+      RAPID_CLIMB: 'unusual climb rate stall',
+      SPEED_ANOMALY: 'airspeed anomaly stall',
+      SQUAWK_7500: 'hijacking security incident',
+      SQUAWK_7600: 'radio communication failure',
+      SQUAWK_7700: 'emergency declaration mayday',
+      GHOST_FLIGHT: 'lost contact radar signal lost',
+      RESTRICTED_AIRSPACE: 'airspace violation restricted area',
+      ALTITUDE_DEVIATION: 'altitude deviation TCAS',
+    };
+
+    const query = queryMap[anomaly.anomaly_type] || anomaly.anomaly_type;
+
+    try {
+      const res = await fetch('/api/v1/safety/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: `Find incidents similar to: ${query}` }),
+      });
+      const data = await res.json();
+
+      // Extract incidents from tool calls if available
+      const toolResult = data.tool_calls?.find((tc: { name: string }) => tc.name === 'search_incident_narratives');
+      if (toolResult?.result?.results) {
+        setHistoricalMatches(toolResult.result.results.slice(0, 3));
+      } else {
+        setHistoricalMatches([]);
+      }
+    } catch {
+      setHistoricalMatches([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [anomaly.anomaly_type, historicalMatches]);
+
+  const handleExpand = () => {
+    setExpanded(!expanded);
+    if (!expanded) fetchHistorical();
+  };
 
   return (
     <div className={clsx('p-3 border-l-2', config.bg, config.color.replace('text-', 'border-'))}>
@@ -61,6 +119,35 @@ function AlertCard({ anomaly }: { anomaly: Anomaly }) {
             <p className="text-2xs text-slate-600 mt-1 font-mono">
               FL{Math.round(anomaly.altitude / 100)}
             </p>
+          )}
+
+          {/* Historical matches toggle */}
+          <button
+            onClick={handleExpand}
+            className="mt-2 text-2xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+          >
+            <span>{expanded ? '▼' : '▶'}</span>
+            <span>Similar Historical Incidents</span>
+          </button>
+
+          {expanded && (
+            <div className="mt-2 pl-2 border-l border-surface-3 space-y-2">
+              {loading && <p className="text-2xs text-slate-500">Searching NTSB database...</p>}
+              {historicalMatches && historicalMatches.length === 0 && (
+                <p className="text-2xs text-slate-500">No similar incidents found</p>
+              )}
+              {historicalMatches && historicalMatches.map((match, i) => (
+                <div key={i} className="text-2xs">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-cyan-400">{match.ntsb_id}</span>
+                    {match.fatal_injuries > 0 && (
+                      <span className="text-red-400">({match.fatal_injuries} fatal)</span>
+                    )}
+                  </div>
+                  <p className="text-slate-500 line-clamp-2 mt-0.5">{match.excerpt}</p>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>

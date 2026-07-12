@@ -1,7 +1,20 @@
+import { useState, useEffect } from 'react';
 import { useFlightTrail } from '@/hooks';
 import type { Aircraft } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import clsx from 'clsx';
+
+interface SafetyContext {
+  aircraft: string;
+  incidents: {
+    total_count: number;
+    fatal_count: number;
+    by_phase: { phase: string; count: number }[];
+    recent_examples: { ntsb_id: string; excerpt: string; event_date: string }[];
+  };
+  risk_factors: { factor: string; count: number }[];
+  error?: string;
+}
 
 interface AircraftDetailProps {
   aircraft: Aircraft;
@@ -11,6 +24,33 @@ interface AircraftDetailProps {
 export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
   const { data: trail } = useFlightTrail(aircraft.icao_hex, 60);
   const isEmergency = ['7500', '7600', '7700'].includes(aircraft.squawk ?? '');
+  const [safetyContext, setSafetyContext] = useState<SafetyContext | null>(null);
+  const [safetyLoading, setSafetyLoading] = useState(false);
+  const [showSafety, setShowSafety] = useState(false);
+
+  // Fetch safety context when expanded
+  useEffect(() => {
+    if (!showSafety || safetyContext) return;
+
+    // Extract aircraft make from callsign patterns (rough heuristic)
+    // In real implementation, you'd have aircraft type from database
+    const callsign = aircraft.callsign || '';
+    let make = 'Unknown';
+
+    // Common airline prefixes to aircraft types
+    if (callsign.startsWith('DAL') || callsign.startsWith('AAL') || callsign.startsWith('UAL')) {
+      make = 'Boeing'; // Major carriers fly mostly Boeing/Airbus
+    } else if (callsign.startsWith('N') && callsign.length <= 6) {
+      make = 'Cessna'; // Many GA aircraft
+    }
+
+    setSafetyLoading(true);
+    fetch(`/api/v1/safety/aircraft/${encodeURIComponent(make)}/context`)
+      .then(res => res.json())
+      .then(data => setSafetyContext(data))
+      .catch(() => setSafetyContext({ aircraft: make, incidents: { total_count: 0, fatal_count: 0, by_phase: [], recent_examples: [] }, risk_factors: [], error: 'Failed to load' }))
+      .finally(() => setSafetyLoading(false));
+  }, [showSafety, safetyContext, aircraft.callsign]);
 
   // Calculate flight stats from trail
   const stats = trail?.positions ? {
@@ -146,6 +186,55 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
           <AltitudeChart positions={trail.positions} />
         </div>
       )}
+
+      {/* Safety Context (collapsible) */}
+      <div className="border-b border-surface-3">
+        <button
+          onClick={() => setShowSafety(!showSafety)}
+          className="w-full p-4 flex items-center justify-between text-left hover:bg-surface-2 transition-colors"
+        >
+          <span className="text-xs text-slate-500 uppercase tracking-wider">Safety Research</span>
+          <span className="text-slate-500">{showSafety ? '▼' : '▶'}</span>
+        </button>
+        {showSafety && (
+          <div className="px-4 pb-4">
+            {safetyLoading && <div className="text-xs text-slate-500">Loading safety data...</div>}
+            {safetyContext && !safetyContext.error && (
+              <div className="space-y-3 text-xs">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2 bg-surface-2 rounded">
+                    <div className="text-slate-500">Total Incidents</div>
+                    <div className="text-lg font-mono text-amber-400">{safetyContext.incidents.total_count}</div>
+                  </div>
+                  <div className="p-2 bg-surface-2 rounded">
+                    <div className="text-slate-500">Fatal</div>
+                    <div className="text-lg font-mono text-red-400">{safetyContext.incidents.fatal_count}</div>
+                  </div>
+                </div>
+                {safetyContext.incidents.by_phase.length > 0 && (
+                  <div>
+                    <div className="text-slate-500 mb-1">Top Incident Phases</div>
+                    {safetyContext.incidents.by_phase.slice(0, 3).map((p, i) => (
+                      <div key={i} className="flex justify-between text-slate-400">
+                        <span>{p.phase}</span>
+                        <span>{p.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {safetyContext.risk_factors.length > 0 && (
+                  <div className="p-2 bg-amber-900/20 border border-amber-500/30 rounded text-amber-300">
+                    {safetyContext.risk_factors[0].factor}
+                  </div>
+                )}
+              </div>
+            )}
+            {safetyContext?.error && (
+              <div className="text-xs text-red-400">{safetyContext.error}</div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Timing */}
       <div className="p-4 text-xs text-slate-500">
