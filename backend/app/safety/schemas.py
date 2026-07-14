@@ -63,7 +63,7 @@ def get_tool_definitions() -> list[dict[str, Any]]:
                     "properties": {
                         "query": {"type": "string"},
                         "n_results": {"type": "integer", "default": 5},
-                        "cfr_part": {"type": "integer"},
+                        "cfr_part": {"type": ["integer", "string"], "description": "CFR part number (e.g., 91, 121)"},
                     },
                     "required": ["query"],
                 },

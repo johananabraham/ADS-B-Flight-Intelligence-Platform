@@ -268,15 +268,19 @@ async def tool_query_incident_database(
 async def tool_search_faa_regulations(
     query: str,
     n_results: int = 5,
-    cfr_part: int | None = None,
+    cfr_part: int | str | None = None,
 ) -> dict[str, Any]:
     """
     Semantic search over FAA regulations (14 CFR).
     """
     # Build metadata filter
     where_filter: dict[str, Any] = {}
-    if cfr_part:
-        where_filter["cfr_part"] = cfr_part
+    if cfr_part is not None:
+        # Coerce to int in case LLM sends a string
+        try:
+            where_filter["cfr_part"] = int(cfr_part)
+        except (ValueError, TypeError):
+            pass
 
     try:
         # Search ChromaDB with text query

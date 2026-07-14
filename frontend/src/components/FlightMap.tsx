@@ -1,16 +1,17 @@
-import { useMemo, memo, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, useMap, Circle } from 'react-leaflet';
+import { useMemo, memo, useEffect, useCallback, useRef } from 'react';
+import { MapContainer, TileLayer, Polyline, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import { useFlightTrail } from '@/hooks';
 import type { Aircraft } from '@/types';
 import type { Geofence } from './GeofencePanel';
 import { RangeRings, AirportMarkers } from './MapOverlays';
 
-// Cache icons to prevent recreation
+// Cache icons to prevent recreation - use coarser rotation buckets
 const iconCache = new Map<string, L.DivIcon>();
 
 function getAircraftIcon(track: number | null, isSelected: boolean, isEmergency: boolean): L.DivIcon {
-  const rotation = Math.round((track ?? 0) / 5) * 5;
+  // Round to nearest 10 degrees for better caching
+  const rotation = Math.round((track ?? 0) / 10) * 10;
   const key = `${rotation}-${isSelected}-${isEmergency}`;
 
   if (iconCache.has(key)) {
@@ -36,42 +37,67 @@ function getAircraftIcon(track: number | null, isSelected: boolean, isEmergency:
   return icon;
 }
 
-interface AircraftMarkerProps {
-  aircraft: Aircraft;
-  isSelected: boolean;
-  onSelect: (icao: string) => void;
-}
+// Optimized aircraft layer using direct Leaflet manipulation
+const AircraftLayer = memo(function AircraftLayer({
+  aircraft,
+  selectedAircraft,
+  onSelectAircraft,
+}: {
+  aircraft: Aircraft[];
+  selectedAircraft: string | null;
+  onSelectAircraft: (icao: string) => void;
+}) {
+  const map = useMap();
+  const markersRef = useRef<Map<string, L.Marker>>(new Map());
+  const onSelectRef = useRef(onSelectAircraft);
+  onSelectRef.current = onSelectAircraft;
 
-const AircraftMarker = memo(function AircraftMarker({ aircraft, isSelected, onSelect }: AircraftMarkerProps) {
-  if (aircraft.latitude === null || aircraft.longitude === null) {
-    return null;
-  }
+  useEffect(() => {
+    const existingIcaos = new Set<string>();
 
-  const isEmergency = ['7500', '7600', '7700'].includes(aircraft.squawk ?? '');
-  const icon = getAircraftIcon(aircraft.track, isSelected, isEmergency);
+    aircraft.forEach((a) => {
+      if (a.latitude === null || a.longitude === null) return;
+      existingIcaos.add(a.icao_hex);
 
-  const handleClick = useCallback((e: L.LeafletMouseEvent) => {
-    L.DomEvent.stopPropagation(e.originalEvent);
-    onSelect(aircraft.icao_hex);
-  }, [aircraft.icao_hex, onSelect]);
+      const isSelected = a.icao_hex === selectedAircraft;
+      const isEmergency = ['7500', '7600', '7700'].includes(a.squawk ?? '');
+      const icon = getAircraftIcon(a.track, isSelected, isEmergency);
 
-  return (
-    <Marker
-      position={[aircraft.latitude, aircraft.longitude]}
-      icon={icon}
-      eventHandlers={{ click: handleClick }}
-    />
-  );
-}, (prev, next) => {
-  // Custom comparison for memo
-  return (
-    prev.aircraft.icao_hex === next.aircraft.icao_hex &&
-    prev.aircraft.latitude === next.aircraft.latitude &&
-    prev.aircraft.longitude === next.aircraft.longitude &&
-    prev.aircraft.track === next.aircraft.track &&
-    prev.aircraft.squawk === next.aircraft.squawk &&
-    prev.isSelected === next.isSelected
-  );
+      const existing = markersRef.current.get(a.icao_hex);
+      if (existing) {
+        // Update position and icon
+        existing.setLatLng([a.latitude, a.longitude]);
+        existing.setIcon(icon);
+      } else {
+        // Create new marker
+        const marker = L.marker([a.latitude, a.longitude], { icon });
+        marker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          onSelectRef.current(a.icao_hex);
+        });
+        marker.addTo(map);
+        markersRef.current.set(a.icao_hex, marker);
+      }
+    });
+
+    // Remove stale markers
+    markersRef.current.forEach((marker, icao) => {
+      if (!existingIcaos.has(icao)) {
+        marker.remove();
+        markersRef.current.delete(icao);
+      }
+    });
+  }, [aircraft, selectedAircraft, map]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      markersRef.current.forEach((marker) => marker.remove());
+      markersRef.current.clear();
+    };
+  }, []);
+
+  return null;
 });
 
 const FlightTrail = memo(function FlightTrail({ icao }: { icao: string }) {
@@ -199,11 +225,15 @@ export function FlightMap({ aircraft, selectedAircraft, onSelectAircraft, showOv
       zoom={8}
       className="h-full w-full"
       zoomControl={false}
+      preferCanvas={true}
     >
-      {/* Dark theme map with visible features */}
+      {/* Dark theme map with visible features - optimized tile loading */}
       <TileLayer
         attribution='&copy; Stadia Maps'
         url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
+        updateWhenZooming={false}
+        updateWhenIdle={true}
+        keepBuffer={4}
       />
 
       <MapClickHandler onClick={handleMapClick} />
@@ -225,15 +255,12 @@ export function FlightMap({ aircraft, selectedAircraft, onSelectAircraft, showOv
       {/* Flight trail for selected aircraft */}
       {selectedAircraft && <FlightTrail icao={selectedAircraft} />}
 
-      {/* Aircraft markers */}
-      {aircraft.map((a) => (
-        <AircraftMarker
-          key={a.icao_hex}
-          aircraft={a}
-          isSelected={a.icao_hex === selectedAircraft}
-          onSelect={onSelectAircraft}
-        />
-      ))}
+      {/* Aircraft markers - optimized with direct Leaflet manipulation */}
+      <AircraftLayer
+        aircraft={aircraft}
+        selectedAircraft={selectedAircraft}
+        onSelectAircraft={onSelectAircraft}
+      />
     </MapContainer>
   );
 }

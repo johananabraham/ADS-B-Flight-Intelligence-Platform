@@ -12,7 +12,7 @@ Unified aviation intelligence platform combining real-time ADS-B flight tracking
 - **Signal Decoder:** dump1090 on port 30003 (SBS format)
 - **Backend:** FastAPI + PostgreSQL + PostGIS
 - **Frontend:** React + TypeScript + Leaflet.js + Tailwind
-- **Features:** Real-time map, filters, geofencing, anomaly detection, statistics
+- **Features:** Real-time map (canvas-rendered), filters, geofencing, anomaly detection, statistics, flight route lookup
 
 ### Safety Research Agent (RAG)
 - **Data Sources:** NTSB incidents (~40k+), FAA regulations (14 CFR Parts 61, 91, 121, 135)
@@ -106,8 +106,15 @@ docker compose up -d
 - 2026-07-11: Added safety context section to AircraftDetail (expandable)
 - 2026-07-11: Added historical incident lookup to AlertsPanel anomalies
 - 2026-07-11: Merged to main, copied ChromaDB data, updated docker-compose
+- 2026-07-13: **Performance Fix:** Switched map from DOM-based markers to Canvas rendering
+- 2026-07-13: Added TileLayer optimizations (updateWhenZooming, keepBuffer)
+- 2026-07-13: Added flight route lookup endpoint (/api/v1/aircraft/{icao}/route)
+- 2026-07-13: Added Route section to AircraftDetail showing origin/destination
+- 2026-07-13: Route lookup uses OpenSky Network + ADS-B Exchange APIs
 
 ## Notes
 - dump1090 must bind to 0.0.0.0 for Docker containers to connect
 - ChromaDB uses local embeddings (no API dependency)
 - Safety Agent already has evaluation suite with 30 test cases
+- Route lookup: Free APIs have limited coverage; operator info always available, routes depend on API data
+- Map uses Leaflet Canvas renderer for performance with many aircraft

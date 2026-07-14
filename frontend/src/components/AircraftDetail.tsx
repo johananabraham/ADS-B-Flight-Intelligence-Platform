@@ -16,6 +16,16 @@ interface SafetyContext {
   error?: string;
 }
 
+interface FlightRoute {
+  callsign: string | null;
+  origin: string | null;
+  destination: string | null;
+  route?: string[];
+  operator?: string;
+  flight_number?: string;
+  error?: string;
+}
+
 interface AircraftDetailProps {
   aircraft: Aircraft;
   onClose: () => void;
@@ -27,6 +37,23 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
   const [safetyContext, setSafetyContext] = useState<SafetyContext | null>(null);
   const [safetyLoading, setSafetyLoading] = useState(false);
   const [showSafety, setShowSafety] = useState(false);
+  const [flightRoute, setFlightRoute] = useState<FlightRoute | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
+
+  // Fetch flight route on mount
+  useEffect(() => {
+    if (!aircraft.callsign) {
+      setFlightRoute(null);
+      return;
+    }
+
+    setRouteLoading(true);
+    fetch(`/api/v1/aircraft/${aircraft.icao_hex}/route`)
+      .then(res => res.json())
+      .then(data => setFlightRoute(data))
+      .catch(() => setFlightRoute(null))
+      .finally(() => setRouteLoading(false));
+  }, [aircraft.icao_hex, aircraft.callsign]);
 
   // Fetch safety context when expanded
   useEffect(() => {
@@ -98,6 +125,56 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
           </button>
         </div>
       </div>
+
+      {/* Route Information */}
+      {(flightRoute || routeLoading) && (
+        <div className="p-4 border-b border-surface-3 bg-surface-1">
+          <div className="text-xs text-slate-500 uppercase tracking-wider mb-3">Flight Info</div>
+          {routeLoading ? (
+            <div className="text-xs text-slate-500">Loading flight info...</div>
+          ) : (
+            <>
+              {/* Operator */}
+              {flightRoute?.operator && (
+                <div className="mb-3 text-center">
+                  <div className="text-2xs text-slate-500 uppercase">Operator</div>
+                  <div className="text-lg text-amber-400">{flightRoute.operator}</div>
+                </div>
+              )}
+              {/* Route if available */}
+              {(flightRoute?.origin || flightRoute?.destination) && (
+                <div className="flex items-center justify-between gap-4">
+                  <div className="text-center flex-1">
+                    <div className="text-2xs text-slate-500 uppercase">Origin</div>
+                    <div className="font-mono text-lg text-emerald-400">
+                      {flightRoute.origin || '—'}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <div className="w-8 h-px bg-slate-600" />
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                    <div className="w-8 h-px bg-slate-600" />
+                  </div>
+                  <div className="text-center flex-1">
+                    <div className="text-2xs text-slate-500 uppercase">Destination</div>
+                    <div className="font-mono text-lg text-cyan-400">
+                      {flightRoute.destination || '—'}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Note about route availability */}
+              {!flightRoute?.origin && !flightRoute?.destination && flightRoute?.operator && (
+                <div className="text-2xs text-slate-600 text-center mt-2">
+                  Route data not available from public APIs
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Current State */}
       <div className="p-4 border-b border-surface-3">

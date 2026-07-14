@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from typing import List, Optional
 from datetime import datetime, timedelta
+import httpx
+import asyncio
 
 from ..core.database import get_db
 from ..models import Aircraft, AircraftPosition, Anomaly, AnomalyType, AnomalySeverity
@@ -12,6 +14,10 @@ from ..schemas import (
     FlightTrailResponse,
     StatsResponse,
 )
+
+# Cache for flight routes to reduce API calls
+_route_cache: dict[str, tuple[dict, datetime]] = {}
+ROUTE_CACHE_TTL = timedelta(minutes=15)
 
 router = APIRouter(prefix="/aircraft", tags=["aircraft"])
 
@@ -147,3 +153,84 @@ def get_stats(db: Session = Depends(get_db)):
         critical_anomalies=critical_anomalies,
         last_updated=now,
     )
+
+
+@router.get("/{icao_hex}/route")
+async def get_flight_route(icao_hex: str, db: Session = Depends(get_db)):
+    """Get departure/arrival airports for a flight."""
+    icao_hex = icao_hex.upper()
+
+    # Get aircraft from DB to get callsign
+    aircraft = db.query(Aircraft).filter(Aircraft.icao_hex == icao_hex).first()
+    if not aircraft:
+        raise HTTPException(status_code=404, detail="Aircraft not found")
+
+    callsign = (aircraft.callsign or "").strip()
+    if not callsign:
+        return {"origin": None, "destination": None, "callsign": None, "error": "No callsign available"}
+
+    # Check cache
+    cache_key = callsign
+    if cache_key in _route_cache:
+        cached_data, cached_time = _route_cache[cache_key]
+        if datetime.utcnow() - cached_time < ROUTE_CACHE_TTL:
+            return cached_data
+
+    # Decode airline from callsign prefix
+    airline_codes = {
+        "AAL": "American Airlines", "DAL": "Delta Air Lines", "UAL": "United Airlines",
+        "SWA": "Southwest Airlines", "JBU": "JetBlue Airways", "ASA": "Alaska Airlines",
+        "NKS": "Spirit Airlines", "FFT": "Frontier Airlines", "HAL": "Hawaiian Airlines",
+        "VRD": "Virgin America", "SKW": "SkyWest Airlines", "RPA": "Republic Airways",
+        "JIA": "PSA Airlines", "ENY": "Envoy Air", "PDT": "Piedmont Airlines",
+        "EJA": "NetJets", "N": "General Aviation",
+    }
+
+    operator = None
+    for code, name in airline_codes.items():
+        if callsign.startswith(code):
+            operator = name
+            break
+
+    # Try multiple sources for route data
+    result = {"callsign": callsign, "origin": None, "destination": None, "operator": operator}
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            # Try OpenSky Network first
+            try:
+                response = await client.get(
+                    f"https://opensky-network.org/api/routes?callsign={callsign}"
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    route = data.get("route", [])
+                    if route:
+                        result["origin"] = route[0] if len(route) > 0 else None
+                        result["destination"] = route[-1] if len(route) > 1 else None
+                        result["route"] = route
+            except Exception:
+                pass
+
+            # Try ADS-B Exchange if OpenSky failed
+            if not result["origin"]:
+                try:
+                    response = await client.get(
+                        f"https://globe.adsbexchange.com/re-api/?find_callsign={callsign}",
+                        headers={"Accept": "application/json"}
+                    )
+                    if response.status_code == 200 and response.text:
+                        data = response.json()
+                        if isinstance(data, list) and data:
+                            flight = data[0]
+                            result["origin"] = flight.get("orig", flight.get("dep"))
+                            result["destination"] = flight.get("dest", flight.get("arr"))
+                except Exception:
+                    pass
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    # Cache the result
+    _route_cache[cache_key] = (result, datetime.utcnow())
+    return result

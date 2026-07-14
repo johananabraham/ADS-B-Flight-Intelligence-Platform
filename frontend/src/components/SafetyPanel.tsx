@@ -44,7 +44,7 @@ export function SafetyPanel({ onClose }: SafetyPanelProps) {
   }, [query]);
 
   return (
-    <div className="absolute top-4 right-4 w-[500px] max-h-[80vh] bg-gray-900/95 rounded-lg border border-cyan-500/30 shadow-xl overflow-hidden flex flex-col">
+    <div className="absolute top-16 right-4 w-[500px] max-h-[70vh] z-[1001] bg-gray-900/95 rounded-lg border border-cyan-500/30 shadow-xl overflow-hidden flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-cyan-500/30">
         <h2 className="text-lg font-semibold text-cyan-400">Safety Research</h2>

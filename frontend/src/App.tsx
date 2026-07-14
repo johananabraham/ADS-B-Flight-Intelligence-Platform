@@ -233,12 +233,8 @@ function AppContent() {
         </div>
       )}
 
-      {/* Safety Research panel - right side (conditional) */}
-      {showSafety && (
-        <div className="z-[1001]">
-          <SafetyPanel onClose={() => setShowSafety(false)} />
-        </div>
-      )}
+      {/* Safety Research panel - positioned by component */}
+      {showSafety && <SafetyPanel onClose={() => setShowSafety(false)} />}
 
       {/* Connection status indicator */}
       <div className={`absolute top-16 right-4 z-[999] flex items-center gap-2 px-2 py-1 rounded text-2xs ${
