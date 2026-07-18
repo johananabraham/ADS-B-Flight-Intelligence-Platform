@@ -1,0 +1,87 @@
+# Mode S Decoder - Multi-instance deployment with load balancing
+# Phase 3: Resilience & Load Balancing
+
+services:
+  # Load balancer (nginx)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - decoder1
+      - decoder2
+      - decoder3
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Decoder instance 1
+  decoder1:
+    build: .
+    expose:
+      - "8080"
+    environment:
+      - PORT=8080
+      - INSTANCE_ID=decoder1
+    restart: unless-stopped
+
+  # Decoder instance 2
+  decoder2:
+    build: .
+    expose:
+      - "8080"
+    environment:
+      - PORT=8080
+      - INSTANCE_ID=decoder2
+    restart: unless-stopped
+
+  # Decoder instance 3
+  decoder3:
+    build: .
+    expose:
+      - "8080"
+    environment:
+      - PORT=8080
+      - INSTANCE_ID=decoder3
+    restart: unless-stopped
+
+  # Prometheus (for Phase 4 - Observability)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - decoder1
+      - decoder2
+      - decoder3
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # Grafana (for Phase 4 - Observability)
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+volumes:
+  grafana-data:

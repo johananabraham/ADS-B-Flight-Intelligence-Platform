@@ -19,6 +19,11 @@ node_modules/
 # Build outputs
 /frontend/dist
 *.log
+*.o
+*.a
+/decoder/modes_decode
+/decoder/modes_server
+/decoder/load_generator
 
 # IDE
 .vscode/

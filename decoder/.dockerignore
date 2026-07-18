@@ -1,0 +1,29 @@
+# Build artifacts
+build/
+*.o
+*.a
+modes_decode
+modes_server
+libmodes.a
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docker
+docker-compose.yml
+Dockerfile
+
+# Docs
+*.md
+DECODER_PLAN.md
+
+# Config files (not needed in image)
+prometheus.yml
+nginx.conf

@@ -1,0 +1,28 @@
+# Prometheus configuration for Mode S Decoder monitoring
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Scrape decoder instances
+  - job_name: 'modes-decoder'
+    static_configs:
+      - targets:
+          - 'decoder1:8080'
+          - 'decoder2:8080'
+          - 'decoder3:8080'
+    metrics_path: /metrics
+    scrape_interval: 5s
+
+  # Scrape nginx (if available)
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    metrics_path: /nginx_status
+    scrape_interval: 10s
+
+  # Self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
