@@ -44,6 +44,27 @@ Real-time aircraft tracking and anomaly detection system using Software Defined 
 
 ## Quick Start
 
+### Demo mode (no SDR hardware required)
+
+Run the complete platform with a deterministic six-aircraft replay feed:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d
+```
+
+Open [http://localhost:5173](http://localhost:5173) (or `http://127.0.0.1:5173`
+if another local Node process is using `localhost`). The map is clearly marked
+`REPLAY DATA`; aircraft positions, altitude, and callsigns are simulated and must
+not be interpreted as live traffic.
+
+Stop the demo with:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.demo.yml down
+```
+
+### Live RF mode
+
 ### Prerequisites
 
 - RTL-SDR USB dongle

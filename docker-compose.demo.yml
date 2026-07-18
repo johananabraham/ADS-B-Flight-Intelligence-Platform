@@ -1,0 +1,29 @@
+services:
+  replay:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.replay
+    container_name: adsb-replay
+    environment:
+      REPLAY_PORT: 30003
+      REPLAY_INTERVAL_SECONDS: 1
+      REPLAY_RESET_SECONDS: 300
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 30003), 2).close()"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  ingestion:
+    environment:
+      DUMP1090_HOST: replay
+      DUMP1090_PORT: 30003
+    depends_on:
+      db:
+        condition: service_healthy
+      replay:
+        condition: service_healthy
+
+  frontend:
+    command: ./node_modules/.bin/vite --host 0.0.0.0 --config vite.demo.config.ts
