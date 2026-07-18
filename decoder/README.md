@@ -73,6 +73,7 @@ Tested on Apple Silicon (M-series):
 - **Decoder correctness suite**: `validation_test` checks decoded fields against published Mode S/ADS-B reference values; this is separate from HTTP success and from dump1090 comparison
 - **Live instance failure**: 3,783/3,788 HTTP requests succeeded (99.87%) while one of three decoder instances was stopped; health remained HTTP 200
 - **dump1090 comparison**: callsign, altitude, ground speed, track, and vertical rate matched dump1090-fa 11.0 on published reference frames
+- **Portable tests**: 51/51 CTest/GoogleTest cases pass in a clean Debian/GCC container
 
 See `docs/validation-results.md` for the exact scope and limitations of these results.
 

@@ -25,9 +25,9 @@ protected:
     std::vector<std::string> valid_df17_messages = {
         "8D4840D6202CC371C32CE0576098",  // Aircraft identification
         "8D40621D58C382D690C8AC2863A7",  // Airborne position
-        "8D4840D69909089070043CDAFA85",  // Airborne velocity
+        "8D485020994409940838175B284F",  // Airborne velocity
         "8DA05F219B06B6AF189400CBC33F",  // Airborne velocity
-        "8D4CA2E858B98506F2784F7C0C30",  // Airborne position
+        "8D40621D58C386435CC412692AD6",  // Airborne position (odd frame)
     };
 
     // Invalid messages (modified CRC)

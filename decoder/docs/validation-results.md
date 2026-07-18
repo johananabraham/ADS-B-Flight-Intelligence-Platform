@@ -2,6 +2,12 @@
 
 Recorded July 18, 2026 on Apple Silicon.
 
+## Portable test suite
+
+All 51 CTest/GoogleTest cases passed in a clean Debian Bookworm container using
+GCC. The container build also caught and corrected a missing standard-library
+include and two invalid CRC fixtures that the host-only build had not exposed.
+
 ## Live instance failure
 
 `decoder2` was stopped three seconds into a 20-second, 300-request/second load
