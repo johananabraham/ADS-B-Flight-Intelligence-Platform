@@ -4,9 +4,9 @@ Last updated: 2026-07-18
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/replay-demo-mode`
+Current branch: `codex/track-observation-contract`
 
-Current commit before this documentation update: `8b1f07d`
+Branch point before Phase 0 implementation: `fc21cf1`
 
 ## 0. Start Here — Explanation for a Junior Developer
 
@@ -230,6 +230,26 @@ Not yet production-ready:
 - The synchronous OpenAI client and synchronous SQL session are called from async
   endpoints and should be isolated or converted before load testing.
 - The UI does not expose citations as first-class clickable source objects.
+
+### Integrity roadmap Phase 0 checkpoint
+
+Implemented on `codex/track-observation-contract`:
+
+- Baseline ADS-B integrity threat model and explicit non-goals.
+- ADR separating immutable source observations from derived system tracks.
+- Versioned Pydantic `TrackObservation` 1.0 contract.
+- Source-specific provenance for live RF, simulation, recorded replay, and external
+  feeds.
+- Timing-quality classification for stale, clock-skewed, and out-of-order reports.
+- SBS-state adapter from the current ingestion field names to the shared contract.
+- Unit tests for identity normalization, partial reports, invalid positions,
+  timezone requirements, provenance requirements, timing evidence, and SBS mapping.
+
+Not implemented in this checkpoint:
+
+- Observation database table or migration.
+- Replacement of the existing mutable aircraft-state ingestion path.
+- Kinematic anomaly rules, ML, external corroboration, or trust scoring.
 
 ## 3. Known Risks and Technical Debt
 

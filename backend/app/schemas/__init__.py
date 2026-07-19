@@ -10,6 +10,12 @@ from .aircraft import (
     StatsResponse,
     BoundsRequest,
 )
+from .observation import (
+    ObservationProvenance,
+    ObservationQualityFlag,
+    ObservationSourceType,
+    TrackObservation,
+)
 
 __all__ = [
     "AircraftBase",
@@ -22,4 +28,8 @@ __all__ = [
     "DailySummaryResponse",
     "StatsResponse",
     "BoundsRequest",
+    "ObservationProvenance",
+    "ObservationQualityFlag",
+    "ObservationSourceType",
+    "TrackObservation",
 ]
