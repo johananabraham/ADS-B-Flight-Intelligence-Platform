@@ -6,14 +6,114 @@ Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
 Current branch: `codex/replay-demo-mode`
 
-Current commit: `ce86718` (`feat: add hardware-free ADS-B replay demo`)
+Current commit before this documentation update: `8b1f07d`
+
+## 0. Start Here — Explanation for a Junior Developer
+
+### What is this project?
+
+Airplanes broadcast short radio messages called **ADS-B messages**. Those messages
+usually include information such as the airplane's identity, position, altitude,
+speed, and direction.
+
+This project receives or generates those messages, turns them into aircraft tracks,
+stores them, displays them on a map, and looks for evidence that a track may be
+incorrect or untrustworthy.
+
+In very simple terms, the finished product should answer four questions:
+
+1. **What aircraft can the system see?**
+2. **Where are they going?**
+3. **Does the reported movement make sense, and do other sources agree?**
+4. **Why did the system trust or distrust a track?**
+
+It also includes a safety research assistant that can search NTSB accident reports
+and FAA regulations. That assistant is useful after an operator sees an event and
+wants historical or regulatory context. It is not the source of the live aircraft
+data and it is not the main detection system.
+
+### How does it work today?
+
+```text
+Real mode                         Hardware-free demo mode
+
+Aircraft radio signal             Python aircraft simulator
+        |                                   |
+RTL-SDR + dump1090                fake-but-valid SBS messages
+        |                                   |
+        +---------------+-------------------+
+                        |
+                ingestion service
+                        |
+                 PostgreSQL database
+                        |
+                  FastAPI backend
+                        |
+            REST API + live WebSocket
+                        |
+             React aircraft map and UI
+```
+
+The demo does not secretly insert aircraft directly into the frontend. It generates
+the same kind of text messages the real receiver would provide, then sends them
+through the normal ingestion, database, API, and WebSocket path. This makes it useful
+for development and demonstrations when the RTL-SDR dongle is not connected.
+
+### What does “integrity” mean here?
+
+Integrity means deciding whether the aircraft data appears consistent and
+trustworthy. ADS-B messages are not authenticated. Receiving a valid-looking
+message does not prove that every field is true.
+
+The planned integrity engine will check several kinds of evidence:
+
+```text
+Does the movement obey reasonable physics?       kinematic rules
+Does the pattern resemble injected test attacks? ML classifier
+Does another licensed data source agree?         cross-source corroboration
+Is the local receiver station healthy?           ESP32/receiver telemetry
+Is the information fresh and complete?           source quality checks
+```
+
+The output should never be a mysterious red or green number. The UI should explain
+which checks passed, failed, or lacked enough information.
+
+### Important beginner vocabulary
+
+- **Decoder:** converts raw Mode S/ADS-B messages into useful fields.
+- **Observation:** one report from one source at one time.
+- **Track:** the system's changing history/estimate for one aircraft.
+- **Anomaly:** something unusual; it is not automatically an attack.
+- **Corroboration:** checking whether an independent source agrees.
+- **False positive:** normal behavior incorrectly flagged as suspicious.
+- **Replay:** saved messages played again using their timestamps.
+- **Simulation:** newly generated fictional aircraft data.
+- **RAG:** retrieves relevant documents before an LLM writes an answer.
+- **Grounded answer:** an answer supported by cited source documents.
+- **Deployment:** running the product on a server so other people can use it.
+
+### User's goal and constraints
+
+- Learn by building a real system over several weeks, not by generating shallow
+  features in a few prompts.
+- Produce a polished, deployable portfolio project especially relevant to Anduril
+  and similar aerospace/defense companies.
+- Use the hardware already owned: one RTL-SDR and one ESP32; avoid unnecessary
+  purchases.
+- Prefer direct, understandable implementations and be able to explain every major
+  architecture decision in an interview.
+- Commit and push frequently on `codex/*` branches.
+- Run tests, builds, Clean Code review, and available security scans at checkpoints.
+- Never claim a metric or capability that was not actually tested and recorded.
+- Eventually deploy a safe public demonstration while keeping development, demo,
+  and real-receiver modes clearly separated.
 
 ## 1. Product Direction
 
-Build a multi-source aviation intelligence platform that accepts live RF, remote
-sensor, recorded, simulated, and internet data; normalizes those sources into one
-track model; detects operational anomalies; and connects live tracks to grounded
-NTSB and FAA safety research.
+Build a deployable ADS-B integrity and aviation intelligence platform that accepts
+live RF, remote sensor, recorded, simulated, and licensed internet data; normalizes
+those sources into one observation model; detects and explains questionable tracks;
+and connects events to grounded NTSB and FAA safety research.
 
 The strongest version of this project is not simply a flight map or a RAG chatbot.
 It is an end-to-end sensor-to-decision system with measurable correctness,
@@ -213,11 +313,292 @@ Week B:
 Do not start by buying unusual RF modules. First prove the edge telemetry path with
 the ESP32 already owned.
 
-## 5. Twelve-Week Expansion Plan
+## 5. Primary Detailed Pathway — ADS-B Integrity Product (14–16 Weeks)
 
-Each phase ends with evidence. A feature is not complete because code exists; it is
-complete when a test, metric, trace, or recorded failure demonstration proves the
-claim.
+This is the main build order. Do not work on every subsystem at once. Finish each
+phase with evidence, update this handoff, commit it, and only then move forward.
+
+### Phase 0 — Threat model and shared data contract (Week 1)
+
+Purpose: define what the system is trying to detect before writing detection code.
+
+Build:
+
+- A threat model covering abrupt and gradual position manipulation, altitude and
+  velocity manipulation, ghost tracks, stale-message replay, ICAO identity conflict,
+  delayed/missing messages, receiver outage, and external-source disagreement.
+- A versioned `TrackObservation` schema containing source ID, receiver ID, ICAO,
+  observation time, receive time, position, altitude, velocity, heading, vertical
+  rate, optional signal data, quality flags, and provenance.
+- Separate database concepts for raw observations, system tracks, anomaly evidence,
+  and operator decisions.
+- Architecture decision records for simulation versus replay and corroboration
+  versus formal sensor fusion.
+
+Verify:
+
+- Schema validation tests cover missing, stale, malformed, and out-of-order data.
+- Every existing source can be mapped to the contract without losing provenance.
+
+Junior-dev lesson: this prevents each later feature from inventing a different
+meaning for “aircraft data.”
+
+### Phase 1 — Reproducible foundation and CI (Week 2)
+
+Purpose: make the current product trustworthy to change.
+
+Build:
+
+- End-to-end demo verification proving replay TCP, ingestion, PostgreSQL, REST,
+  WebSocket, and changing positions.
+- Root GitHub Actions workflow for decoder tests, replay tests, backend/API tests,
+  TypeScript build, linting, Compose validation, Docker builds, dependency scanning,
+  and secret scanning.
+- Alembic migrations and a migration smoke test.
+- A claims/evidence table linking each README statement to its test artifact.
+- Dedicated dependency-upgrade branch for the known npm audit findings.
+
+Verify:
+
+- A clean clone can start and verify the demo with documented commands.
+- CI is green without relying on local untracked files or a pre-populated database.
+
+### Phase 2 — Actual recorded replay and operator controls (Week 3)
+
+Purpose: create repeatable scenarios for detection development.
+
+Build:
+
+- A versioned recording format containing messages, original timestamps, source,
+  receiver, capture metadata, and license/provenance.
+- A legally shareable sample recording. If no real recording can be redistributed,
+  check in a clearly labeled generated fixture and document how users create their
+  own local recording.
+- Replay controls: pause, resume, restart, seek, and 0.5x/1x/2x/10x speed.
+- Explicit UI states for `LIVE RF`, `SIMULATION`, `RECORDED REPLAY`, and external
+  live data.
+
+Verify:
+
+- The same recording produces the same ordered observations on repeated runs.
+- Timing and seek integration tests pass within documented tolerance.
+
+### Phase 3 — Deterministic kinematic plausibility engine (Weeks 4–5)
+
+Purpose: detect physically inconsistent movement without machine learning.
+
+Build:
+
+- Compute time delta, great-circle distance, implied ground speed, acceleration,
+  turn rate, climb/descent rate, and disagreement with reported velocity.
+- Start with conservative, documented thresholds; do not imply that one threshold
+  represents every aircraft type.
+- Return structured evidence: rule, measured value, threshold, source observations,
+  confidence/quality, and explanation.
+- Handle clock skew, duplicate messages, missing positions, stale data, and tiny time
+  deltas without generating divide-by-zero or alert storms.
+
+Verify:
+
+- Unit/property tests for normal tracks, teleportation, abrupt altitude changes,
+  impossible speed, delayed messages, duplicates, and gradual drift.
+- Run against a real benign capture and report alerts per flight hour plus manually
+  reviewed examples. This is a benign-data baseline, not proof that the capture had
+  no malicious traffic.
+
+### Phase 4 — Synthetic attack dataset and evaluation harness (Weeks 6–7)
+
+Purpose: create a reproducible test laboratory without claiming real spoofing data.
+
+Build:
+
+- Transform complete track/capture sessions into labeled test cases for abrupt and
+  gradual position, altitude, and velocity manipulation; ghost tracks; replay; and
+  identity conflict.
+- Split train/validation/test by original flight or capture session before generating
+  variants. Never randomly split individual messages from the same flight.
+- Record generator version, random seed, source recording hash, attack parameters,
+  and expected detection window.
+- Include realistic noise, missing messages, latency, and legitimate edge cases.
+
+Verify:
+
+- Dataset generation is deterministic from seed and manifest.
+- No source flight/capture crosses evaluation splits.
+- Metrics are itemized by attack type and obvious versus subtle variants.
+
+### Phase 5 — Interpretable ML anomaly model (Weeks 8–9)
+
+Purpose: test whether learned patterns improve over deterministic rules.
+
+Build:
+
+- Start with logistic regression, decision tree, and random forest baselines.
+- Features may include motion residuals, message timing, consistency, source quality,
+  and kinematic outputs, but document circular features that directly mirror the
+  synthetic generator.
+- Version model, feature schema, dataset manifest, code commit, and evaluation result.
+- Add an abstain/unknown path when required features are missing.
+
+Verify:
+
+- Compare every model against “always normal” and Phase 3 rules-only baselines.
+- Report precision, recall, F1, false alerts per flight hour, detection delay, and
+  results per attack type—not only aggregate accuracy.
+- Keep ML only if it adds measurable value on held-out capture sessions.
+
+### Phase 6 — External cross-source corroboration (Week 10)
+
+Purpose: determine whether a licensed external source agrees with the local feed.
+
+Build:
+
+- An adapter for one permitted external aviation data source, initially OpenSky if
+  its current limits and terms fit the use case.
+- Match observations using ICAO, time, position, altitude, and freshness tolerances.
+- Produce `CORROBORATED`, `LOCAL_ONLY`, `EXTERNAL_ONLY`, `CONFLICTING`, `STALE`, and
+  `UNAVAILABLE` states.
+- Rate-limit handling, caching, backoff, circuit breaker, and source-health metrics.
+
+Verify:
+
+- Multi-hour comparison artifact records coverage, latency, and each state rate.
+- Manually review a sample of conflicts.
+- Demonstrate that external API failure produces `UNAVAILABLE`, not “suspicious.”
+
+Use the phrase **cross-source corroboration** until the system actually performs
+state estimation with observation association and uncertainty. Do not market a
+simple API comparison as full sensor fusion.
+
+### Phase 7 — ESP32 edge-station telemetry (Weeks 11–12)
+
+Purpose: add honest embedded and distributed-system work using existing hardware.
+
+Build:
+
+- ESP-IDF firmware publishing node ID, firmware version, uptime, reconnect count,
+  RSSI, and any measurements the actual board/sensors can provide.
+- MQTT over TLS with certificate validation, per-node credentials, last-will event,
+  bounded offline queue, exponential backoff, watchdog, and status LED states.
+- Mosquitto, backend MQTT consumer, sensor node tables, and fleet-health UI.
+- Correlate node health with decoder message rate/CRC metrics to distinguish quiet
+  airspace, RF/receiver degradation, and network/node failure where evidence allows.
+
+Verify:
+
+- Physically disconnect Wi-Fi or ESP32 power and record detection time, data loss,
+  reconnect time, and queued-message behavior.
+- Attempt unauthorized topic access and verify denial.
+
+The ESP32 does not receive 1090 MHz ADS-B. It monitors and communicates station
+health. A Raspberry Pi/mini PC plus SDR or a dedicated receiver still performs RF
+reception and decoding.
+
+### Phase 8 — Explainable trust assessment and operator UX (Week 13)
+
+Purpose: combine evidence without hiding it behind a magic score.
+
+Build:
+
+- Store component outputs separately: kinematic evidence, ML probability,
+  corroboration state, source freshness, and station health.
+- Add an overall state such as `TRUSTED`, `QUESTIONABLE`, `LOW_CONFIDENCE`, or
+  `INSUFFICIENT_DATA`; calibrate any numeric score against evaluation data.
+- UI shows color/state plus exact reasons, measured values, source age, and evidence
+  timeline.
+- Operator can acknowledge, annotate, filter, inspect, and export an event.
+
+Verify:
+
+- UI tests prove component evidence is visible.
+- Scenario tests cover low trust, source unavailable, receiver degraded, and
+  insufficient data without conflating them.
+- Conduct a small usability review: can another developer explain why a track was
+  flagged without reading backend logs?
+
+### Phase 9 — Complete grounded safety research (Week 14, then ongoing)
+
+Purpose: allow operators to investigate historical and regulatory context.
+
+Build in this order:
+
+1. Idempotent NTSB and eCFR ingestion with source manifests and validation reports.
+2. A reviewed 30-case baseline evaluation set.
+3. SQL exact-match, dense retrieval Recall@3/5, citation precision/recall,
+   faithfulness, latency, and cost metrics.
+4. Clickable citations and exact source spans/effective dates in the UI.
+5. Only then test BM25+dense fusion, reranking, parent/child retrieval, temporal CFR
+   lookup, citation verification, or a causal knowledge graph.
+
+Verify:
+
+- Re-ingestion is idempotent and all answer sources are versioned.
+- Advanced retrieval is retained only if it beats the checked-in baseline.
+
+The RAG agent explains and researches; it does not decide whether live ADS-B is
+authentic and it does not replace deterministic safety-critical logic.
+
+### Phase 10 — Deployment, security, and portfolio release (Weeks 15–16)
+
+Purpose: make the project usable by someone other than its developer.
+
+Build:
+
+- Production images: frontend built to static files and served by nginx/Caddy;
+  backend without reload or source bind mounts; non-root containers.
+- Managed PostgreSQL or a backed-up persistent database; persistent vector data.
+- HTTPS, restricted CORS, authentication/RBAC, rate limits, request limits, audit
+  logs, secure headers, and secret storage.
+- Public deployment defaults to simulation or a legally permitted delayed/external
+  feed. Do not expose a home SDR, database, MQTT broker, or ESP32 directly to the
+  public internet.
+- CI builds versioned images, deploys a staging environment, runs migrations and
+  smoke tests, promotes the release, then polls `/health` with rollback on failure.
+- Prometheus/OpenTelemetry/Langfuse where applicable, Grafana dashboards, structured
+  logs, correlation IDs, backups, restore rehearsal, and cost budget/alerts.
+
+Suggested deployment shape:
+
+```text
+Public browser
+      |
+ HTTPS reverse proxy / static frontend
+      |
+  authenticated FastAPI service
+      |
+ managed PostgreSQL + persistent vector data
+
+Home/remote receiver and ESP32
+      |
+ outbound-only TLS/VPN connection
+      |
+ private ingestion/MQTT endpoint
+```
+
+Verify:
+
+- Deploy from a clean release tag.
+- Run API/UI smoke tests against staging and production.
+- Execute backup restore, service restart, bad-deploy rollback, rate-limit, and
+  dependency/security scans.
+- Document monthly cost, data licensing, privacy, and known limitations.
+
+Portfolio release:
+
+- 60–90 second demo covering injected test anomaly, source disagreement, and edge
+  outage/recovery.
+- Architecture diagram, threat model, evaluation report, failure-test report,
+  architecture decision records, and résumé claims/evidence table.
+
+This is the deployment target, not a claim that public production deployment exists
+today.
+
+## 6. Appendix — Earlier Broad Backlog (Superseded as a Schedule)
+
+This section preserves useful ideas from the earlier roadmap, but it is not a second
+schedule. Follow Section 5 as the authoritative order. Pull items from this appendix
+only when they support the active Section 5 phase. A feature is complete only when a
+test, metric, trace, or recorded failure demonstration proves the claim.
 
 ### Phase 1 — Reproducible demo and CI foundation (Week 1)
 
@@ -431,7 +812,7 @@ Proof:
 
 Résumé signal: ownership of a complete, operated product.
 
-## 6. RAG Decision Framework
+## 7. RAG Decision Framework
 
 The RAG system is worth extending because aviation safety questions combine exact
 structured filters, long narratives, and time-sensitive regulations. However, RAG
@@ -455,7 +836,7 @@ Potential non-RAG additions with greater recruiter value than another prompt twe
 - Fault injection with measured recovery.
 - Operator workflows: acknowledge, investigate, annotate, export, and share a case.
 
-## 7. Product UX Backlog
+## 8. Product UX Backlog
 
 Prioritize operator clarity:
 
@@ -471,7 +852,7 @@ Prioritize operator clarity:
 
 Avoid adding decorative dashboards with no operational decision behind them.
 
-## 8. Recruiter and Interview Positioning
+## 9. Recruiter and Interview Positioning
 
 The most compelling story is:
 
@@ -528,18 +909,20 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
 - A short case study: problem, constraints, design, what broke, measured results,
   and what would change at 100 sensors or 10,000 tracks.
 
-## 9. Immediate Next Actions
+## 10. Immediate Next Actions
 
 1. Merge or open a PR for `codex/replay-demo-mode` after review.
-2. Add the automated end-to-end demo verifier and root CI workflow.
-3. Create the dedicated dependency-upgrade/security branch.
-4. Build actual recorded SBS replay and timeline controls.
-5. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
+2. Start Section 5 Phase 0: threat model and `TrackObservation` contract. Do not
+   begin ML yet.
+3. Add the automated end-to-end demo verifier and root CI workflow.
+4. Create the dedicated dependency-upgrade/security branch.
+5. Build actual recorded SBS replay and timeline controls.
+6. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
    subtree after confirming the board model and available sensors.
-6. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
+7. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
    harness exist.
 
-## 10. Handoff Rules for the Next Engineer or Agent
+## 11. Handoff Rules for the Next Engineer or Agent
 
 - Preserve unrelated untracked files unless explicitly authorized.
 - Work on `codex/*` feature branches and commit each verified checkpoint.
@@ -551,3 +934,23 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
 - Keep changes surgical; do not mix dependency upgrades with product features.
 - Update this file after every milestone with commit, commands, evidence, known
   failures, and the next safe action.
+
+## 12. Copy/Paste Context for a New Chat
+
+Use this when starting a new Codex chat:
+
+> Work in the ADS-B Flight Intelligence Platform repository. Read `CLAUDE.md` and
+> `HANDOFF.md` completely before changing files. The product goal is a deployable,
+> Anduril-relevant civilian ADS-B integrity platform: multi-source observations,
+> deterministic kinematic checks, leakage-safe synthetic/ML evaluation,
+> cross-source corroboration, ESP32 station-health telemetry, explainable operator
+> trust states, and a grounded NTSB/eCFR research assistant. Section 5 of
+> `HANDOFF.md` is the authoritative 14–16 week order. First inspect git status and
+> preserve unrelated untracked `AGENTS.md`, `DECODER_PLAN.md`, and `graphify-out/`.
+> Use `codex/*` branches, make frequent checkpoint commits, run proportional tests,
+> builds, Clean Code review, and available security scans, and never claim unmeasured
+> results. Current hardware-free demo uses
+> `docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d`
+> and is simulation, not live traffic. The current next engineering phase is the
+> threat model and versioned `TrackObservation` data contract. Deployment is planned
+> for Section 5 Phase 10; public production deployment is not complete today.
