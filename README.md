@@ -79,8 +79,13 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml \
 python3 scripts/verify_recorded_replay.py
 ```
 
+The website is labeled `RECORDED REPLAY` and adds an operator timeline with
+pause/resume, restart, seek, and 0.5x/1x/2x/10x playback controls. Commands travel
+through the public FastAPI backend to an internal replay-control service, so the
+browser never receives direct access to the replay container.
+
 The verifier requires exactly six immutable observations, six unique IDs, two
-aircraft, and the expected original timestamp range. See
+aircraft, the expected original timestamp range, and working replay controls. See
 `docs/recording-format-v1.md` for the format and integrity rules.
 
 Stop the demo with:
