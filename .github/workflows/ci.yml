@@ -98,7 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Start hardware-free demo
-        run: docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d
+        run: docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build --renew-anon-volumes -d
       - name: Apply database migration
         run: docker compose exec -T backend alembic -c alembic.ini upgrade head
       - name: Verify the complete data path

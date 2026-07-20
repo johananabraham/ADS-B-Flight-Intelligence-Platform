@@ -49,7 +49,7 @@ Real-time aircraft tracking and anomaly detection system using Software Defined 
 Run the complete platform with a deterministic six-aircraft replay feed:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d
+docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build --renew-anon-volumes -d
 ```
 
 Open [http://localhost:5173](http://localhost:5173) (or `http://127.0.0.1:5173`

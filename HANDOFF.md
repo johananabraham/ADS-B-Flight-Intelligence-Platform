@@ -1,10 +1,10 @@
 # Project Handoff and Expansion Roadmap
 
-Last updated: 2026-07-18
+Last updated: 2026-07-19
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/track-observation-contract`
+Current branch: `codex/dependency-security-upgrades`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -188,7 +188,7 @@ than ten shallow AI features.
 Start it with:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d
+docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build --renew-anon-volumes -d
 ```
 
 Open `http://localhost:5173`. On the current development machine, use
@@ -278,6 +278,28 @@ Implemented on `codex/ci-demo-verifier`:
 - Draft PR #1 contains both Phase 0 commits; `actionlint` 1.7.7 validates the
   workflow, and manual workflow dispatch is available after registration on main.
 
+Implemented on `codex/dependency-security-upgrades`:
+
+- Upgraded vulnerable backend packages including FastAPI, Pydantic,
+  python-dotenv, scikit-learn, pytest, and their compatible dependency graph.
+- Migrated Pydantic settings/ORM schemas and SQLAlchemy declarative imports away
+  from APIs deprecated by the upgraded versions.
+- Upgraded the frontend toolchain to Node 20.19, Vite 7.3.6, ESLint 9.39.5,
+  TypeScript 5.9.3, and TypeScript ESLint 8.64.0.
+- Migrated ESLint to flat configuration and made Vite's path aliases valid in an
+  ES module environment.
+- Frontend container now uses reproducible `npm ci`; `.dockerignore` prevents host
+  `node_modules` from replacing Linux container binaries.
+- Documented and CI demo startup renew anonymous dependency volumes so a rebuilt
+  image cannot silently run packages retained from an older container.
+- Security result: Python changed from 11 known dependency vulnerabilities to zero;
+  npm changed from eight findings (seven high, one moderate) to zero.
+- Regression evidence: 21 backend tests and Python lint pass; frontend lint and
+  production build pass under Node 20.19.
+- Full rebuilt Compose demo passed with the running Node 20.19.6/Vite 7.3.6
+  frontend, six API aircraft, and 1,545 recent uniquely identified observations
+  across all six simulated aircraft.
+
 Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
@@ -285,10 +307,8 @@ Not implemented in these checkpoints:
 
 ## 3. Known Risks and Technical Debt
 
-- `npm audit` currently reports seven high-severity `minimatch` findings in the
-  lint dependency chain and one moderate Vite/esbuild development-server finding.
-  Available automatic fixes require breaking upgrades; handle them in a dedicated
-  dependency-upgrade branch.
+- The dependency upgrades are verified locally but still require a GitHub-hosted
+  CI run after their branch is pushed and connected to a pull request.
 - Docker Scout could not run because Docker Desktop is not authenticated.
 - Root Compose contains development credentials and exposes PostgreSQL publicly on
   the host. Move secrets to environment/secret storage and bind development ports
@@ -302,9 +322,8 @@ Not implemented in these checkpoints:
 - The new root CI workflow still needs its first successful GitHub-hosted run after
   this branch is pushed. Authentication, authorization, and rate limiting remain
   unimplemented.
-- A 2026-07-19 `pip-audit` found 11 known vulnerabilities in five existing pinned
-  packages: FastAPI, Starlette, python-dotenv, scikit-learn, and pytest. Upgrade
-  them on a dedicated branch with API and model regression tests.
+- The local host still has Node 18.12.1, which is too old for the upgraded frontend;
+  use the Node 20.19 container or install Node 20.19+ for host-side frontend work.
 - Data-source identity is a frontend build-time label. It should eventually come
   from a signed backend source-status API.
 - Simulator aircraft are fictional. Do not describe demo traffic as captured or
@@ -1009,7 +1028,7 @@ Use this when starting a new Codex chat:
 > Use `codex/*` branches, make frequent checkpoint commits, run proportional tests,
 > builds, Clean Code review, and available security scans, and never claim unmeasured
 > results. Current hardware-free demo uses
-> `docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d`
+> `docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build --renew-anon-volumes -d`
 > and is simulation, not live traffic. Phase 0 now includes the threat model,
 > versioned `TrackObservation` contract, append-only persistence, migration, and an
 > isolated 500-message replay smoke test. Root CI and the automated end-to-end

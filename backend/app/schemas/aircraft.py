@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional, List
 from ..models.aircraft import AnomalyType, AnomalySeverity
@@ -21,16 +21,16 @@ class AircraftCreate(AircraftBase):
 
 
 class AircraftResponse(AircraftBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     last_seen: datetime
     first_seen: datetime
     messages_received: int
 
-    class Config:
-        from_attributes = True
-
-
 class AircraftPositionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     icao_hex: str
     latitude: float
     longitude: float
@@ -39,10 +39,6 @@ class AircraftPositionResponse(BaseModel):
     track: Optional[float] = None
     timestamp: datetime
 
-    class Config:
-        from_attributes = True
-
-
 class FlightTrailResponse(BaseModel):
     icao_hex: str
     callsign: Optional[str] = None
@@ -50,6 +46,8 @@ class FlightTrailResponse(BaseModel):
 
 
 class AnomalyResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     icao_hex: str
     callsign: Optional[str] = None
@@ -64,15 +62,13 @@ class AnomalyResponse(BaseModel):
     resolved_at: Optional[datetime] = None
     acknowledged: int
 
-    class Config:
-        from_attributes = True
-
-
 class AnomalyAcknowledge(BaseModel):
     acknowledged: int  # 0=new, 1=acknowledged, 2=dismissed
 
 
 class DailySummaryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     date: datetime
     total_aircraft: int
@@ -81,10 +77,6 @@ class DailySummaryResponse(BaseModel):
     summary_text: Optional[str] = None
     key_events: Optional[dict] = None
     generated_at: datetime
-
-    class Config:
-        from_attributes = True
-
 
 class StatsResponse(BaseModel):
     active_aircraft: int
