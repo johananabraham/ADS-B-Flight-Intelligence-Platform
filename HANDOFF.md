@@ -275,6 +275,8 @@ Implemented on `codex/ci-demo-verifier`:
   169 unique IDs, and all six simulated aircraft represented.
 - In-app browser verification rendered `REPLAY DATA`, six aircraft, live position
   updates, and no browser console errors.
+- Draft PR #1 contains both Phase 0 commits; `actionlint` 1.7.7 validates the
+  workflow, and manual workflow dispatch is available after registration on main.
 
 Not implemented in these checkpoints:
 
