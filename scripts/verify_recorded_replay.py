@@ -8,6 +8,7 @@ import json
 import subprocess
 import time
 from dataclasses import asdict, dataclass
+from urllib.request import Request, urlopen
 
 from verify_demo import fetch_json, fetch_text
 
@@ -21,6 +22,50 @@ class RecordedReplayEvidence:
     observed_aircraft: int
     first_observed_at: str
     last_observed_at: str
+    controls_verified: bool
+
+
+def send_command(api_url: str, action: str, value: float | None = None) -> dict:
+    request = Request(
+        f"{api_url}/api/v1/replay/commands",
+        data=json.dumps({"action": action, "value": value}).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urlopen(request, timeout=5) as response:  # noqa: S310 - local API is explicit input
+        result = json.load(response)
+    if not isinstance(result, dict):
+        raise RuntimeError("replay command returned invalid status")
+    return result
+
+
+def verify_controls(api_url: str) -> None:
+    restarted = send_command(api_url, "restart")
+    if restarted.get("state") != "PLAYING" or restarted.get("position_ms", 1) > 50:
+        raise RuntimeError("restart did not reset and start playback")
+
+    speed = send_command(api_url, "speed", 2)
+    if speed.get("speed") != 2:
+        raise RuntimeError("speed command was not applied")
+
+    paused = send_command(api_url, "pause")
+    time.sleep(0.1)
+    paused_status = fetch_json(f"{api_url}/api/v1/replay/status")
+    if paused_status.get("state") != "PAUSED":
+        raise RuntimeError("pause command was not applied")
+    if paused_status.get("position_ms") != paused.get("position_ms"):
+        raise RuntimeError("playback position changed while paused")
+
+    sought = send_command(api_url, "seek", 1)
+    if sought.get("position_ms") != 1_000 or sought.get("state") != "PAUSED":
+        raise RuntimeError("seek did not preserve paused state at the requested position")
+
+    resumed = send_command(api_url, "resume")
+    if resumed.get("state") != "PLAYING":
+        raise RuntimeError("resume command was not applied")
+
+    send_command(api_url, "speed", 1)
+    send_command(api_url, "restart")
 
 
 def query_recording(database_container: str, recording_id: str) -> tuple[str, ...]:
@@ -83,6 +128,8 @@ def verify_once(args: argparse.Namespace) -> RecordedReplayEvidence:
     if values[3] != args.expected_start or values[4] != args.expected_end:
         raise RuntimeError(f"recorded timestamps were not preserved: {values[3:]!r}")
 
+    verify_controls(args.frontend_url)
+
     return RecordedReplayEvidence(
         recording_id=args.recording_id,
         active_aircraft=len(aircraft),
@@ -91,6 +138,7 @@ def verify_once(args: argparse.Namespace) -> RecordedReplayEvidence:
         observed_aircraft=observed_aircraft,
         first_observed_at=values[3],
         last_observed_at=values[4],
+        controls_verified=True,
     )
 
 

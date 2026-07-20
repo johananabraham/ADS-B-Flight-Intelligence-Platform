@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     # dump1090
     dump1090_url: str = "http://localhost:8080/data/aircraft.json"
+    replay_control_url: str = "http://replay:8081"
 
     # API Keys
     anthropic_api_key: str = ""
