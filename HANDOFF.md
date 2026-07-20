@@ -259,6 +259,23 @@ Implemented on `codex/observation-persistence`:
 - Isolated replay smoke test persisted 500 unique observations across six aircraft;
   the labeled smoke-test rows were deleted afterward.
 
+Implemented on `codex/ci-demo-verifier`:
+
+- Root GitHub Actions workflow for Python, frontend, C++ decoder, security audits,
+  migration SQL, and a complete Docker demo job.
+- Dependency-free `scripts/verify_demo.py` for local and CI evidence collection.
+- ESLint configuration so the existing frontend lint command actually executes.
+- Removed ten pre-existing unused Python imports required to turn on repository lint.
+- Idempotent observation migration supports the current development `create_all`
+  startup order while CI validates the Alembic revision.
+- 21 Python tests pass, Python lint passes, frontend lint passes, and the production
+  frontend build passes.
+- The C++ decoder builds with warnings-as-errors and all 51 CTest cases pass.
+- Fresh Compose verification passed with six API aircraft, 169 recent observations,
+  169 unique IDs, and all six simulated aircraft represented.
+- In-app browser verification rendered `REPLAY DATA`, six aircraft, live position
+  updates, and no browser console errors.
+
 Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
@@ -280,8 +297,9 @@ Not implemented in these checkpoints:
   each holds a multi-aircraft transaction until the batch commit. The supported
   topology currently has one ingestion writer; add deterministic lock ordering or
   smaller transactions before active/active ingestion.
-- There is no root CI workflow, comprehensive backend test suite, migration gate,
-  authentication, authorization, or rate limiting.
+- The new root CI workflow still needs its first successful GitHub-hosted run after
+  this branch is pushed. Authentication, authorization, and rate limiting remain
+  unimplemented.
 - A 2026-07-19 `pip-audit` found 11 known vulnerabilities in five existing pinned
   packages: FastAPI, Starlette, python-dotenv, scikit-learn, and pytest. Upgrade
   them on a dedicated branch with API and model regression tests.
@@ -951,8 +969,8 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
 
 ## 10. Immediate Next Actions
 
-1. Review and merge `codex/observation-persistence` after Phase 0.
-2. Add the automated end-to-end demo verifier and root CI workflow.
+1. Push `codex/ci-demo-verifier` and confirm its first GitHub-hosted CI run.
+2. Review and merge the Phase 0 branches.
 3. Create the dedicated dependency-upgrade/security branch.
 4. Add deterministic kinematic checks over immutable observations.
 5. Build actual recorded SBS replay and timeline controls.
@@ -992,6 +1010,7 @@ Use this when starting a new Codex chat:
 > `docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d`
 > and is simulation, not live traffic. Phase 0 now includes the threat model,
 > versioned `TrackObservation` contract, append-only persistence, migration, and an
-> isolated 500-message replay smoke test. The next checkpoint is root CI and an
-> automated end-to-end demo verifier. Deployment is planned
+> isolated 500-message replay smoke test. Root CI and the automated end-to-end
+> verifier are implemented on `codex/ci-demo-verifier`; confirm the first hosted
+> Actions run before claiming CI is green. Deployment is planned
 > for Section 5 Phase 10; public production deployment is not complete today.

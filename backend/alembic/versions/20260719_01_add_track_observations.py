@@ -6,8 +6,6 @@ Create Date: 2026-07-19
 """
 
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 
 revision = "20260719_01"
@@ -17,40 +15,46 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "track_observations",
-        sa.Column("observation_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("schema_version", sa.String(length=10), nullable=False),
-        sa.Column("source_type", sa.String(length=30), nullable=False),
-        sa.Column("source_id", sa.String(length=100), nullable=False),
-        sa.Column("receiver_id", sa.String(length=100), nullable=True),
-        sa.Column("recording_id", sa.String(length=100), nullable=True),
-        sa.Column("provider", sa.String(length=100), nullable=True),
-        sa.Column("license_id", sa.String(length=100), nullable=True),
-        sa.Column("icao_hex", sa.String(length=6), nullable=False),
-        sa.Column("observed_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("received_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("callsign", sa.String(length=8), nullable=True),
-        sa.Column("latitude", sa.Float(), nullable=True),
-        sa.Column("longitude", sa.Float(), nullable=True),
-        sa.Column("altitude_ft", sa.Integer(), nullable=True),
-        sa.Column("ground_speed_knots", sa.Float(), nullable=True),
-        sa.Column("track_degrees", sa.Float(), nullable=True),
-        sa.Column("vertical_rate_fpm", sa.Integer(), nullable=True),
-        sa.Column("squawk", sa.String(length=4), nullable=True),
-        sa.Column("quality_flags", postgresql.JSONB(), nullable=False),
-        sa.Column("raw_message_id", sa.String(length=200), nullable=True),
-        sa.PrimaryKeyConstraint("observation_id"),
+    # Development startup still creates model metadata. IF NOT EXISTS keeps this
+    # additive migration safe whether Alembic or the API reaches a fresh DB first.
+    op.execute(
+        """
+        CREATE TABLE IF NOT EXISTS track_observations (
+            observation_id UUID PRIMARY KEY,
+            schema_version VARCHAR(10) NOT NULL,
+            source_type VARCHAR(30) NOT NULL,
+            source_id VARCHAR(100) NOT NULL,
+            receiver_id VARCHAR(100),
+            recording_id VARCHAR(100),
+            provider VARCHAR(100),
+            license_id VARCHAR(100),
+            icao_hex VARCHAR(6) NOT NULL,
+            observed_at TIMESTAMPTZ NOT NULL,
+            received_at TIMESTAMPTZ NOT NULL,
+            callsign VARCHAR(8),
+            latitude DOUBLE PRECISION,
+            longitude DOUBLE PRECISION,
+            altitude_ft INTEGER,
+            ground_speed_knots DOUBLE PRECISION,
+            track_degrees DOUBLE PRECISION,
+            vertical_rate_fpm INTEGER,
+            squawk VARCHAR(4),
+            quality_flags JSONB NOT NULL,
+            raw_message_id VARCHAR(200)
+        )
+        """
     )
-    op.create_index(
-        "ix_track_observations_icao_time",
-        "track_observations",
-        ["icao_hex", "observed_at"],
+    op.execute(
+        """
+        CREATE INDEX IF NOT EXISTS ix_track_observations_icao_time
+        ON track_observations (icao_hex, observed_at)
+        """
     )
-    op.create_index(
-        "ix_track_observations_source_time",
-        "track_observations",
-        ["source_id", "observed_at"],
+    op.execute(
+        """
+        CREATE INDEX IF NOT EXISTS ix_track_observations_source_time
+        ON track_observations (source_id, observed_at)
+        """
     )
 
 

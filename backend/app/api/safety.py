@@ -1,8 +1,8 @@
 """Safety research API endpoints."""
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Optional, Any
+from typing import Optional
 
 from ..safety import run_agent, tool_get_aircraft_safety_context, tool_query_incident_database
 

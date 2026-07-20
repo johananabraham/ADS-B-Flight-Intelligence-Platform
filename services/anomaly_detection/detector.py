@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"
 from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker
 
-from app.models import Aircraft, AircraftPosition, Anomaly, AnomalyType, AnomalySeverity
+from app.models import Aircraft, Anomaly, AnomalyType, AnomalySeverity
 from app.core.config import get_settings
 
 logging.basicConfig(

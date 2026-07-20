@@ -57,6 +57,16 @@ if another local Node process is using `localhost`). The map is clearly marked
 `REPLAY DATA`; aircraft positions, altitude, and callsigns are simulated and must
 not be interpreted as live traffic.
 
+Verify the complete demo path after it starts:
+
+```bash
+python3 scripts/verify_demo.py
+```
+
+The verifier checks the API, rendered frontend shell, active aircraft, recent
+simulation observations in PostgreSQL, unique observation IDs, and all six demo
+aircraft. It exits nonzero when any part of that path is unavailable.
+
 Stop the demo with:
 
 ```bash
@@ -151,6 +161,13 @@ ANTHROPIC_API_KEY=your_key_here
 The demo Compose override labels its generated traffic as `SIMULATION`. For a
 recorded file, use `RECORDED_REPLAY` and set `OBSERVATION_RECORDING_ID`; do not
 label replayed traffic as live RF.
+
+## Continuous Integration
+
+GitHub Actions runs Python lint/tests, migration SQL validation, frontend
+lint/build, C++ decoder build/tests, dependency audits, and the complete Docker
+demo verifier. Security audits currently report known pinned-dependency findings
+as a non-blocking job until the dedicated dependency-upgrade checkpoint lands.
 
 ## Project Structure
 
