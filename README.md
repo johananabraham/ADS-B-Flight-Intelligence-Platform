@@ -142,8 +142,15 @@ Create `.env` in root:
 ```env
 DATABASE_URL=postgresql://localhost/adsb_intel
 DUMP1090_URL=http://localhost:8080/data/aircraft.json
+OBSERVATION_SOURCE_TYPE=LIVE_RF
+OBSERVATION_SOURCE_ID=dump1090-sbs
+OBSERVATION_RECEIVER_ID=local-receiver
 ANTHROPIC_API_KEY=your_key_here
 ```
+
+The demo Compose override labels its generated traffic as `SIMULATION`. For a
+recorded file, use `RECORDED_REPLAY` and set `OBSERVATION_RECORDING_ID`; do not
+label replayed traffic as live RF.
 
 ## Project Structure
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Optional
+from uuid import NAMESPACE_URL, uuid5
 
 from ..schemas.observation import (
     ObservationProvenance,
@@ -29,8 +30,19 @@ def sbs_state_to_observation(
     quality_flags = frozenset() if has_complete_position else frozenset(
         {ObservationQualityFlag.PARTIAL}
     )
+    identity = (
+        {
+            "observation_id": uuid5(
+                NAMESPACE_URL,
+                f"adsb:{source_type.value}:{source_id}:{raw_message_id}",
+            )
+        }
+        if raw_message_id
+        else {}
+    )
 
     return TrackObservation(
+        **identity,
         provenance=ObservationProvenance(
             source_type=source_type,
             source_id=source_id,

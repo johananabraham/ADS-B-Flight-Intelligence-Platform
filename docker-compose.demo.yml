@@ -19,6 +19,9 @@ services:
     environment:
       DUMP1090_HOST: replay
       DUMP1090_PORT: 30003
+      OBSERVATION_SOURCE_TYPE: SIMULATION
+      OBSERVATION_SOURCE_ID: columbus-demo
+      OBSERVATION_RECEIVER_ID: ""
     depends_on:
       db:
         condition: service_healthy

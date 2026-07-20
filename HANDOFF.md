@@ -245,9 +245,22 @@ Implemented on `codex/track-observation-contract`:
 - Unit tests for identity normalization, partial reports, invalid positions,
   timezone requirements, provenance requirements, timing evidence, and SBS mapping.
 
-Not implemented in this checkpoint:
+Implemented on `codex/observation-persistence`:
 
-- Observation database table or migration.
+- Append-only `track_observations` PostgreSQL model with source/time indexes.
+- Alembic migration `20260719_01` and application-metadata integration.
+- Stable UUIDv5 identity derived from source ID and the SHA-256 raw-message ID.
+- Idempotent PostgreSQL `ON CONFLICT DO NOTHING` persistence.
+- SBS generated-time parsing as timezone-aware UTC evidence.
+- Ingestion writes each raw observation before updating the existing mutable track.
+- Compose provenance defaults distinguish live RF from the hardware-free demo.
+- 19 unit tests pass, including timestamp extraction and duplicate handling.
+- Real Postgres duplicate check: first insert accepted, retry ignored, one row stored.
+- Isolated replay smoke test persisted 500 unique observations across six aircraft;
+  the labeled smoke-test rows were deleted afterward.
+
+Not implemented in these checkpoints:
+
 - Replacement of the existing mutable aircraft-state ingestion path.
 - Kinematic anomaly rules, ML, external corroboration, or trust scoring.
 
@@ -263,8 +276,15 @@ Not implemented in this checkpoint:
   to loopback before any public deployment.
 - Root Compose uses development bind mounts and Vite rather than production static
   hosting.
+- Two concurrent ingestion writers updating the same aircraft can deadlock because
+  each holds a multi-aircraft transaction until the batch commit. The supported
+  topology currently has one ingestion writer; add deterministic lock ordering or
+  smaller transactions before active/active ingestion.
 - There is no root CI workflow, comprehensive backend test suite, migration gate,
   authentication, authorization, or rate limiting.
+- A 2026-07-19 `pip-audit` found 11 known vulnerabilities in five existing pinned
+  packages: FastAPI, Starlette, python-dotenv, scikit-learn, and pytest. Upgrade
+  them on a dedicated branch with API and model regression tests.
 - Data-source identity is a frontend build-time label. It should eventually come
   from a signed backend source-status API.
 - Simulator aircraft are fictional. Do not describe demo traffic as captured or
@@ -931,11 +951,10 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
 
 ## 10. Immediate Next Actions
 
-1. Merge or open a PR for `codex/replay-demo-mode` after review.
-2. Start Section 5 Phase 0: threat model and `TrackObservation` contract. Do not
-   begin ML yet.
-3. Add the automated end-to-end demo verifier and root CI workflow.
-4. Create the dedicated dependency-upgrade/security branch.
+1. Review and merge `codex/observation-persistence` after Phase 0.
+2. Add the automated end-to-end demo verifier and root CI workflow.
+3. Create the dedicated dependency-upgrade/security branch.
+4. Add deterministic kinematic checks over immutable observations.
 5. Build actual recorded SBS replay and timeline controls.
 6. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
    subtree after confirming the board model and available sensors.
@@ -971,6 +990,8 @@ Use this when starting a new Codex chat:
 > builds, Clean Code review, and available security scans, and never claim unmeasured
 > results. Current hardware-free demo uses
 > `docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d`
-> and is simulation, not live traffic. The current next engineering phase is the
-> threat model and versioned `TrackObservation` data contract. Deployment is planned
+> and is simulation, not live traffic. Phase 0 now includes the threat model,
+> versioned `TrackObservation` contract, append-only persistence, migration, and an
+> isolated 500-message replay smoke test. The next checkpoint is root CI and an
+> automated end-to-end demo verifier. Deployment is planned
 > for Section 5 Phase 10; public production deployment is not complete today.

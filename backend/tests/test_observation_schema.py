@@ -145,6 +145,21 @@ def test_maps_existing_sbs_state_to_shared_contract() -> None:
     assert observation.quality_flags == frozenset()
 
 
+def test_sbs_raw_message_id_produces_stable_observation_id() -> None:
+    arguments = {
+        "source_type": ObservationSourceType.SIMULATION,
+        "source_id": "columbus-demo",
+        "observed_at": NOW,
+        "received_at": NOW,
+        "raw_message_id": "sequence-7",
+    }
+
+    first = sbs_state_to_observation({"hex": "A1B2C3"}, **arguments)
+    retry = sbs_state_to_observation({"hex": "A1B2C3"}, **arguments)
+
+    assert first.observation_id == retry.observation_id
+
+
 def test_marks_sbs_state_without_position_as_partial() -> None:
     observation = sbs_state_to_observation(
         {"hex": "A1B2C3", "flight": "DAL1842"},

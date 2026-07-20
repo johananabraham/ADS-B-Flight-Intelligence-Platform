@@ -7,6 +7,7 @@ from .aircraft import (
     DailySummary,
 )
 from .safety import Incident, Regulation
+from .observation import TrackObservationRecord
 
 __all__ = [
     "Aircraft",
@@ -17,4 +18,5 @@ __all__ = [
     "DailySummary",
     "Incident",
     "Regulation",
+    "TrackObservationRecord",
 ]
