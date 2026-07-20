@@ -66,7 +66,7 @@ export function StatusBar({
             <span className="text-2xs text-slate-500 font-mono">v1.0</span>
             <span className={clsx(
               'rounded border px-2 py-0.5 text-2xs font-semibold tracking-wider',
-              sourceMode === 'REPLAY DATA'
+              sourceMode.includes('REPLAY')
                 ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-400'
                 : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
             )}>
