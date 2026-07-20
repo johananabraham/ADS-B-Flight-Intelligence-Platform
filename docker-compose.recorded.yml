@@ -1,0 +1,13 @@
+services:
+  replay:
+    environment:
+      REPLAY_RECORDING_PATH: /app/services/replay/recordings/columbus_generated_v1.json
+      REPLAY_SPEED: 1
+      REPLAY_LOOP: "true"
+
+  ingestion:
+    environment:
+      OBSERVATION_SOURCE_TYPE: RECORDED_REPLAY
+      OBSERVATION_SOURCE_ID: checked-in-recording
+      OBSERVATION_RECEIVER_ID: ""
+      OBSERVATION_RECORDING_ID: columbus-generated-v1

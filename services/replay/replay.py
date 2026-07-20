@@ -6,13 +6,21 @@ import asyncio
 import logging
 import math
 import os
+from contextlib import suppress
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
+from functools import partial
+
+from services.replay.recording import PlaybackCursor, Recording
 
 HOST = os.getenv("REPLAY_HOST", "0.0.0.0")
 PORT = int(os.getenv("REPLAY_PORT", "30003"))
 INTERVAL_SECONDS = float(os.getenv("REPLAY_INTERVAL_SECONDS", "1"))
 RESET_SECONDS = float(os.getenv("REPLAY_RESET_SECONDS", "300"))
+RECORDING_PATH = os.getenv("REPLAY_RECORDING_PATH")
+RECORDING_SPEED = float(os.getenv("REPLAY_SPEED", "1"))
+RECORDING_LOOP = os.getenv("REPLAY_LOOP", "true").lower() in {"1", "true", "yes"}
+RECORDING_LOOP_DELAY_SECONDS = float(os.getenv("REPLAY_LOOP_DELAY_SECONDS", "1"))
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
@@ -98,13 +106,57 @@ async def stream_aircraft(reader: asyncio.StreamReader, writer: asyncio.StreamWr
         pass
     finally:
         writer.close()
-        await writer.wait_closed()
+        with suppress(BrokenPipeError, ConnectionResetError):
+            await writer.wait_closed()
         logger.info("Replay client disconnected: %s", peer)
 
 
+async def stream_recording(
+    reader: asyncio.StreamReader,
+    writer: asyncio.StreamWriter,
+    *,
+    recording: Recording,
+    speed: float,
+) -> None:
+    """Stream one validated recording using its original relative timing."""
+    peer = writer.get_extra_info("peername")
+    logger.info("Recorded replay client connected: %s", peer)
+    cursor = PlaybackCursor(recording, speed=speed)
+    try:
+        while not reader.at_eof():
+            scheduled = cursor.next_event()
+            if scheduled is None:
+                if not RECORDING_LOOP:
+                    break
+                await asyncio.sleep(RECORDING_LOOP_DELAY_SECONDS)
+                cursor.restart()
+                continue
+            if scheduled.delay_seconds:
+                await asyncio.sleep(scheduled.delay_seconds)
+            writer.write(f"{scheduled.event.sbs_message}\n".encode("ascii"))
+            await writer.drain()
+    except (BrokenPipeError, ConnectionResetError):
+        pass
+    finally:
+        writer.close()
+        with suppress(BrokenPipeError, ConnectionResetError):
+            await writer.wait_closed()
+        logger.info("Recorded replay client disconnected: %s", peer)
+
+
 async def main() -> None:
-    server = await asyncio.start_server(stream_aircraft, HOST, PORT)
-    logger.info("ADS-B replay listening on %s:%s with %s aircraft", HOST, PORT, len(demo_scenario()))
+    handler = stream_aircraft
+    description = f"generated simulation with {len(demo_scenario())} aircraft"
+    if RECORDING_PATH:
+        recording = Recording.load(RECORDING_PATH)
+        handler = partial(stream_recording, recording=recording, speed=RECORDING_SPEED)
+        description = (
+            f"recording {recording.recording_id} with {len(recording.events)} events "
+            f"at {RECORDING_SPEED}x"
+        )
+
+    server = await asyncio.start_server(handler, HOST, PORT)
+    logger.info("ADS-B replay listening on %s:%s using %s", HOST, PORT, description)
     async with server:
         await server.serve_forever()
 

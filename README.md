@@ -67,6 +67,22 @@ The verifier checks the API, rendered frontend shell, active aircraft, recent
 simulation observations in PostgreSQL, unique observation IDs, and all six demo
 aircraft. It exits nonzero when any part of that path is unavailable.
 
+### Recorded replay mode
+
+The repository also contains a versioned, fictional six-event SBS recording with
+CC0 licensing and explicit provenance. Unlike demo simulation, this mode emits the
+same saved messages with their original relative timing and timestamps:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.demo.yml \
+  -f docker-compose.recorded.yml up --build --renew-anon-volumes -d
+python3 scripts/verify_recorded_replay.py
+```
+
+The verifier requires exactly six immutable observations, six unique IDs, two
+aircraft, and the expected original timestamp range. See
+`docs/recording-format-v1.md` for the format and integrity rules.
+
 Stop the demo with:
 
 ```bash
@@ -79,7 +95,7 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml down
 
 - RTL-SDR USB dongle
 - Python 3.11+
-- Node.js 18+
+- Node.js 20.19+ (or use the frontend container)
 - PostgreSQL 15+ with PostGIS
 - Docker (optional)
 

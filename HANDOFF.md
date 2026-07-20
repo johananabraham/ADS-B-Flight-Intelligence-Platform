@@ -4,7 +4,7 @@ Last updated: 2026-07-19
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/dependency-security-upgrades`
+Current branch: `codex/recorded-replay-format`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -300,6 +300,30 @@ Implemented on `codex/dependency-security-upgrades`:
   frontend, six API aircraft, and 1,545 recent uniquely identified observations
   across all six simulated aircraft.
 
+Implemented on `codex/recorded-replay-format`:
+
+- Versioned recording format 1.0 with stable recording identity, explicit source,
+  license/attribution, original timestamps, receiver context, and ordered SBS events.
+- SHA-256 integrity validation rejects modified event arrays before playback.
+- Timestamp validation requires the event offset, ISO timestamp, and timestamp
+  inside each SBS message to agree.
+- Deterministic per-client cursor supports restart, seek, and 0.5x/1x/2x/10x speed
+  scheduling without changing event order.
+- Checked-in fictional CC0 fixture contains six events for two aircraft and is
+  explicitly labeled as generated rather than captured RF.
+- Dedicated `docker-compose.recorded.yml` switches ingestion provenance to
+  `RECORDED_REPLAY` and supplies the stable recording ID.
+- Automated recorded-mode verifier checks the API/frontend path and requires six
+  persisted events, six unique observation IDs, two aircraft, and the exact
+  original timestamp range.
+- Live smoke test passed those checks and confirmed repeated loops remain
+  idempotent. TCP health-check disconnects are handled without unhandled errors.
+- CI now runs recorded replay verification after the six-aircraft simulation test.
+- Checkpoint gate: 29 Python tests pass, Ruff and actionlint pass, Python/npm audits
+  report zero known vulnerabilities, and the secret-pattern scan is clean.
+- Normal simulation mode was restored after testing and its verifier passed with
+  six aircraft and 25/25 unique recent observations.
+
 Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
@@ -324,6 +348,9 @@ Not implemented in these checkpoints:
   unimplemented.
 - The local host still has Node 18.12.1, which is too old for the upgraded frontend;
   use the Node 20.19 container or install Node 20.19+ for host-side frontend work.
+- Recorded replay currently takes startup settings from environment variables.
+  Pause/resume/seek/speed controls are implemented only in the playback domain
+  object; an authenticated control API and operator timeline UI are still pending.
 - Data-source identity is a frontend build-time label. It should eventually come
   from a signed backend source-status API.
 - Simulator aircraft are fictional. Do not describe demo traffic as captured or
@@ -990,11 +1017,11 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
 
 ## 10. Immediate Next Actions
 
-1. Push `codex/ci-demo-verifier` and confirm its first GitHub-hosted CI run.
-2. Review and merge the Phase 0 branches.
-3. Create the dedicated dependency-upgrade/security branch.
-4. Add deterministic kinematic checks over immutable observations.
-5. Build actual recorded SBS replay and timeline controls.
+1. Review the stacked Phase 0, CI, dependency-security, and recorded-replay PRs.
+2. Confirm the first GitHub-hosted CI run after the workflow reaches `main`.
+3. Add a replay-control API with pause/resume/restart/seek/speed state.
+4. Add the operator replay timeline and explicit `RECORDED REPLAY` UI state.
+5. Add deterministic kinematic checks over immutable observations.
 6. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
    subtree after confirming the board model and available sensors.
 7. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
@@ -1032,6 +1059,9 @@ Use this when starting a new Codex chat:
 > and is simulation, not live traffic. Phase 0 now includes the threat model,
 > versioned `TrackObservation` contract, append-only persistence, migration, and an
 > isolated 500-message replay smoke test. Root CI and the automated end-to-end
-> verifier are implemented on `codex/ci-demo-verifier`; confirm the first hosted
-> Actions run before claiming CI is green. Deployment is planned
+> verifier are implemented on `codex/ci-demo-verifier`. Dependency audits are at
+> zero known findings on `codex/dependency-security-upgrades`. Recording format
+> 1.0, deterministic playback, a CC0 generated fixture, and recorded-mode verifier
+> are on `codex/recorded-replay-format`; control API/UI work is next. Confirm the
+> first hosted Actions run before claiming CI is green. Deployment is planned
 > for Section 5 Phase 10; public production deployment is not complete today.
