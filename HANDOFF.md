@@ -1,10 +1,10 @@
 # Project Handoff and Expansion Roadmap
 
-Last updated: 2026-07-19
+Last updated: 2026-07-20
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/recorded-replay-format`
+Current branch: `codex/replay-control-ui`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -324,6 +324,30 @@ Implemented on `codex/recorded-replay-format`:
 - Normal simulation mode was restored after testing and its verifier passed with
   six aircraft and 25/25 unique recent observations.
 
+Implemented on `codex/replay-control-ui`:
+
+- One authoritative, monotonic replay controller now owns playback position,
+  event index, pause/resume state, restart, seek, loop behavior, and
+  0.5x/1x/2x/10x speed changes.
+- The replay container exposes an internal FastAPI control service on port 8081;
+  its HTTP health check does not consume replay messages.
+- The public backend proxies validated status and command requests at
+  `/api/v1/replay/status` and `/api/v1/replay/commands`. The replay service is not
+  published directly to the host or browser.
+- Recorded mode adds an accessible operator timeline with explicit playing,
+  paused, and completed states; pause/resume, restart, seek, and speed controls;
+  progress and event counts; busy/error feedback; and 44-pixel control targets.
+- The timeline appears only under the explicit `RECORDED REPLAY` build mode.
+- Browser verification confirmed clean rendering, pause/resume, restart, speed
+  selection, accessible names/state, and no console warnings or errors.
+- The automated verifier proved restart, 2x speed, a frozen paused clock, seek to
+  one second while paused, and resume. It also preserved exactly six unique
+  observations for two aircraft and the original `2026-07-19 12:00:00` through
+  `12:00:02` timestamp range.
+- Checkpoint gate: 35 Python tests, Ruff, frontend ESLint, TypeScript/Vite build,
+  actionlint, `git diff --check`, and the secret-pattern scan pass. Python and npm
+  dependency audits report zero known vulnerabilities.
+
 Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
@@ -348,9 +372,9 @@ Not implemented in these checkpoints:
   unimplemented.
 - The local host still has Node 18.12.1, which is too old for the upgraded frontend;
   use the Node 20.19 container or install Node 20.19+ for host-side frontend work.
-- Recorded replay currently takes startup settings from environment variables.
-  Pause/resume/seek/speed controls are implemented only in the playback domain
-  object; an authenticated control API and operator timeline UI are still pending.
+- Recorded replay startup settings still come from environment variables. The
+  control API is intentionally internal and unauthenticated; add authorization and
+  audit logging before exposing operator controls in a public deployment.
 - Data-source identity is a frontend build-time label. It should eventually come
   from a signed backend source-status API.
 - Simulator aircraft are fictional. Do not describe demo traffic as captured or
@@ -472,6 +496,10 @@ Verify:
 ### Phase 2 — Actual recorded replay and operator controls (Week 3)
 
 Purpose: create repeatable scenarios for detection development.
+
+Status: implemented through the replay format, generated fixture, internal control
+service, backend proxy, operator timeline, and deterministic integration verifier.
+Authentication and audit logging remain deployment hardening work.
 
 Build:
 
@@ -1017,14 +1045,16 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
 
 ## 10. Immediate Next Actions
 
-1. Review the stacked Phase 0, CI, dependency-security, and recorded-replay PRs.
+1. Review the stacked Phase 0, CI, dependency-security, recorded-replay, and
+   replay-control PRs.
 2. Confirm the first GitHub-hosted CI run after the workflow reaches `main`.
-3. Add a replay-control API with pause/resume/restart/seek/speed state.
-4. Add the operator replay timeline and explicit `RECORDED REPLAY` UI state.
-5. Add deterministic kinematic checks over immutable observations.
-6. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
+3. Add deterministic kinematic checks over immutable observations, beginning with
+   time delta, implied speed, acceleration, turn rate, and vertical-rate evidence.
+4. Add replay scenarios that deterministically trigger and do not trigger each
+   kinematic rule, then measure false positives against the clean fixture.
+5. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
    subtree after confirming the board model and available sensors.
-7. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
+6. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
    harness exist.
 
 ## 11. Handoff Rules for the Next Engineer or Agent
@@ -1062,6 +1092,9 @@ Use this when starting a new Codex chat:
 > verifier are implemented on `codex/ci-demo-verifier`. Dependency audits are at
 > zero known findings on `codex/dependency-security-upgrades`. Recording format
 > 1.0, deterministic playback, a CC0 generated fixture, and recorded-mode verifier
-> are on `codex/recorded-replay-format`; control API/UI work is next. Confirm the
+> are on `codex/recorded-replay-format`. The internal replay-control API, backend
+> proxy, accessible operator timeline, and deterministic control verification are
+> on `codex/replay-control-ui`; deterministic kinematic plausibility checks are
+> next. Confirm the
 > first hosted Actions run before claiming CI is green. Deployment is planned
 > for Section 5 Phase 10; public production deployment is not complete today.
