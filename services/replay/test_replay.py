@@ -11,7 +11,7 @@ from services.replay.recording import PlaybackCursor, Recording, RecordingValida
 from services.replay.replay import AircraftState, demo_scenario
 
 
-FIXTURE = Path(__file__).parent / "recordings" / "columbus_generated_v1.json"
+FIXTURE = Path(__file__).parent / "recordings" / "columbus_generated_v2.json"
 
 
 class AircraftStateTests(unittest.TestCase):
@@ -44,7 +44,7 @@ class RecordedPlaybackTests(unittest.TestCase):
     def test_fixture_has_explicit_generated_provenance_and_valid_hash(self) -> None:
         recording = Recording.load(FIXTURE)
 
-        self.assertEqual(recording.recording_id, "columbus-generated-v1")
+        self.assertEqual(recording.recording_id, "columbus-generated-v2")
         self.assertEqual(recording.source.kind, "GENERATED")
         self.assertEqual(recording.source.license_id, "CC0-1.0")
         self.assertEqual(len(recording.events), 6)
@@ -157,7 +157,7 @@ class ReplayControlApiTests(unittest.IsolatedAsyncioTestCase):
             invalid = await client.post("/commands", json={"action": "speed", "value": 3})
 
         self.assertEqual(status.status_code, 200)
-        self.assertEqual(status.json()["recording_id"], "columbus-generated-v1")
+        self.assertEqual(status.json()["recording_id"], "columbus-generated-v2")
         self.assertEqual(invalid.status_code, 422)
 
 

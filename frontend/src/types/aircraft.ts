@@ -59,6 +59,34 @@ export interface Anomaly {
   acknowledged: number;
 }
 
+export type KinematicEvaluationStatus = 'PASS' | 'FLAGGED' | 'INSUFFICIENT_DATA';
+
+export interface KinematicRuleResult {
+  rule: string;
+  status: KinematicEvaluationStatus;
+  value: number;
+  threshold: number;
+  unit: string;
+  explanation: string;
+  observation_ids: string[];
+}
+
+export interface KinematicEvaluation {
+  evaluation_id: string;
+  policy_version: string;
+  previous_observation_id: string;
+  current_observation_id: string;
+  source_type: string;
+  source_id: string;
+  icao_hex: string;
+  evaluated_at: string;
+  status: KinematicEvaluationStatus;
+  reason: string | null;
+  delta_seconds: number;
+  measurements: Record<string, number>;
+  rule_results: KinematicRuleResult[];
+}
+
 export interface Stats {
   active_aircraft: number;
   total_positions_today: number;

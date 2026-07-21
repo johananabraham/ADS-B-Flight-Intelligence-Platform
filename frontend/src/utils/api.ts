@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Aircraft, Anomaly, FlightTrail, Stats } from '@/types';
+import type { Aircraft, Anomaly, FlightTrail, KinematicEvaluation, Stats } from '@/types';
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -52,6 +52,16 @@ export async function acknowledgeAnomaly(
 ): Promise<Anomaly> {
   const { data } = await api.patch<Anomaly>(`/anomalies/${id}/acknowledge`, {
     acknowledged,
+  });
+  return data;
+}
+
+export async function fetchKinematicEvaluations(
+  icao: string,
+  limit: number = 5
+): Promise<KinematicEvaluation[]> {
+  const { data } = await api.get<KinematicEvaluation[]>('/kinematics/evaluations', {
+    params: { icao_hex: icao, limit },
   });
   return data;
 }

@@ -8,8 +8,8 @@ from app.api import replay as replay_api
 
 
 STATUS = {
-    "recording_id": "columbus-generated-v1",
-    "title": "Generated Columbus Two-Aircraft Fixture",
+    "recording_id": "columbus-generated-v2",
+    "title": "Generated Columbus Two-Aircraft Fixture V2",
     "state": "PAUSED",
     "speed": 1.0,
     "position_ms": 1_000,
