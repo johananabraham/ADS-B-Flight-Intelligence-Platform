@@ -1,23 +1,23 @@
-fastapi==0.109.0
+fastapi==0.139.2
 uvicorn[standard]==0.27.0
 sqlalchemy==2.0.25
 psycopg2-binary==2.9.9
 geoalchemy2==0.14.3
 alembic==1.13.1
-pydantic==2.5.3
-pydantic-settings==2.1.0
+pydantic==2.13.4
+pydantic-settings==2.14.2
 httpx==0.26.0
-python-dotenv==1.0.0
+python-dotenv==1.2.2
 shapely==2.0.2
 pandas==2.1.4
 numpy==1.26.3
-scikit-learn==1.4.0
+scikit-learn==1.9.0
 anthropic==0.18.1
 websockets==12.0
 asyncpg==0.29.0
 redis==5.0.1
-pytest==7.4.4
-pytest-asyncio==0.23.3
+pytest==9.1.1
+pytest-asyncio==1.4.0
 
 # Safety Research Agent dependencies
 chromadb==0.4.22

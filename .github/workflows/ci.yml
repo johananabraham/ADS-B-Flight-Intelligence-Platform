@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan tracked files for credential patterns
+        shell: bash
+        run: |
+          if git grep -Il -E '(AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|sk-[A-Za-z0-9_-]{20,})' -- . ':!frontend/package-lock.json' | grep -q .; then
+            echo "Potential credential pattern found in a tracked file."
+            exit 1
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend and quality dependencies
+        run: pip install -r backend/requirements.txt ruff==0.5.7
+      - name: Lint Python
+        run: ruff check backend services scripts
+      - name: Run backend tests
+        env:
+          PYTHONPATH: backend:.
+        run: pytest -q backend/tests
+      - name: Validate migration SQL
+        working-directory: backend
+        env:
+          PYTHONPATH: .
+        run: alembic -c alembic.ini upgrade head --sql > /tmp/migration.sql
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  decoder:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure decoder
+        run: cmake -S decoder -B decoder/build -DBUILD_TESTS=ON
+      - name: Build decoder
+        run: cmake --build decoder/build --parallel 2
+      - name: Test decoder
+        run: ctest --test-dir decoder/build --output-on-failure
+
+  security:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Audit Python dependencies
+        run: pip install pip-audit==2.7.3 && pip-audit -r backend/requirements.txt
+      - uses: actions/setup-node@v4
+        if: always()
+        with:
+          node-version: "20"
+      - name: Audit frontend dependencies
+        if: always()
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+  demo:
+    needs: [backend, frontend, decoder]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start hardware-free demo
+        run: docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build --renew-anon-volumes -d
+      - name: Apply database migration
+        run: docker compose exec -T backend alembic -c alembic.ini upgrade head
+      - name: Verify the complete data path
+        run: python scripts/verify_demo.py --timeout 180
+      - name: Start checked-in recorded replay
+        run: >-
+          docker compose -f docker-compose.yml -f docker-compose.demo.yml
+          -f docker-compose.recorded.yml up --build --force-recreate -d replay ingestion
+      - name: Verify recorded replay provenance and timestamps
+        run: python scripts/verify_recorded_replay.py --timeout 60
+      - name: Capture service logs
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.demo.yml logs --no-color > demo.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: demo-service-logs
+          path: demo.log
+      - name: Stop demo
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.demo.yml down -v

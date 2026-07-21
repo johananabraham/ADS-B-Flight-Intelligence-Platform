@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
+from sqlalchemy import and_
 from typing import List, Optional
 from datetime import datetime, timedelta
 import httpx
-import asyncio
 
 from ..core.database import get_db
-from ..models import Aircraft, AircraftPosition, Anomaly, AnomalyType, AnomalySeverity
+from ..models import Aircraft, AircraftPosition, Anomaly, AnomalySeverity
 from ..schemas import (
     AircraftResponse,
     AircraftPositionResponse,

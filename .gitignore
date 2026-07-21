@@ -24,6 +24,7 @@ node_modules/
 /decoder/modes_decode
 /decoder/modes_server
 /decoder/load_generator
+/decoder/fault-tolerance-results.txt
 
 # IDE
 .vscode/

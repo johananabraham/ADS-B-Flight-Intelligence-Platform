@@ -44,11 +44,58 @@ Real-time aircraft tracking and anomaly detection system using Software Defined 
 
 ## Quick Start
 
+### Demo mode (no SDR hardware required)
+
+Run the complete platform with a deterministic six-aircraft replay feed:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build --renew-anon-volumes -d
+```
+
+Open [http://localhost:5173](http://localhost:5173) (or `http://127.0.0.1:5173`
+if another local Node process is using `localhost`). The map is clearly marked
+`REPLAY DATA`; aircraft positions, altitude, and callsigns are simulated and must
+not be interpreted as live traffic.
+
+Verify the complete demo path after it starts:
+
+```bash
+python3 scripts/verify_demo.py
+```
+
+The verifier checks the API, rendered frontend shell, active aircraft, recent
+simulation observations in PostgreSQL, unique observation IDs, and all six demo
+aircraft. It exits nonzero when any part of that path is unavailable.
+
+### Recorded replay mode
+
+The repository also contains a versioned, fictional six-event SBS recording with
+CC0 licensing and explicit provenance. Unlike demo simulation, this mode emits the
+same saved messages with their original relative timing and timestamps:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.demo.yml \
+  -f docker-compose.recorded.yml up --build --renew-anon-volumes -d
+python3 scripts/verify_recorded_replay.py
+```
+
+The verifier requires exactly six immutable observations, six unique IDs, two
+aircraft, and the expected original timestamp range. See
+`docs/recording-format-v1.md` for the format and integrity rules.
+
+Stop the demo with:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.demo.yml down
+```
+
+### Live RF mode
+
 ### Prerequisites
 
 - RTL-SDR USB dongle
 - Python 3.11+
-- Node.js 18+
+- Node.js 20.19+ (or use the frontend container)
 - PostgreSQL 15+ with PostGIS
 - Docker (optional)
 
@@ -121,8 +168,22 @@ Create `.env` in root:
 ```env
 DATABASE_URL=postgresql://localhost/adsb_intel
 DUMP1090_URL=http://localhost:8080/data/aircraft.json
+OBSERVATION_SOURCE_TYPE=LIVE_RF
+OBSERVATION_SOURCE_ID=dump1090-sbs
+OBSERVATION_RECEIVER_ID=local-receiver
 ANTHROPIC_API_KEY=your_key_here
 ```
+
+The demo Compose override labels its generated traffic as `SIMULATION`. For a
+recorded file, use `RECORDED_REPLAY` and set `OBSERVATION_RECORDING_ID`; do not
+label replayed traffic as live RF.
+
+## Continuous Integration
+
+GitHub Actions runs Python lint/tests, migration SQL validation, frontend
+lint/build, C++ decoder build/tests, dependency audits, and the complete Docker
+demo verifier. Security audits currently report known pinned-dependency findings
+as a non-blocking job until the dedicated dependency-upgrade checkpoint lands.
 
 ## Project Structure
 

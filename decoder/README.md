@@ -59,6 +59,9 @@ make tools
 
 # Reproducible failure-injection test: stops decoder2 during active load
 ./tests/fault_tolerance_test.sh
+
+# Compare decoded fields against a local dump1090-fa installation
+./tests/dump1090_validation.sh
 ```
 
 ## Performance
@@ -68,10 +71,11 @@ Tested on Apple Silicon (M-series):
 - **HTTP latency**: 1.4 ms p99 in the recorded load test
 - **HTTP success rate**: 1,974/1,974 requests returned HTTP 200 in that run
 - **Decoder correctness suite**: `validation_test` checks decoded fields against published Mode S/ADS-B reference values; this is separate from HTTP success and from dump1090 comparison
+- **Live instance failure**: 3,783/3,788 HTTP requests succeeded (99.87%) while one of three decoder instances was stopped; health remained HTTP 200
+- **dump1090 comparison**: callsign, altitude, ground speed, track, and vertical rate matched dump1090-fa 11.0 on published reference frames
+- **Portable tests**: 51/51 CTest/GoogleTest cases pass in a clean Debian/GCC container
 
-The nginx topology is designed to retry another upstream when one decoder fails. Run
-`tests/fault_tolerance_test.sh` and retain its output before claiming demonstrated
-fault tolerance; architecture alone is not evidence of a successful live-failure test.
+See `docs/validation-results.md` for the exact scope and limitations of these results.
 
 ## Project Structure
 

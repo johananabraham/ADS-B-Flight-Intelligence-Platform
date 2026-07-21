@@ -40,7 +40,7 @@ TEST_F(DecoderValidationTest, AircraftIdentification_KLM1023) {
     EXPECT_EQ(static_cast<int>(msg.type_code), 4);
 
     ASSERT_TRUE(msg.identification.has_value());
-    EXPECT_EQ(msg.identification->callsign, "KLM1023 ");  // 8 chars with trailing space
+    EXPECT_EQ(msg.identification->callsign, "KLM1023");
 }
 
 /**

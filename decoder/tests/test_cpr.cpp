@@ -124,22 +124,22 @@ TEST_F(CPRTest, LocalDecodeOddFrame) {
     }
 }
 
-TEST_F(CPRTest, LocalDecodeFarReference) {
-    // Test with a reference position that's too far away
+TEST_F(CPRTest, LocalDecodeUsesReferenceZone) {
     modes::AirbornePosition pos;
     pos.cpr_format = modes::CPRFormat::EVEN;
     pos.lat_cpr = 92095;
     pos.lon_cpr = 39846;
 
-    // Reference very far from expected position
-    double ref_lat = -40.0;  // Southern hemisphere
-    double ref_lon = 150.0;  // Australia
+    double ref_lat = -40.0;
+    double ref_lon = 150.0;
 
     bool success = modes::decode_cpr_local(pos, ref_lat, ref_lon);
 
-    // Should likely fail due to distance check
-    // (position would be decoded but rejected as too far from reference)
-    // This is expected behavior for local decode
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(pos.latitude.has_value());
+    ASSERT_TRUE(pos.longitude.has_value());
+    EXPECT_LE(std::abs(*pos.latitude - ref_lat), 3.0);
+    EXPECT_LE(std::abs(*pos.longitude - ref_lon), 3.0);
 }
 
 TEST_F(CPRTest, CPRValueBounds) {
@@ -185,7 +185,7 @@ TEST_F(CPRTest, EquatorCrossing) {
     double ref_lon = 0.0;
 
     bool success = modes::decode_cpr_local(pos, ref_lat, ref_lon);
-    // Should handle equator crossing
+    EXPECT_FALSE(success);
 }
 
 TEST_F(CPRTest, PolarRegion) {
@@ -199,7 +199,7 @@ TEST_F(CPRTest, PolarRegion) {
     double ref_lon = 0.0;
 
     bool success = modes::decode_cpr_local(pos, ref_lat, ref_lon);
-    // Should handle polar region (NL=1)
+    EXPECT_FALSE(success);
 }
 
 TEST_F(CPRTest, DatelineCrossing) {

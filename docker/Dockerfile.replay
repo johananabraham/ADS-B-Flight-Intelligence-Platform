@@ -1,0 +1,10 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+RUN useradd --create-home --uid 10001 replay
+COPY services/replay /app/services/replay
+RUN chown -R replay:replay /app
+
+USER replay
+EXPOSE 30003
+CMD ["python", "-m", "services.replay.replay"]

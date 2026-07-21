@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from datetime import datetime, timedelta
 import asyncio
-import json
 
 from ..core.database import SessionLocal
 from ..models import Aircraft, Anomaly, AnomalySeverity

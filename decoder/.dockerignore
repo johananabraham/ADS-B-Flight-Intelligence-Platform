@@ -2,8 +2,11 @@
 build/
 *.o
 *.a
+**/*.o
+**/*.a
 modes_decode
 modes_server
+load_generator
 libmodes.a
 
 # IDE

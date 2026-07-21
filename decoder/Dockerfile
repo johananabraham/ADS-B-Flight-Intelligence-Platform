@@ -19,13 +19,14 @@ COPY src/ src/
 COPY Makefile .
 
 # Build the server
-RUN make CXX=clang++ modes_server
+RUN make clean && make CXX=clang++ modes_server
 
 # Runtime stage
 FROM debian:bookworm-slim
 
 # Install runtime dependencies (minimal)
 RUN apt-get update && apt-get install -y \
+    curl \
     libstdc++6 \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -r -s /bin/false modes

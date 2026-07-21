@@ -41,6 +41,7 @@ const defaultFilters: Filters = {
 // Military callsign prefixes
 const MILITARY_PREFIXES = ['RCH', 'REACH', 'EVAC', 'NAVY', 'ARMY', 'USAF', 'MC', 'PAT', 'TOPCAT', 'GOLD', 'SENTRY', 'AWAC'];
 const EMERGENCY_SQUAWKS = ['7500', '7600', '7700'];
+const SOURCE_MODE = import.meta.env.VITE_DATA_SOURCE_MODE;
 
 function AppContent() {
   const [selectedAircraft, setSelectedAircraft] = useState<string | null>(null);
@@ -166,6 +167,7 @@ function AppContent() {
           lastUpdate={lastUpdate}
           aircraftCount={aircraft.length}
           totalAircraftCount={rawAircraft.length}
+          sourceMode={SOURCE_MODE}
           aircraft={aircraft}
         />
       </div>

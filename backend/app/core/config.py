@@ -1,9 +1,10 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
-from typing import Literal
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     # Database
     database_url: str = "postgresql://localhost/adsb_intel"
 
@@ -38,11 +39,6 @@ class Settings(BaseSettings):
     # Data Ingestion URLs
     ntsb_data_url: str = "https://data.ntsb.gov/avdata/FileDirectory/DownloadFile?fileID=C%3A%5Cavdata%5Cavall.zip"
     ecfr_api_base_url: str = "https://www.ecfr.gov/api/versioner/v1"
-
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
-
 
 @lru_cache()
 def get_settings() -> Settings:

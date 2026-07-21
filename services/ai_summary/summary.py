@@ -20,10 +20,8 @@ from sqlalchemy.orm import sessionmaker
 import anthropic
 
 from app.models import (
-    Aircraft,
     AircraftPosition,
     Anomaly,
-    AnomalyType,
     AnomalySeverity,
     DailySummary,
 )

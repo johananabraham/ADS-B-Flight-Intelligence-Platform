@@ -53,7 +53,7 @@ TEST_F(DecoderTest, DecodeDF17Position) {
 
 TEST_F(DecoderTest, DecodeDF17Velocity) {
     // Airborne velocity message
-    modes::DecodedMessage msg = modes::decode_hex("8D4840D69909089070043CDAFA85");
+    modes::DecodedMessage msg = modes::decode_hex("8D485020994409940838175B284F");
 
     EXPECT_TRUE(msg.valid);
     EXPECT_EQ(msg.downlink_format, modes::DownlinkFormat::DF17);
@@ -144,21 +144,20 @@ TEST_F(DecoderTest, TCToStringNotNull) {
 }
 
 TEST_F(DecoderTest, VelocityTypeDetection) {
-    modes::DecodedMessage msg = modes::decode_hex("8D4840D69909089070043CDAFA85");
+    modes::DecodedMessage msg = modes::decode_hex("8D485020994409940838175B284F");
 
-    if (msg.velocity.has_value()) {
-        // Type should be either ground speed or airspeed
-        EXPECT_NE(msg.velocity->type, modes::VelocityType::UNKNOWN);
-    }
+    ASSERT_TRUE(msg.valid);
+    ASSERT_TRUE(msg.velocity.has_value());
+    EXPECT_NE(msg.velocity->type, modes::VelocityType::UNKNOWN);
 }
 
 TEST_F(DecoderTest, MultipleValidMessages) {
     std::vector<std::string> messages = {
         "8D4840D6202CC371C32CE0576098",
         "8D40621D58C382D690C8AC2863A7",
-        "8D4840D69909089070043CDAFA85",
+        "8D485020994409940838175B284F",
         "8DA05F219B06B6AF189400CBC33F",
-        "8D4CA2E858B98506F2784F7C0C30",
+        "8D40621D58C386435CC412692AD6",
     };
 
     for (const auto& hex : messages) {

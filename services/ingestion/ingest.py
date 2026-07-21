@@ -7,8 +7,9 @@ Run this continuously to maintain live tracking data.
 """
 
 import asyncio
+import hashlib
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict
 import sys
 import os
@@ -22,6 +23,9 @@ from sqlalchemy.dialects.postgresql import insert
 
 from app.models import Aircraft, AircraftPosition
 from app.core.config import get_settings
+from app.schemas.observation import ObservationSourceType
+from app.services.observation_adapters import sbs_state_to_observation
+from app.services.observation_persistence import insert_observation
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,6 +43,17 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 aircraft_state: Dict[str, dict] = {}
 
 
+def parse_sbs_timestamp(date_value: str, time_value: str) -> Optional[datetime]:
+    """Parse a BaseStation UTC timestamp, including optional milliseconds."""
+    timestamp = f"{date_value.strip()} {time_value.strip()}"
+    for pattern in ("%Y/%m/%d %H:%M:%S.%f", "%Y/%m/%d %H:%M:%S"):
+        try:
+            return datetime.strptime(timestamp, pattern).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return None
+
+
 def parse_sbs_message(line: str) -> Optional[dict]:
     """Parse SBS BaseStation format message."""
     try:
@@ -54,7 +69,11 @@ def parse_sbs_message(line: str) -> Optional[dict]:
         if not icao_hex or len(icao_hex) != 6:
             return None
 
-        data = {'hex': icao_hex}
+        data = {
+            'hex': icao_hex,
+            '_observed_at': parse_sbs_timestamp(parts[6], parts[7]),
+            '_raw_message_id': hashlib.sha256(line.strip().encode('utf-8')).hexdigest(),
+        }
 
         # Callsign (field 10)
         if len(parts) > 10 and parts[10].strip():
@@ -120,7 +139,7 @@ def merge_aircraft_state(icao: str, new_data: dict) -> dict:
 
     state = aircraft_state[icao]
     for key, value in new_data.items():
-        if value is not None:
+        if value is not None and not key.startswith('_'):
             state[key] = value
     state['last_update'] = datetime.utcnow()
 
@@ -187,6 +206,12 @@ async def connect_and_ingest():
     """Connect to dump1090 SBS port and ingest data."""
     host = os.environ.get('DUMP1090_HOST', 'localhost')
     port = int(os.environ.get('DUMP1090_PORT', 30003))
+    source_type = ObservationSourceType(
+        os.environ.get('OBSERVATION_SOURCE_TYPE', ObservationSourceType.LIVE_RF.value)
+    )
+    source_id = os.environ.get('OBSERVATION_SOURCE_ID', 'dump1090-sbs')
+    receiver_id = os.environ.get('OBSERVATION_RECEIVER_ID', 'local-receiver')
+    recording_id = os.environ.get('OBSERVATION_RECORDING_ID')
 
     logger.info(f"Connecting to dump1090 SBS output at {host}:{port}")
 
@@ -211,6 +236,27 @@ async def connect_and_ingest():
                     data = parse_sbs_message(line)
 
                     if data:
+                        received_at = datetime.now(timezone.utc)
+                        observation = sbs_state_to_observation(
+                            data,
+                            source_type=source_type,
+                            source_id=source_id,
+                            receiver_id=(
+                                receiver_id
+                                if source_type is ObservationSourceType.LIVE_RF
+                                else None
+                            ),
+                            recording_id=(
+                                recording_id
+                                if source_type is ObservationSourceType.RECORDED_REPLAY
+                                else None
+                            ),
+                            observed_at=data.get('_observed_at') or received_at,
+                            received_at=received_at,
+                            raw_message_id=data.get('_raw_message_id'),
+                        )
+                        insert_observation(db, observation)
+
                         icao = data['hex']
                         merged = merge_aircraft_state(icao, data)
 

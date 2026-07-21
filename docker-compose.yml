@@ -50,6 +50,10 @@ services:
       DUMP1090_URL: http://host.docker.internal:8080/data/aircraft.json
       DUMP1090_HOST: host.docker.internal
       DUMP1090_PORT: 30003
+      OBSERVATION_SOURCE_TYPE: ${OBSERVATION_SOURCE_TYPE:-LIVE_RF}
+      OBSERVATION_SOURCE_ID: ${OBSERVATION_SOURCE_ID:-dump1090-sbs}
+      OBSERVATION_RECEIVER_ID: ${OBSERVATION_RECEIVER_ID:-local-receiver}
+      OBSERVATION_RECORDING_ID: ${OBSERVATION_RECORDING_ID:-}
     depends_on:
       db:
         condition: service_healthy
