@@ -22,6 +22,6 @@ one ASCII `sbs_message`. The event offset, explicit timestamp, and timestamp ins
 the SBS message must agree. The loader rejects unordered, altered, malformed, or
 timezone-naive data before opening the replay server.
 
-The checked-in `columbus_generated_v1.json` fixture is fictional, released as
+The checked-in `columbus_generated_v2.json` fixture is fictional, released as
 CC0-1.0, and safe to redistribute. It must never be described as captured RF or
 real aircraft traffic.

@@ -185,7 +185,7 @@ function AppContent() {
 
       {/* Aircraft detail - center bottom (when selected) */}
       {selectedAircraftData && (
-        <div className={`absolute left-80 right-80 z-[1000] max-w-xl mx-auto ${IS_RECORDED_REPLAY ? 'bottom-44' : 'bottom-4'}`}>
+        <div className={`absolute left-80 right-80 z-[1000] mx-auto max-w-xl overflow-y-auto ${IS_RECORDED_REPLAY ? 'bottom-44 max-h-[calc(100vh-13rem)]' : 'bottom-4 max-h-[calc(100vh-6rem)]'}`}>
           <AircraftDetail
             aircraft={selectedAircraftData}
             onClose={() => setSelectedAircraft(null)}

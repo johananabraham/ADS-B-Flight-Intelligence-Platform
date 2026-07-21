@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useFlightTrail } from '@/hooks';
+import { useFlightTrail, useKinematicEvaluations } from '@/hooks';
 import type { Aircraft } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import clsx from 'clsx';
+import { IntegrityEvidence } from './IntegrityEvidence';
 
 interface SafetyContext {
   aircraft: string;
@@ -39,6 +40,13 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
   const [showSafety, setShowSafety] = useState(false);
   const [flightRoute, setFlightRoute] = useState<FlightRoute | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [showIntegrity, setShowIntegrity] = useState(false);
+  const {
+    data: kinematicEvaluations = [],
+    isLoading: integrityLoading,
+    isError: integrityError,
+  } = useKinematicEvaluations(aircraft.icao_hex);
+  const latestEvaluation = kinematicEvaluations[0];
 
   // Fetch flight route on mount
   useEffect(() => {
@@ -263,6 +271,14 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
           <AltitudeChart positions={trail.positions} />
         </div>
       )}
+
+      <IntegrityEvidence
+        evaluation={latestEvaluation}
+        expanded={showIntegrity}
+        loading={integrityLoading}
+        error={integrityError}
+        onToggle={() => setShowIntegrity(value => !value)}
+      />
 
       {/* Safety Context (collapsible) */}
       <div className="border-b border-surface-3">

@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, Float, Index, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PostgreSQLUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -20,10 +20,14 @@ class KinematicEvaluationRecord(Base):
     )
     policy_version: Mapped[str] = mapped_column(String(20), nullable=False)
     previous_observation_id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), nullable=False
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("track_observations.observation_id", ondelete="RESTRICT"),
+        nullable=False,
     )
     current_observation_id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), nullable=False
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("track_observations.observation_id", ondelete="RESTRICT"),
+        nullable=False,
     )
     source_type: Mapped[str] = mapped_column(String(30), nullable=False)
     source_id: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -36,6 +40,10 @@ class KinematicEvaluationRecord(Base):
     rule_results: Mapped[list[dict[str, object]]] = mapped_column(JSONB, nullable=False)
 
     __table_args__ = (
+        CheckConstraint(
+            "status IN ('PASS', 'FLAGGED', 'INSUFFICIENT_DATA')",
+            name="ck_kinematic_evaluation_status",
+        ),
         UniqueConstraint(
             "previous_observation_id",
             "current_observation_id",
