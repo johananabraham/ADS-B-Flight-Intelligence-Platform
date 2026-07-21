@@ -98,11 +98,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Start hardware-free demo
-        run: docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d
+        run: docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build --renew-anon-volumes -d
       - name: Apply database migration
         run: docker compose exec -T backend alembic -c alembic.ini upgrade head
       - name: Verify the complete data path
         run: python scripts/verify_demo.py --timeout 180
+      - name: Start checked-in recorded replay
+        run: >-
+          docker compose -f docker-compose.yml -f docker-compose.demo.yml
+          -f docker-compose.recorded.yml up --build --force-recreate -d replay ingestion
+      - name: Verify recorded replay provenance and timestamps
+        run: python scripts/verify_recorded_replay.py --timeout 60
       - name: Capture service logs
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.demo.yml logs --no-color > demo.log
