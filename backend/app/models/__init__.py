@@ -8,6 +8,7 @@ from .aircraft import (
 )
 from .safety import Incident, Regulation
 from .observation import TrackObservationRecord
+from .kinematics import KinematicEvaluationRecord
 
 __all__ = [
     "Aircraft",
@@ -19,4 +20,5 @@ __all__ = [
     "Incident",
     "Regulation",
     "TrackObservationRecord",
+    "KinematicEvaluationRecord",
 ]
