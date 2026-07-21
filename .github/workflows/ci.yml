@@ -109,6 +109,13 @@ jobs:
           -f docker-compose.recorded.yml up --build --force-recreate -d replay ingestion
       - name: Verify recorded replay provenance and timestamps
         run: python scripts/verify_recorded_replay.py --timeout 60
+      - name: Start deterministic kinematic attack replay
+        run: >-
+          docker compose -f docker-compose.yml -f docker-compose.demo.yml
+          -f docker-compose.recorded.yml -f docker-compose.kinematic-attack.yml
+          up --build --force-recreate -d replay ingestion
+      - name: Verify exact kinematic rule evidence
+        run: python scripts/verify_kinematic_replay.py --timeout 60
       - name: Capture service logs
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.demo.yml logs --no-color > demo.log

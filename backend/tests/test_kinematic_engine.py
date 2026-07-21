@@ -1,6 +1,8 @@
 """Deterministic tests for observation-to-observation plausibility evidence."""
 
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
+from unittest.mock import Mock
 from uuid import UUID
 
 from sqlalchemy.dialects import postgresql
@@ -16,7 +18,13 @@ from app.services.kinematics import (
     KinematicRule,
     evaluate_pair,
 )
-from app.services.kinematic_persistence import build_evaluation_insert_statement
+from app.models.aircraft import AnomalySeverity, AnomalyType
+from app.services import kinematic_persistence
+from app.services.kinematic_persistence import (
+    build_evaluation_insert_statement,
+    evaluation_to_anomaly,
+    record_to_observation,
+)
 
 
 START = datetime(2026, 7, 20, 12, 0, tzinfo=timezone.utc)
@@ -137,3 +145,71 @@ def test_evaluation_identity_and_insert_are_idempotent() -> None:
     statement = build_evaluation_insert_statement(first)
     sql = str(statement.compile(dialect=postgresql.dialect()))
     assert "ON CONFLICT (evaluation_id) DO NOTHING" in sql
+
+
+def test_database_record_restores_timezone_and_provenance() -> None:
+    source = observation(seconds=0, latitude=0)
+    record = SimpleNamespace(
+        schema_version=source.schema_version,
+        observation_id=source.observation_id,
+        source_type="SIMULATION",
+        source_id="kinematic-test",
+        receiver_id=None,
+        recording_id=None,
+        provider=None,
+        license_id=None,
+        icao_hex=source.icao_hex,
+        observed_at=source.observed_at.replace(tzinfo=None),
+        received_at=source.received_at.replace(tzinfo=None),
+        callsign=None,
+        latitude=source.latitude,
+        longitude=source.longitude,
+        altitude_ft=source.altitude_ft,
+        ground_speed_knots=source.ground_speed_knots,
+        track_degrees=source.track_degrees,
+        vertical_rate_fpm=None,
+        squawk=None,
+        quality_flags=[],
+        raw_message_id=None,
+    )
+
+    restored = record_to_observation(record)
+
+    assert restored.provenance == PROVENANCE
+    assert restored.observed_at.tzinfo is timezone.utc
+
+
+def test_flagged_evaluation_becomes_explainable_operator_alert() -> None:
+    previous = observation(seconds=0, latitude=0, speed_knots=200)
+    current = observation(seconds=1, latitude=0.05, speed_knots=800)
+    evaluation = evaluate_pair(previous, current)
+
+    anomaly = evaluation_to_anomaly(evaluation, current)
+
+    assert anomaly.anomaly_type is AnomalyType.KINEMATIC_PLAUSIBILITY
+    assert anomaly.severity is AnomalySeverity.HIGH
+    assert anomaly.details["evaluation_id"] == str(evaluation.evaluation_id)
+    assert len(anomaly.details["failed_rules"]) >= 2
+    assert "not established" in anomaly.details["interpretation"]
+
+
+def test_new_observation_is_evaluated_and_alerted_once(monkeypatch) -> None:
+    previous = observation(seconds=0, latitude=0, speed_knots=200)
+    current = observation(seconds=1, latitude=0.05, speed_knots=800)
+    db = Mock()
+    monkeypatch.setattr(
+        kinematic_persistence,
+        "find_previous_position_observation",
+        lambda *_args: previous,
+    )
+    monkeypatch.setattr(
+        kinematic_persistence,
+        "insert_evaluation",
+        lambda *_args: True,
+    )
+
+    evaluation = kinematic_persistence.evaluate_new_observation(db, current)
+
+    assert evaluation is not None
+    assert evaluation.status is EvaluationStatus.FLAGGED
+    db.add.assert_called_once()
