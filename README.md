@@ -26,6 +26,7 @@ Real-time aircraft tracking and anomaly detection system using Software Defined 
 - **Real-time ADS-B ingestion** via RTL-SDR + dump1090
 - **Live flight tracking** on interactive map
 - **Anomaly detection** for altitude, speed, squawk codes, restricted airspace
+- **Explainable kinematic integrity checks** tied to immutable source observations
 - **AI-generated intelligence summaries** via Claude API
 - **Historical data analysis** with time-series queries
 
@@ -76,6 +77,7 @@ same saved messages with their original relative timing and timestamps:
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.demo.yml \
   -f docker-compose.recorded.yml up --build --renew-anon-volumes -d
+docker compose exec -T backend alembic -c alembic.ini upgrade head
 python3 scripts/verify_recorded_replay.py
 ```
 
@@ -85,8 +87,26 @@ through the public FastAPI backend to an internal replay-control service, so the
 browser never receives direct access to the replay container.
 
 The verifier requires exactly six immutable observations, six unique IDs, two
-aircraft, the expected original timestamp range, and working replay controls. See
+aircraft, the expected original timestamp range, working replay controls, four
+passing kinematic evaluations, and zero kinematic flags. See
 `docs/recording-format-v1.md` for the format and integrity rules.
+
+### Deterministic integrity scenario
+
+Switch replay and ingestion to the explicitly generated impossible-motion fixture:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.demo.yml \
+  -f docker-compose.recorded.yml -f docker-compose.kinematic-attack.yml \
+  up --build --force-recreate -d replay ingestion
+python3 scripts/verify_kinematic_replay.py
+```
+
+Select `TEST001` and expand **Integrity Evidence**. The system shows each measured
+value, policy threshold, source, and policy version. The verifier requires exactly
+two immutable observations, one evaluation, one idempotent alert, and all five
+expected failed rules. This demonstrates inconsistent motion; it does not prove
+that a transmitter was spoofed.
 
 Stop the demo with:
 
@@ -187,8 +207,9 @@ label replayed traffic as live RF.
 
 GitHub Actions runs Python lint/tests, migration SQL validation, frontend
 lint/build, C++ decoder build/tests, dependency audits, and the complete Docker
-demo verifier. Security audits currently report known pinned-dependency findings
-as a non-blocking job until the dedicated dependency-upgrade checkpoint lands.
+demo, clean replay, and kinematic attack verifiers. Security audits are retained as
+a non-blocking job so code-quality failures remain distinguishable from newly
+published dependency advisories.
 
 ## Project Structure
 
@@ -230,6 +251,12 @@ The system flags these anomaly types:
 | SQUAWK_7700 | General emergency | CRITICAL |
 | GHOST_FLIGHT | Aircraft disappeared mid-flight | MEDIUM |
 | RESTRICTED_AIRSPACE | Entered no-fly zone | HIGH |
+| KINEMATIC_PLAUSIBILITY | Two observations exceed one or more versioned motion limits | MEDIUM/HIGH |
+
+Kinematic evidence currently checks implied ground speed, reported acceleration,
+turn rate, derived vertical rate, and disagreement between reported and implied
+speed. Thresholds are conservative general limits, not aircraft-type performance
+models, and the UI states that inconsistency is not proof of spoofing.
 
 ## License
 
