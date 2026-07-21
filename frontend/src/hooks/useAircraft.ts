@@ -5,6 +5,7 @@ import {
   fetchStats,
   fetchAnomalies,
   fetchCriticalAnomalies,
+  fetchKinematicEvaluations,
 } from '@/utils/api';
 
 export function useAircraft() {
@@ -44,6 +45,15 @@ export function useCriticalAnomalies(hours: number = 24) {
   return useQuery({
     queryKey: ['criticalAnomalies', hours],
     queryFn: () => fetchCriticalAnomalies(hours),
+    refetchInterval: 5000,
+  });
+}
+
+export function useKinematicEvaluations(icao: string | null) {
+  return useQuery({
+    queryKey: ['kinematicEvaluations', icao],
+    queryFn: () => fetchKinematicEvaluations(icao!),
+    enabled: !!icao,
     refetchInterval: 5000,
   });
 }

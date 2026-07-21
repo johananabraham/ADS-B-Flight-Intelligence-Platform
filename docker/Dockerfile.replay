@@ -2,9 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 RUN useradd --create-home --uid 10001 replay
+COPY services/replay/requirements.txt /app/services/replay/requirements.txt
+RUN pip install --no-cache-dir -r /app/services/replay/requirements.txt
 COPY services/replay /app/services/replay
 RUN chown -R replay:replay /app
 
 USER replay
-EXPOSE 30003
+EXPOSE 30003 8081
 CMD ["python", "-m", "services.replay.replay"]

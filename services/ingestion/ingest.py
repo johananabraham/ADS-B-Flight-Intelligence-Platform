@@ -26,6 +26,7 @@ from app.core.config import get_settings
 from app.schemas.observation import ObservationSourceType
 from app.services.observation_adapters import sbs_state_to_observation
 from app.services.observation_persistence import insert_observation
+from app.services.kinematic_persistence import evaluate_new_observation
 
 logging.basicConfig(
     level=logging.INFO,
@@ -255,7 +256,8 @@ async def connect_and_ingest():
                             received_at=received_at,
                             raw_message_id=data.get('_raw_message_id'),
                         )
-                        insert_observation(db, observation)
+                        if insert_observation(db, observation):
+                            evaluate_new_observation(db, observation)
 
                         icao = data['hex']
                         merged = merge_aircraft_state(icao, data)

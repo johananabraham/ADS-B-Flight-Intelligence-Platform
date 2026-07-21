@@ -9,6 +9,7 @@ import { FilterPanel } from '@/components/FilterPanel';
 import { StatsPanel } from '@/components/StatsPanel';
 import { GeofencePanel } from '@/components/GeofencePanel';
 import { SafetyPanel } from '@/components/SafetyPanel';
+import { ReplayControls } from '@/components/ReplayControls';
 import type { Geofence } from '@/components/GeofencePanel';
 import { useWebSocket } from '@/hooks';
 import type { Aircraft } from '@/types';
@@ -42,6 +43,7 @@ const defaultFilters: Filters = {
 const MILITARY_PREFIXES = ['RCH', 'REACH', 'EVAC', 'NAVY', 'ARMY', 'USAF', 'MC', 'PAT', 'TOPCAT', 'GOLD', 'SENTRY', 'AWAC'];
 const EMERGENCY_SQUAWKS = ['7500', '7600', '7700'];
 const SOURCE_MODE = import.meta.env.VITE_DATA_SOURCE_MODE;
+const IS_RECORDED_REPLAY = SOURCE_MODE === 'RECORDED REPLAY';
 
 function AppContent() {
   const [selectedAircraft, setSelectedAircraft] = useState<string | null>(null);
@@ -183,7 +185,7 @@ function AppContent() {
 
       {/* Aircraft detail - center bottom (when selected) */}
       {selectedAircraftData && (
-        <div className="absolute bottom-4 left-80 right-80 z-[1000] max-w-xl mx-auto">
+        <div className={`absolute left-80 right-80 z-[1000] mx-auto max-w-xl overflow-y-auto ${IS_RECORDED_REPLAY ? 'bottom-44 max-h-[calc(100vh-13rem)]' : 'bottom-4 max-h-[calc(100vh-6rem)]'}`}>
           <AircraftDetail
             aircraft={selectedAircraftData}
             onClose={() => setSelectedAircraft(null)}
@@ -237,6 +239,12 @@ function AppContent() {
 
       {/* Safety Research panel - positioned by component */}
       {showSafety && <SafetyPanel onClose={() => setShowSafety(false)} />}
+
+      {IS_RECORDED_REPLAY && (
+        <div className="absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2">
+          <ReplayControls />
+        </div>
+      )}
 
       {/* Connection status indicator */}
       <div className={`absolute top-16 right-4 z-[999] flex items-center gap-2 px-2 py-1 rounded text-2xs ${

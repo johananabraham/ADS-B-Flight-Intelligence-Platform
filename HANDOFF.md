@@ -1,10 +1,10 @@
 # Project Handoff and Expansion Roadmap
 
-Last updated: 2026-07-19
+Last updated: 2026-07-20
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/recorded-replay-format`
+Current branch: `codex/kinematic-plausibility-engine`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -324,10 +324,73 @@ Implemented on `codex/recorded-replay-format`:
 - Normal simulation mode was restored after testing and its verifier passed with
   six aircraft and 25/25 unique recent observations.
 
+Implemented on `codex/replay-control-ui`:
+
+- One authoritative, monotonic replay controller now owns playback position,
+  event index, pause/resume state, restart, seek, loop behavior, and
+  0.5x/1x/2x/10x speed changes.
+- The replay container exposes an internal FastAPI control service on port 8081;
+  its HTTP health check does not consume replay messages.
+- The public backend proxies validated status and command requests at
+  `/api/v1/replay/status` and `/api/v1/replay/commands`. The replay service is not
+  published directly to the host or browser.
+- Recorded mode adds an accessible operator timeline with explicit playing,
+  paused, and completed states; pause/resume, restart, seek, and speed controls;
+  progress and event counts; busy/error feedback; and 44-pixel control targets.
+- The timeline appears only under the explicit `RECORDED REPLAY` build mode.
+- Browser verification confirmed clean rendering, pause/resume, restart, speed
+  selection, accessible names/state, and no console warnings or errors.
+- The automated verifier proved restart, 2x speed, a frozen paused clock, seek to
+  one second while paused, and resume. It also preserved exactly six unique
+  observations for two aircraft and the original `2026-07-19 12:00:00` through
+  `12:00:02` timestamp range.
+- Checkpoint gate: 35 Python tests, Ruff, frontend ESLint, TypeScript/Vite build,
+  actionlint, `git diff --check`, and the secret-pattern scan pass. Python and npm
+  dependency audits report zero known vulnerabilities.
+
+Implemented on `codex/kinematic-plausibility-engine`:
+
+- A versioned `KinematicPolicy` evaluates consecutive complete positions from the
+  same aircraft and exact source provenance. It computes great-circle distance,
+  implied ground speed, reported acceleration, shortest-path turn rate, derived
+  vertical rate, and reported-versus-implied speed disagreement.
+- Every rule result stores the measured value, threshold, unit, explanation,
+  policy version, and both immutable observation IDs. Results are `PASS`,
+  `FLAGGED`, or `INSUFFICIENT_DATA`; reversed, tiny, long-gap, and partial pairs
+  are not mislabeled as attacks.
+- Evaluation IDs are deterministic UUIDv5 values and PostgreSQL inserts are
+  idempotent. Foreign keys prevent evidence from referencing missing observations;
+  a status check constraint and pair/policy uniqueness protect the table.
+- Ingestion evaluates only newly inserted position observations. Flagged results
+  create one explainable `KINEMATIC_PLAUSIBILITY` anomaly; two or more failed rules
+  are high severity, while a single failure is medium severity.
+- FastAPI exposes provenance-filterable evidence at
+  `/api/v1/kinematics/evaluations`. The aircraft detail UI shows explicit pass,
+  flagged, insufficient, loading, empty, and error states plus exact failed values
+  and thresholds. It always states that consistency checks do not authenticate a
+  transmitter or prove spoofing.
+- Building the engine revealed that the original generated replay coordinates did
+  not match their reported speeds. The corrected `columbus-generated-v2` fixture
+  now produces four passing evaluations and zero flags.
+- A separate CC0 `kinematic-attack-generated-v2` fixture isolates the new engine:
+  reported speed/vertical rate remain within the legacy detector envelope while
+  the cross-observation jump fails all five kinematic rules.
+- End-to-end clean evidence: 6/6 unique observations, two aircraft, exact original
+  timestamps, all replay controls, four evaluations, and zero flags.
+- End-to-end attack evidence: two observations, one evaluation, one idempotent
+  alert, and exactly five failed rules. Repeated loops do not duplicate evidence.
+- Browser evidence confirmed the `FLAGGED` state, all five values/thresholds,
+  provenance, keyboard-expandable disclosure, bounded scrolling, and zero console
+  warnings/errors.
+- Checkpoint gate: 48 Python tests, Ruff, frontend ESLint, TypeScript/Vite build,
+  actionlint, Compose validation, migration SQL generation, `git diff --check`, and
+  secret scan pass. Python and npm audits report zero known vulnerabilities.
+
 Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
-- Kinematic anomaly rules, ML, external corroboration, or trust scoring.
+- ML, external corroboration, aircraft-type-specific performance envelopes, or
+  fused trust scoring.
 
 ## 3. Known Risks and Technical Debt
 
@@ -348,11 +411,17 @@ Not implemented in these checkpoints:
   unimplemented.
 - The local host still has Node 18.12.1, which is too old for the upgraded frontend;
   use the Node 20.19 container or install Node 20.19+ for host-side frontend work.
-- Recorded replay currently takes startup settings from environment variables.
-  Pause/resume/seek/speed controls are implemented only in the playback domain
-  object; an authenticated control API and operator timeline UI are still pending.
+- Recorded replay startup settings still come from environment variables. The
+  control API is intentionally internal and unauthenticated; add authorization and
+  audit logging before exposing operator controls in a public deployment.
 - Data-source identity is a frontend build-time label. It should eventually come
   from a signed backend source-status API.
+- Kinematic policy 1.0 uses conservative general limits. It has deterministic
+  clean/attack evidence but is not calibrated against hours of benign real RF;
+  do not publish a false-positive-rate claim yet.
+- Evaluations compare observations within one exact source. They do not yet fuse
+  independent receivers or external feeds, estimate sensor uncertainty, or detect
+  gradual low-and-slow drift over a long window.
 - Simulator aircraft are fictional. Do not describe demo traffic as captured or
   live traffic.
 - The existing `graphify-out/` directory contains cache fragments but no usable
@@ -473,6 +542,10 @@ Verify:
 
 Purpose: create repeatable scenarios for detection development.
 
+Status: implemented through the replay format, generated fixture, internal control
+service, backend proxy, operator timeline, and deterministic integration verifier.
+Authentication and audit logging remain deployment hardening work.
+
 Build:
 
 - A versioned recording format containing messages, original timestamps, source,
@@ -492,6 +565,11 @@ Verify:
 ### Phase 3 — Deterministic kinematic plausibility engine (Weeks 4–5)
 
 Purpose: detect physically inconsistent movement without machine learning.
+
+Status: the first complete vertical slice is implemented—five deterministic rules,
+versioned persisted evidence, ingestion integration, API/UI presentation, corrected
+clean fixture, isolated attack fixture, and clean/attack CI verification. Real
+benign-capture calibration, property tests, and gradual-window rules remain.
 
 Build:
 
@@ -1017,11 +1095,16 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
 
 ## 10. Immediate Next Actions
 
-1. Review the stacked Phase 0, CI, dependency-security, and recorded-replay PRs.
+1. Review the stacked Phase 0, CI, dependency-security, recorded-replay, and
+   replay-control PRs.
 2. Confirm the first GitHub-hosted CI run after the workflow reaches `main`.
-3. Add a replay-control API with pause/resume/restart/seek/speed state.
-4. Add the operator replay timeline and explicit `RECORDED REPLAY` UI state.
-5. Add deterministic kinematic checks over immutable observations.
+3. Add property-based tests around geographic poles/date boundaries, noisy heading,
+   interval boundaries, and gradual drift so threshold behavior is explored beyond
+   the two golden fixtures.
+4. Run policy 1.0 against a legally usable benign RF capture and publish reviewed
+   alerts per flight hour before claiming a false-positive rate.
+5. Add short-window gradual-drift evidence and an evaluation report before starting
+   any ML classifier.
 6. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
    subtree after confirming the board model and available sensors.
 7. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
@@ -1062,6 +1145,12 @@ Use this when starting a new Codex chat:
 > verifier are implemented on `codex/ci-demo-verifier`. Dependency audits are at
 > zero known findings on `codex/dependency-security-upgrades`. Recording format
 > 1.0, deterministic playback, a CC0 generated fixture, and recorded-mode verifier
-> are on `codex/recorded-replay-format`; control API/UI work is next. Confirm the
+> are on `codex/recorded-replay-format`. The internal replay-control API, backend
+> proxy, accessible operator timeline, and deterministic control verification are
+> on `codex/replay-control-ui`. The versioned five-rule kinematic engine, persisted
+> evidence, API/UI disclosure, corrected clean fixture, isolated attack fixture,
+> and deterministic clean/attack verifiers are on
+> `codex/kinematic-plausibility-engine`. Property tests and benign-capture policy
+> calibration are next; do not claim a false-positive rate yet. Confirm the
 > first hosted Actions run before claiming CI is green. Deployment is planned
 > for Section 5 Phase 10; public production deployment is not complete today.
