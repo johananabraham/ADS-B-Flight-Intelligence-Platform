@@ -108,6 +108,23 @@ two immutable observations, one evaluation, one idempotent alert, and all five
 expected failed rules. This demonstrates inconsistent motion; it does not prove
 that a transmitter was spoofed.
 
+### Reproducible kinematic evaluation
+
+Run the leakage-safe generated scenario suite without Docker or radio hardware:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/run_kinematic_evaluation.py --check \
+  --baseline evaluation/results/kinematic_rules_baseline_v1.json
+```
+
+The generator splits 90 original source sessions before creating any variants, then
+scores only the 22-session held-out test split. Policy 1.0 detects 100% of the
+generated abrupt position, altitude, velocity, and heading scenarios with zero
+delay. It detects 0% of the subtle gradual-drift and replayed-timestamp scenarios;
+those measured gaps define the next engineering work. Generated clean sessions
+produce zero alerts, but that is **not** a real-world false-positive-rate claim.
+See `docs/kinematic-evaluation-v1.md` for methodology and the checked-in result.
+
 Stop the demo with:
 
 ```bash
@@ -205,7 +222,8 @@ label replayed traffic as live RF.
 
 ## Continuous Integration
 
-GitHub Actions runs Python lint/tests, migration SQL validation, frontend
+GitHub Actions runs Python lint/tests, the held-out synthetic kinematic regression
+gate, migration SQL validation, frontend
 lint/build, C++ decoder build/tests, dependency audits, and the complete Docker
 demo, clean replay, and kinematic attack verifiers. Security audits are retained as
 a non-blocking job so code-quality failures remain distinguishable from newly
