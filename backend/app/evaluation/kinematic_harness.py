@@ -207,6 +207,7 @@ def _variant_observations(
             replayed_at = source[index - 1].observed_at
             update["observed_at"] = replayed_at
             update["received_at"] = replayed_at
+            update["ground_speed_knots"] = None
         variant.append(observation.model_copy(update=update))
     return tuple(variant)
 

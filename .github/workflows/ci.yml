@@ -39,6 +39,12 @@ jobs:
         env:
           PYTHONPATH: backend:.
         run: pytest -q backend/tests
+      - name: Enforce synthetic kinematic baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_kinematic_evaluation.py --check
+          --baseline evaluation/results/kinematic_rules_baseline_v1.json
       - name: Validate migration SQL
         working-directory: backend
         env:

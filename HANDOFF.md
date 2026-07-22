@@ -4,7 +4,7 @@ Last updated: 2026-07-20
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/kinematic-plausibility-engine`
+Current branch: `codex/kinematic-evaluation-harness`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -386,6 +386,30 @@ Implemented on `codex/kinematic-plausibility-engine`:
   actionlint, Compose validation, migration SQL generation, `git diff --check`, and
   secret scan pass. Python and npm audits report zero known vulnerabilities.
 
+Implemented on `codex/kinematic-evaluation-harness`:
+
+- Generator 1.0 creates 90 deterministic clean source sessions and seven variants
+  per session. A SHA-256 partition assigns each source session before variants are
+  created: 46 train, 22 validation, and 22 held-out test sessions.
+- Scenario manifests record version, seed, source-session hash, split, attack
+  parameters, detection window, and deterministic observation identities.
+- The six generated manipulation families cover abrupt position, altitude,
+  velocity, and heading changes; subtle gradual position drift; and replayed
+  timestamps. `INSUFFICIENT_DATA` is never counted as a detection.
+- Policy 1.0 held-out results: all four abrupt families detect 22/22 scenarios at
+  zero-second median delay; gradual drift detects 0/22; replayed timestamps detect
+  0/22 and produce 22 insufficient pairs; clean generated controls flag 0/22.
+  These are synthetic regression metrics, not a real-world false-positive claim.
+- Hypothesis explores 100 examples each for polar/date-line geography, inclusive
+  0.5–30 second intervals, and noisy heading wrap. Determinism and split-leakage
+  tests protect the dataset contract.
+- `scripts/run_kinematic_evaluation.py --check` is a CI regression gate. It requires
+  zero generated-clean alerts and 100% detection for each obvious abrupt family,
+  while preserving measured gaps rather than pretending unsupported coverage.
+- The compact reviewed result is
+  `evaluation/results/kinematic_rules_baseline_v1.json`; the CLI emits the complete
+  per-scenario reproduction manifest and results.
+
 Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
@@ -422,6 +446,9 @@ Not implemented in these checkpoints:
 - Evaluations compare observations within one exact source. They do not yet fuse
   independent receivers or external feeds, estimate sensor uncertainty, or detect
   gradual low-and-slow drift over a long window.
+- The synthetic laboratory does not model ghost tracks, identity conflicts,
+  realistic latency/noise distributions, or aircraft-specific flight envelopes
+  yet. Its clean controls cannot substitute for benign captured RF calibration.
 - Simulator aircraft are fictional. Do not describe demo traffic as captured or
   live traffic.
 - The existing `graphify-out/` directory contains cache fragments but no usable
@@ -1098,13 +1125,12 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
 1. Review the stacked Phase 0, CI, dependency-security, recorded-replay, and
    replay-control PRs.
 2. Confirm the first GitHub-hosted CI run after the workflow reaches `main`.
-3. Add property-based tests around geographic poles/date boundaries, noisy heading,
-   interval boundaries, and gradual drift so threshold behavior is explored beyond
-   the two golden fixtures.
+3. Add a short-window trajectory residual rule and compare it against the unchanged
+   rules-only baseline, especially the 0/22 gradual-drift result.
 4. Run policy 1.0 against a legally usable benign RF capture and publish reviewed
    alerts per flight hour before claiming a false-positive rate.
-5. Add short-window gradual-drift evidence and an evaluation report before starting
-   any ML classifier.
+5. Extend Generator 1.0 with missing-message, jitter, ghost-track, identity-conflict,
+   and legitimate high-rate edge cases before starting any ML classifier.
 6. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
    subtree after confirming the board model and available sensors.
 7. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
@@ -1150,7 +1176,11 @@ Use this when starting a new Codex chat:
 > on `codex/replay-control-ui`. The versioned five-rule kinematic engine, persisted
 > evidence, API/UI disclosure, corrected clean fixture, isolated attack fixture,
 > and deterministic clean/attack verifiers are on
-> `codex/kinematic-plausibility-engine`. Property tests and benign-capture policy
-> calibration are next; do not claim a false-positive rate yet. Confirm the
+> `codex/kinematic-plausibility-engine`. The leakage-safe synthetic scenario
+> generator, held-out rules baseline, Hypothesis boundary tests, compact report,
+> and CI regression gate are on `codex/kinematic-evaluation-harness`. The current
+> rules detect all 22 held-out examples for each abrupt family but miss all gradual
+> drift and replayed-timestamp examples; do not claim a false-positive rate yet.
+> Short-window drift evidence and benign-capture calibration are next. Confirm the
 > first hosted Actions run before claiming CI is green. Deployment is planned
 > for Section 5 Phase 10; public production deployment is not complete today.
