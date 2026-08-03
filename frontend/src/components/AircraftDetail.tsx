@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useFlightTrail, useKinematicEvaluations } from '@/hooks';
+import {
+  useFlightTrail,
+  useKinematicEvaluations,
+  useWindowKinematicEvaluations,
+} from '@/hooks';
 import type { Aircraft } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import clsx from 'clsx';
@@ -47,6 +51,12 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
     isError: integrityError,
   } = useKinematicEvaluations(aircraft.icao_hex);
   const latestEvaluation = kinematicEvaluations[0];
+  const {
+    data: windowEvaluations = [],
+    isLoading: windowLoading,
+    isError: windowError,
+  } = useWindowKinematicEvaluations(aircraft.icao_hex);
+  const latestWindowEvaluation = windowEvaluations[0];
 
   // Fetch flight route on mount
   useEffect(() => {
@@ -274,9 +284,10 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
 
       <IntegrityEvidence
         evaluation={latestEvaluation}
+        windowEvaluation={latestWindowEvaluation}
         expanded={showIntegrity}
-        loading={integrityLoading}
-        error={integrityError}
+        loading={integrityLoading || windowLoading}
+        error={integrityError || windowError}
         onToggle={() => setShowIntegrity(value => !value)}
       />
 

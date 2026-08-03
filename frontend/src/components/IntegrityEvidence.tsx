@@ -1,9 +1,14 @@
 import clsx from 'clsx';
 
-import type { KinematicEvaluation, KinematicRuleResult } from '@/types';
+import type {
+  KinematicEvaluation,
+  KinematicRuleResult,
+  WindowKinematicEvaluation,
+} from '@/types';
 
 interface IntegrityEvidenceProps {
   evaluation?: KinematicEvaluation;
+  windowEvaluation?: WindowKinematicEvaluation;
   expanded: boolean;
   loading: boolean;
   error: boolean;
@@ -18,12 +23,18 @@ const STATUS_STYLES = {
 
 export function IntegrityEvidence({
   evaluation,
+  windowEvaluation,
   expanded,
   loading,
   error,
   onToggle,
 }: IntegrityEvidenceProps) {
   const failedRules = evaluation?.rule_results.filter(rule => rule.status === 'FLAGGED') ?? [];
+  const failedWindowRules =
+    windowEvaluation?.rule_results.filter(rule => rule.status === 'FLAGGED') ?? [];
+  const displayedStatus = windowEvaluation?.status === 'FLAGGED'
+    ? windowEvaluation.status
+    : evaluation?.status ?? windowEvaluation?.status;
 
   return (
     <section className="border-b border-surface-3" aria-labelledby="integrity-heading">
@@ -38,9 +49,9 @@ export function IntegrityEvidence({
           Integrity Evidence
         </span>
         <span className="flex items-center gap-2">
-          {evaluation && (
-            <span className={clsx('rounded border px-2 py-1 text-xs font-semibold', STATUS_STYLES[evaluation.status])}>
-              {evaluation.status.replace('_', ' ')}
+          {displayedStatus && (
+            <span className={clsx('rounded border px-2 py-1 text-xs font-semibold', STATUS_STYLES[displayedStatus])}>
+              {displayedStatus.replace('_', ' ')}
             </span>
           )}
           <svg
@@ -100,6 +111,28 @@ export function IntegrityEvidence({
                 Source: {evaluation.source_type} / {evaluation.source_id}
               </p>
             </>
+          )}
+          {windowEvaluation && (
+            <div className="space-y-2 rounded border border-surface-3 bg-surface-2 p-3">
+              <p className="font-semibold text-slate-200">Short-window trajectory evidence</p>
+              <p className="text-slate-300">
+                Development policy {windowEvaluation.policy_version} compared{' '}
+                {windowEvaluation.observation_ids.length} observations over{' '}
+                <span className="font-mono text-slate-100">
+                  {windowEvaluation.duration_seconds.toFixed(1)} s
+                </span>.
+              </p>
+              {failedWindowRules.map(rule => <FailedRule key={rule.rule} rule={rule} />)}
+              {windowEvaluation.status === 'PASS' && (
+                <p className="text-status-nominal">Cumulative trajectory residual stayed within the development limit.</p>
+              )}
+              {windowEvaluation.status === 'INSUFFICIENT_DATA' && (
+                <p className="text-slate-300">{windowEvaluation.reason}</p>
+              )}
+              <p className="text-slate-500">
+                This threshold is not calibrated against benign captured RF and is not a field false-positive claim.
+              </p>
+            </div>
           )}
         </div>
       )}

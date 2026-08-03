@@ -6,6 +6,7 @@ import {
   fetchAnomalies,
   fetchCriticalAnomalies,
   fetchKinematicEvaluations,
+  fetchWindowKinematicEvaluations,
 } from '@/utils/api';
 
 export function useAircraft() {
@@ -53,6 +54,15 @@ export function useKinematicEvaluations(icao: string | null) {
   return useQuery({
     queryKey: ['kinematicEvaluations', icao],
     queryFn: () => fetchKinematicEvaluations(icao!),
+    enabled: !!icao,
+    refetchInterval: 5000,
+  });
+}
+
+export function useWindowKinematicEvaluations(icao: string | null) {
+  return useQuery({
+    queryKey: ['windowKinematicEvaluations', icao],
+    queryFn: () => fetchWindowKinematicEvaluations(icao!),
     enabled: !!icao,
     refetchInterval: 5000,
   });

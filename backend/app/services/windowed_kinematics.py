@@ -25,6 +25,7 @@ class WindowPolicy:
 
     version: str = "1.0-development"
     minimum_observations: int = 6
+    maximum_observations: int = 31
     minimum_duration_seconds: float = 5.0
     maximum_duration_seconds: float = 30.0
     maximum_position_residual_nm: float = 0.002
@@ -43,6 +44,17 @@ class WindowRuleResult:
     @property
     def failed(self) -> bool:
         return self.status is EvaluationStatus.FLAGGED
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "rule": self.rule.value,
+            "status": self.status.value,
+            "value": self.value,
+            "threshold": self.threshold,
+            "unit": self.unit,
+            "explanation": self.explanation,
+            "observation_ids": [str(value) for value in self.observation_ids],
+        }
 
 
 @dataclass(frozen=True)
@@ -179,6 +191,13 @@ def evaluate_window(
             observations,
             selected_policy,
             f"At least {selected_policy.minimum_observations} observations are required.",
+            duration_seconds,
+        )
+    if len(observations) > selected_policy.maximum_observations:
+        return _insufficient(
+            observations,
+            selected_policy,
+            f"At most {selected_policy.maximum_observations} observations are allowed.",
             duration_seconds,
         )
     first = observations[0]

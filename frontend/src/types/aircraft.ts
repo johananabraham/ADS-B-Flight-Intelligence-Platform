@@ -87,6 +87,23 @@ export interface KinematicEvaluation {
   rule_results: KinematicRuleResult[];
 }
 
+export interface WindowKinematicEvaluation {
+  evaluation_id: string;
+  policy_version: string;
+  first_observation_id: string;
+  current_observation_id: string;
+  observation_ids: string[];
+  source_type: string;
+  source_id: string;
+  icao_hex: string;
+  evaluated_at: string;
+  status: KinematicEvaluationStatus;
+  reason: string | null;
+  duration_seconds: number;
+  measurements: Record<string, number>;
+  rule_results: KinematicRuleResult[];
+}
+
 export interface Stats {
   active_aircraft: number;
   total_positions_today: number;

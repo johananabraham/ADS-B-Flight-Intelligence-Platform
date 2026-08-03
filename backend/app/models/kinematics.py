@@ -1,4 +1,4 @@
-"""Persistence model for deterministic kinematic evidence."""
+"""Persistence models for deterministic kinematic evidence."""
 
 from datetime import datetime
 from uuid import UUID
@@ -52,4 +52,49 @@ class KinematicEvaluationRecord(Base):
         ),
         Index("ix_kinematic_evaluations_icao_time", "icao_hex", "evaluated_at"),
         Index("ix_kinematic_evaluations_status_time", "status", "evaluated_at"),
+    )
+
+
+class WindowKinematicEvaluationRecord(Base):
+    """One versioned residual evaluation over immutable observations."""
+
+    __tablename__ = "window_kinematic_evaluations"
+
+    evaluation_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), primary_key=True
+    )
+    policy_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    first_observation_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("track_observations.observation_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    current_observation_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("track_observations.observation_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    observation_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    source_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    source_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    icao_hex: Mapped[str] = mapped_column(String(6), nullable=False)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    reason: Mapped[str | None] = mapped_column(String(300))
+    duration_seconds: Mapped[float] = mapped_column(Float, nullable=False)
+    measurements: Mapped[dict[str, float]] = mapped_column(JSONB, nullable=False)
+    rule_results: Mapped[list[dict[str, object]]] = mapped_column(JSONB, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('PASS', 'FLAGGED', 'INSUFFICIENT_DATA')",
+            name="ck_window_kinematic_evaluation_status",
+        ),
+        UniqueConstraint(
+            "first_observation_id",
+            "current_observation_id",
+            "policy_version",
+            name="uq_window_kinematic_evaluation_window_policy",
+        ),
+        Index("ix_window_kinematic_icao_time", "icao_hex", "evaluated_at"),
     )
