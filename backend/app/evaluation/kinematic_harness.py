@@ -19,6 +19,7 @@ from app.schemas.observation import (
     TrackObservation,
 )
 from app.services.kinematics import EvaluationStatus, KinematicPolicy, evaluate_pair
+from app.services.windowed_kinematics import WindowPolicy, evaluate_window
 
 
 GENERATOR_VERSION = "1.0"
@@ -72,6 +73,20 @@ class ScenarioResult:
     flagged_pair_count: int
     insufficient_pair_count: int
     detected: bool
+    time_to_detect_seconds: float | None
+
+
+@dataclass(frozen=True)
+class WindowScenarioResult:
+    scenario_id: str
+    source_session_id: str
+    split: DatasetSplit
+    scenario_type: ScenarioType
+    pair_detected: bool
+    window_detected: bool
+    combined_detected: bool
+    flagged_windows: int
+    insufficient_windows: int
     time_to_detect_seconds: float | None
 
 
@@ -393,6 +408,141 @@ def build_report(
             }
             for scenario in selected
         ],
+        "scenarios": [asdict(result) for result in results],
+    }
+
+
+def evaluate_window_scenario(
+    scenario: KinematicScenario,
+    *,
+    pair_policy: KinematicPolicy | None = None,
+    window_policy: WindowPolicy | None = None,
+) -> WindowScenarioResult:
+    """Compare pairwise and prefix-window detection on one unchanged scenario."""
+    pair_evaluations = [
+        (index, evaluate_pair(previous, current, policy=pair_policy))
+        for index, (previous, current) in enumerate(
+            zip(scenario.observations, scenario.observations[1:]), start=1
+        )
+    ]
+    selected_window_policy = window_policy or WindowPolicy()
+    window_evaluations = [
+        (
+            end_index,
+            evaluate_window(
+                scenario.observations[: end_index + 1], policy=selected_window_policy
+            ),
+        )
+        for end_index in range(
+            selected_window_policy.minimum_observations - 1,
+            len(scenario.observations),
+        )
+    ]
+    pair_indices = [
+        index
+        for index, evaluation in pair_evaluations
+        if evaluation.status is EvaluationStatus.FLAGGED
+    ]
+    window_indices = [
+        index
+        for index, evaluation in window_evaluations
+        if evaluation.status is EvaluationStatus.FLAGGED
+    ]
+    if scenario.detection_window is not None:
+        pair_indices = [
+            index
+            for index in pair_indices
+            if scenario.detection_window.start_index <= index <= scenario.detection_window.end_index
+        ]
+        window_indices = [
+            index
+            for index in window_indices
+            if scenario.detection_window.start_index <= index <= scenario.detection_window.end_index
+        ]
+    detection_indices = sorted({*pair_indices, *window_indices})
+    time_to_detect = None
+    if detection_indices and scenario.detection_window is not None:
+        attack_time = scenario.observations[scenario.detection_window.start_index].observed_at
+        detection_time = scenario.observations[detection_indices[0]].observed_at
+        time_to_detect = (detection_time - attack_time).total_seconds()
+    return WindowScenarioResult(
+        scenario_id=scenario.scenario_id,
+        source_session_id=scenario.source_session_id,
+        split=scenario.split,
+        scenario_type=scenario.scenario_type,
+        pair_detected=bool(pair_indices),
+        window_detected=bool(window_indices),
+        combined_detected=bool(detection_indices),
+        flagged_windows=sum(
+            evaluation.status is EvaluationStatus.FLAGGED
+            for _, evaluation in window_evaluations
+        ),
+        insufficient_windows=sum(
+            evaluation.status is EvaluationStatus.INSUFFICIENT_DATA
+            for _, evaluation in window_evaluations
+        ),
+        time_to_detect_seconds=time_to_detect,
+    )
+
+
+def build_window_report(
+    scenarios: Iterable[KinematicScenario],
+    *,
+    split: DatasetSplit = DatasetSplit.TEST,
+    pair_policy: KinematicPolicy | None = None,
+    window_policy: WindowPolicy | None = None,
+) -> dict[str, object]:
+    """Measure additive window evidence without changing the rules-only baseline."""
+    selected_window_policy = window_policy or WindowPolicy()
+    selected = [scenario for scenario in scenarios if scenario.split is split]
+    results = [
+        evaluate_window_scenario(
+            scenario,
+            pair_policy=pair_policy,
+            window_policy=selected_window_policy,
+        )
+        for scenario in selected
+    ]
+    metrics: dict[str, dict[str, object]] = {}
+    for scenario_type in ScenarioType:
+        type_results = [result for result in results if result.scenario_type is scenario_type]
+        delays = [
+            result.time_to_detect_seconds
+            for result in type_results
+            if result.time_to_detect_seconds is not None
+        ]
+        metrics[scenario_type.value] = {
+            "scenarios": len(type_results),
+            "pair_detected": sum(result.pair_detected for result in type_results),
+            "window_detected": sum(result.window_detected for result in type_results),
+            "combined_detected": sum(result.combined_detected for result in type_results),
+            "combined_detection_rate": (
+                round(
+                    sum(result.combined_detected for result in type_results)
+                    / len(type_results),
+                    4,
+                )
+                if type_results
+                else None
+            ),
+            "median_time_to_detect_seconds": statistics.median(delays) if delays else None,
+            "insufficient_windows": sum(
+                result.insufficient_windows for result in type_results
+            ),
+        }
+    return {
+        "report_schema_version": "1.0",
+        "scope": "synthetic_scenarios_only",
+        "evaluated_split": split.value,
+        "scenario_count": len(results),
+        "pair_policy_version": (pair_policy or KinematicPolicy()).version,
+        "window_policy": asdict(selected_window_policy),
+        "limitations": [
+            "The window threshold is development-only and is not calibrated against benign captured RF.",
+            "Synthetic clean performance is not a real-world false-positive rate.",
+            "The original Generator 1.0 held-out scenarios are unchanged for comparison.",
+        ],
+        "metrics_by_scenario_type": metrics,
         "scenarios": [asdict(result) for result in results],
     }
 

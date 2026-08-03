@@ -8,6 +8,7 @@ from app.evaluation.kinematic_harness import (
     DatasetSplit,
     ScenarioType,
     build_report,
+    build_window_report,
     generate_dataset,
     validate_no_split_leakage,
 )
@@ -77,3 +78,17 @@ def test_attack_metadata_records_reproduction_inputs() -> None:
     assert scenario.detection_window is not None
     assert scenario.detection_window.start_index == 5
     assert scenario.attack_parameters["position_jump_degrees"] == 0.05
+
+
+def test_window_evidence_closes_the_held_out_gradual_drift_gap() -> None:
+    report = build_window_report(
+        generate_dataset(session_count=30), split=DatasetSplit.TEST
+    )
+    metrics = report["metrics_by_scenario_type"]
+    gradual = metrics[ScenarioType.GRADUAL_POSITION_DRIFT.value]
+    clean = metrics[ScenarioType.CLEAN.value]
+
+    assert gradual["pair_detected"] == 0
+    assert gradual["combined_detected"] == gradual["scenarios"]
+    assert clean["combined_detected"] == 0
+    assert "development-only" in report["limitations"][0]
