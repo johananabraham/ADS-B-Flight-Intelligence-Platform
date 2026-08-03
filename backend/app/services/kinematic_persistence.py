@@ -6,7 +6,10 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from ..models.aircraft import Anomaly, AnomalySeverity, AnomalyType
-from ..models.kinematics import KinematicEvaluationRecord
+from ..models.kinematics import (
+    KinematicEvaluationRecord,
+    WindowKinematicEvaluationRecord,
+)
 from ..models.observation import TrackObservationRecord
 from ..schemas.observation import (
     ObservationProvenance,
@@ -15,6 +18,7 @@ from ..schemas.observation import (
     TrackObservation,
 )
 from .kinematics import EvaluationStatus, KinematicEvaluation, evaluate_pair
+from .windowed_kinematics import WindowEvaluation, WindowPolicy, evaluate_window
 
 
 def evaluation_values(evaluation: KinematicEvaluation) -> dict[str, object]:
@@ -45,6 +49,38 @@ def build_evaluation_insert_statement(evaluation: KinematicEvaluation):
 
 def insert_evaluation(db: Session, evaluation: KinematicEvaluation) -> bool:
     result = db.execute(build_evaluation_insert_statement(evaluation))
+    return result.rowcount == 1
+
+
+def window_evaluation_values(evaluation: WindowEvaluation) -> dict[str, object]:
+    return {
+        "evaluation_id": evaluation.evaluation_id,
+        "policy_version": evaluation.policy_version,
+        "first_observation_id": evaluation.observation_ids[0],
+        "current_observation_id": evaluation.observation_ids[-1],
+        "observation_ids": [str(value) for value in evaluation.observation_ids],
+        "source_type": evaluation.source_type,
+        "source_id": evaluation.source_id,
+        "icao_hex": evaluation.icao_hex,
+        "evaluated_at": evaluation.evaluated_at,
+        "status": evaluation.status.value,
+        "reason": evaluation.reason,
+        "duration_seconds": evaluation.duration_seconds,
+        "measurements": evaluation.measurements,
+        "rule_results": [result.to_dict() for result in evaluation.rule_results],
+    }
+
+
+def build_window_evaluation_insert_statement(evaluation: WindowEvaluation):
+    return (
+        insert(WindowKinematicEvaluationRecord)
+        .values(**window_evaluation_values(evaluation))
+        .on_conflict_do_nothing(index_elements=["evaluation_id"])
+    )
+
+
+def insert_window_evaluation(db: Session, evaluation: WindowEvaluation) -> bool:
+    result = db.execute(build_window_evaluation_insert_statement(evaluation))
     return result.rowcount == 1
 
 
@@ -106,6 +142,35 @@ def find_previous_position_observation(
     return record_to_observation(record) if record else None
 
 
+def find_window_observations(
+    db: Session,
+    current: TrackObservation,
+    *,
+    policy: WindowPolicy | None = None,
+) -> tuple[TrackObservation, ...]:
+    selected_policy = policy or WindowPolicy()
+    cutoff = current.observed_at.timestamp() - selected_policy.maximum_duration_seconds
+    records = (
+        db.query(TrackObservationRecord)
+        .filter(
+            TrackObservationRecord.icao_hex == current.icao_hex,
+            TrackObservationRecord.source_type == current.provenance.source_type.value,
+            TrackObservationRecord.source_id == current.provenance.source_id,
+            TrackObservationRecord.receiver_id == current.provenance.receiver_id,
+            TrackObservationRecord.recording_id == current.provenance.recording_id,
+            TrackObservationRecord.provider == current.provenance.provider,
+            TrackObservationRecord.license_id == current.provenance.license_id,
+            TrackObservationRecord.observed_at <= current.observed_at,
+            TrackObservationRecord.observed_at
+            >= datetime.fromtimestamp(cutoff, tz=timezone.utc),
+        )
+        .order_by(TrackObservationRecord.observed_at.desc())
+        .limit(selected_policy.maximum_observations)
+        .all()
+    )
+    return tuple(record_to_observation(record) for record in reversed(records))
+
+
 def evaluation_to_anomaly(
     evaluation: KinematicEvaluation, current: TrackObservation
 ) -> Anomaly:
@@ -154,4 +219,7 @@ def evaluate_new_observation(
     evaluation = evaluate_pair(previous, current)
     if insert_evaluation(db, evaluation) and evaluation.status is EvaluationStatus.FLAGGED:
         db.add(evaluation_to_anomaly(evaluation, current))
+    window_observations = find_window_observations(db, current)
+    if len(window_observations) >= WindowPolicy().minimum_observations:
+        insert_window_evaluation(db, evaluate_window(window_observations))
     return evaluation

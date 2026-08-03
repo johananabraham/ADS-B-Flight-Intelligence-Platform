@@ -22,9 +22,11 @@ from app.models.aircraft import AnomalySeverity, AnomalyType
 from app.services import kinematic_persistence
 from app.services.kinematic_persistence import (
     build_evaluation_insert_statement,
+    build_window_evaluation_insert_statement,
     evaluation_to_anomaly,
     record_to_observation,
 )
+from app.services.windowed_kinematics import evaluate_window
 
 
 START = datetime(2026, 7, 20, 12, 0, tzinfo=timezone.utc)
@@ -147,6 +149,18 @@ def test_evaluation_identity_and_insert_are_idempotent() -> None:
     assert "ON CONFLICT (evaluation_id) DO NOTHING" in sql
 
 
+def test_window_evaluation_insert_is_idempotent() -> None:
+    observations = tuple(
+        observation(seconds=index, latitude=index * 0.0013889)
+        for index in range(6)
+    )
+
+    statement = build_window_evaluation_insert_statement(evaluate_window(observations))
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+
+    assert "ON CONFLICT (evaluation_id) DO NOTHING" in sql
+
+
 def test_database_record_restores_timezone_and_provenance() -> None:
     source = observation(seconds=0, latitude=0)
     record = SimpleNamespace(
@@ -206,6 +220,11 @@ def test_new_observation_is_evaluated_and_alerted_once(monkeypatch) -> None:
         kinematic_persistence,
         "insert_evaluation",
         lambda *_args: True,
+    )
+    monkeypatch.setattr(
+        kinematic_persistence,
+        "find_window_observations",
+        lambda *_args: (),
     )
 
     evaluation = kinematic_persistence.evaluate_new_observation(db, current)

@@ -80,6 +80,15 @@ def test_duplicate_time_returns_insufficient_data() -> None:
     assert "strictly" in result.reason
 
 
+def test_window_larger_than_policy_limit_is_not_scored() -> None:
+    observations = tuple(observation(index) for index in range(32))
+
+    result = evaluate_window(observations)
+
+    assert result.status is EvaluationStatus.INSUFFICIENT_DATA
+    assert "31" in result.reason
+
+
 def test_identity_is_deterministic_for_policy_and_observations() -> None:
     observations = tuple(observation(index) for index in range(6))
 

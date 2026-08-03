@@ -1,5 +1,12 @@
 import axios from 'axios';
-import type { Aircraft, Anomaly, FlightTrail, KinematicEvaluation, Stats } from '@/types';
+import type {
+  Aircraft,
+  Anomaly,
+  FlightTrail,
+  KinematicEvaluation,
+  Stats,
+  WindowKinematicEvaluation,
+} from '@/types';
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -63,6 +70,17 @@ export async function fetchKinematicEvaluations(
   const { data } = await api.get<KinematicEvaluation[]>('/kinematics/evaluations', {
     params: { icao_hex: icao, limit },
   });
+  return data;
+}
+
+export async function fetchWindowKinematicEvaluations(
+  icao: string,
+  limit: number = 5
+): Promise<WindowKinematicEvaluation[]> {
+  const { data } = await api.get<WindowKinematicEvaluation[]>(
+    '/kinematics/window-evaluations',
+    { params: { icao_hex: icao, limit } }
+  );
   return data;
 }
 

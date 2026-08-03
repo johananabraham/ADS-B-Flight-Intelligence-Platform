@@ -67,6 +67,36 @@ def evaluation_record() -> SimpleNamespace:
     )
 
 
+def window_evaluation_record() -> SimpleNamespace:
+    observation_ids = [uuid4() for _ in range(6)]
+    return SimpleNamespace(
+        evaluation_id=uuid4(),
+        policy_version="1.0-development",
+        first_observation_id=observation_ids[0],
+        current_observation_id=observation_ids[-1],
+        observation_ids=observation_ids,
+        source_type="SIMULATION",
+        source_id="window-test",
+        icao_hex="A1B2C3",
+        evaluated_at=datetime(2026, 8, 3, 12, 0, tzinfo=timezone.utc),
+        status="FLAGGED",
+        reason=None,
+        duration_seconds=5,
+        measurements={"position_residual_nm": 0.006},
+        rule_results=[
+            {
+                "rule": "CUMULATIVE_POSITION_RESIDUAL",
+                "status": "FLAGGED",
+                "value": 0.006,
+                "threshold": 0.002,
+                "unit": "nautical_miles",
+                "explanation": "Residual exceeds development limit.",
+                "observation_ids": [str(value) for value in observation_ids],
+            }
+        ],
+    )
+
+
 @pytest.mark.asyncio
 async def test_lists_serialized_kinematic_evidence() -> None:
     app = FastAPI()
@@ -100,3 +130,22 @@ async def test_rejects_invalid_aircraft_identity_filter() -> None:
         )
 
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_lists_window_evidence() -> None:
+    app = FastAPI()
+    app.include_router(router)
+    record = window_evaluation_record()
+    app.dependency_overrides[get_db] = lambda: FakeSession([record])
+    transport = httpx.ASGITransport(app=app)
+
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            "/kinematics/window-evaluations", params={"icao_hex": "a1b2c3"}
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body[0]["duration_seconds"] == 5
+    assert body[0]["rule_results"][0]["rule"] == "CUMULATIVE_POSITION_RESIDUAL"
