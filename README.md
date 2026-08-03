@@ -27,6 +27,7 @@ Real-time aircraft tracking and anomaly detection system using Software Defined 
 - **Live flight tracking** on interactive map
 - **Anomaly detection** for altitude, speed, squawk codes, restricted airspace
 - **Explainable kinematic integrity checks** tied to immutable source observations
+- **Short-window trajectory residuals** for subtle cumulative drift evidence
 - **AI-generated intelligence summaries** via Claude API
 - **Historical data analysis** with time-series queries
 
@@ -125,6 +126,20 @@ those measured gaps define the next engineering work. Generated clean sessions
 produce zero alerts, but that is **not** a real-world false-positive-rate claim.
 See `docs/kinematic-evaluation-v1.md` for methodology and the checked-in result.
 
+The additive short-window policy closes the measured gradual-drift gap on the same
+held-out scenarios: pairwise detection is 0/22 and combined detection is 22/22,
+with a 2-second median delay and 0/22 generated clean controls flagged. Reproduce
+the reviewed comparison with:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/run_windowed_kinematic_evaluation.py --check \
+  --baseline evaluation/results/windowed_trajectory_baseline_v1.json
+```
+
+These are synthetic regression results, not a real-world false-positive rate. The
+window threshold remains `1.0-development` until benign captured RF calibration.
+See `docs/windowed-trajectory-evaluation-v1.md` for method, integration, and limits.
+
 Stop the demo with:
 
 ```bash
@@ -222,8 +237,8 @@ label replayed traffic as live RF.
 
 ## Continuous Integration
 
-GitHub Actions runs Python lint/tests, the held-out synthetic kinematic regression
-gate, migration SQL validation, frontend
+GitHub Actions runs Python lint/tests, pairwise and short-window held-out synthetic
+kinematic regression gates, migration SQL validation, frontend
 lint/build, C++ decoder build/tests, dependency audits, and the complete Docker
 demo, clean replay, and kinematic attack verifiers. Security audits are retained as
 a non-blocking job so code-quality failures remain distinguishable from newly

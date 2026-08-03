@@ -32,9 +32,12 @@ export function IntegrityEvidence({
   const failedRules = evaluation?.rule_results.filter(rule => rule.status === 'FLAGGED') ?? [];
   const failedWindowRules =
     windowEvaluation?.rule_results.filter(rule => rule.status === 'FLAGGED') ?? [];
-  const displayedStatus = windowEvaluation?.status === 'FLAGGED'
-    ? windowEvaluation.status
-    : evaluation?.status ?? windowEvaluation?.status;
+  const statuses = [evaluation?.status, windowEvaluation?.status].filter(Boolean);
+  const displayedStatus = statuses.includes('FLAGGED')
+    ? 'FLAGGED'
+    : statuses.includes('PASS')
+      ? 'PASS'
+      : statuses[0];
 
   return (
     <section className="border-b border-surface-3" aria-labelledby="integrity-heading">
@@ -74,7 +77,7 @@ export function IntegrityEvidence({
               Integrity evidence could not be loaded. Confirm the API and database migration are running.
             </p>
           )}
-          {!loading && !error && !evaluation && (
+          {!loading && !error && !evaluation && !windowEvaluation && (
             <p className="rounded border border-surface-3 bg-surface-2 p-3 text-slate-300">
               No evaluation yet. Two complete position reports from the same source are required.
             </p>

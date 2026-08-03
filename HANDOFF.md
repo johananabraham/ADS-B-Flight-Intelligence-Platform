@@ -1,10 +1,10 @@
 # Project Handoff and Expansion Roadmap
 
-Last updated: 2026-07-20
+Last updated: 2026-08-03
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/kinematic-evaluation-harness`
+Current branch: `codex/windowed-trajectory-evidence`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -409,6 +409,23 @@ Implemented on `codex/kinematic-evaluation-harness`:
 - The compact reviewed result is
   `evaluation/results/kinematic_rules_baseline_v1.json`; the CLI emits the complete
   per-scenario reproduction manifest and results.
+
+Implemented on `codex/windowed-trajectory-evidence`:
+
+- A versioned short-window residual rule dead-reckons the reported endpoint from
+  6–31 same-aircraft, same-provenance observations over 5–30 seconds.
+- The unchanged Generator 1.0 held-out comparison improves gradual-drift detection
+  from 0/22 pairwise to 22/22 combined at 2 seconds median delay. Generated clean
+  controls remain 0/22 flagged. This is synthetic evidence, not a field false-positive
+  rate; the threshold is explicitly `1.0-development`.
+- Window evidence is persisted idempotently with immutable observation references,
+  exposed at `/api/v1/kinematics/window-evaluations`, and rendered in the aircraft
+  Integrity Evidence panel. It does not create standalone alerts yet.
+- The reviewed artifact is
+  `evaluation/results/windowed_trajectory_baseline_v1.json`; CI reproduces and
+  compares it on every supported branch and pull request.
+- `docs/windowed-trajectory-evaluation-v1.md` records the method, exact results,
+  limitations, and calibration work still required.
 
 Not implemented in these checkpoints:
 
@@ -1125,10 +1142,11 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
 1. Review the stacked Phase 0, CI, dependency-security, recorded-replay, and
    replay-control PRs.
 2. Confirm the first GitHub-hosted CI run after the workflow reaches `main`.
-3. Add a short-window trajectory residual rule and compare it against the unchanged
-   rules-only baseline, especially the 0/22 gradual-drift result.
-4. Run policy 1.0 against a legally usable benign RF capture and publish reviewed
+3. Run pair policy 1.0 and window policy 1.0-development against a legally usable
+   benign RF capture and publish reviewed
    alerts per flight hour before claiming a false-positive rate.
+4. Design alert grouping and suppression before promoting window flags to operator
+   alerts; one sliding-window result per observation would otherwise create noise.
 5. Extend Generator 1.0 with missing-message, jitter, ghost-track, identity-conflict,
    and legitimate high-rate edge cases before starting any ML classifier.
 6. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
@@ -1179,8 +1197,12 @@ Use this when starting a new Codex chat:
 > `codex/kinematic-plausibility-engine`. The leakage-safe synthetic scenario
 > generator, held-out rules baseline, Hypothesis boundary tests, compact report,
 > and CI regression gate are on `codex/kinematic-evaluation-harness`. The current
-> rules detect all 22 held-out examples for each abrupt family but miss all gradual
-> drift and replayed-timestamp examples; do not claim a false-positive rate yet.
-> Short-window drift evidence and benign-capture calibration are next. Confirm the
+> pairwise rules detect all 22 held-out examples for each abrupt family but miss
+> gradual drift and replayed timestamps. The additive development window rule now
+> detects 22/22 gradual-drift scenarios at 2 seconds median delay with 0/22 generated
+> clean controls flagged; it is persisted, available through the API, shown in the
+> UI, and enforced by a reviewed CI baseline on `codex/windowed-trajectory-evidence`.
+> Do not claim a real-world false-positive rate. Benign-capture calibration and alert
+> suppression are next. Confirm the
 > first hosted Actions run before claiming CI is green. Deployment is planned
 > for Section 5 Phase 10; public production deployment is not complete today.

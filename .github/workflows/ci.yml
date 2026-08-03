@@ -45,6 +45,12 @@ jobs:
         run: >-
           python scripts/run_kinematic_evaluation.py --check
           --baseline evaluation/results/kinematic_rules_baseline_v1.json
+      - name: Enforce short-window trajectory baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_windowed_kinematic_evaluation.py --check
+          --baseline evaluation/results/windowed_trajectory_baseline_v1.json
       - name: Validate migration SQL
         working-directory: backend
         env:

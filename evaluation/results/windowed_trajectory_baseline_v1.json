@@ -1,0 +1,96 @@
+{
+  "report_schema_version": "1.0",
+  "scope": "synthetic_scenarios_only",
+  "command": "PYTHONPATH=backend:. python scripts/run_windowed_kinematic_evaluation.py --check --baseline evaluation/results/windowed_trajectory_baseline_v1.json",
+  "generator": {
+    "version": "1.0",
+    "root_seed": 20260720,
+    "source_sessions": 90,
+    "split_source_sessions": {
+      "train": 46,
+      "validation": 22,
+      "test": 22
+    }
+  },
+  "evaluated_split": "test",
+  "scenario_count": 154,
+  "pair_policy_version": "1.0",
+  "window_policy": {
+    "version": "1.0-development",
+    "minimum_observations": 6,
+    "maximum_observations": 31,
+    "minimum_duration_seconds": 5.0,
+    "maximum_duration_seconds": 30.0,
+    "maximum_position_residual_nm": 0.002
+  },
+  "metrics_by_scenario_type": {
+    "CLEAN": {
+      "scenarios": 22,
+      "pair_detected": 0,
+      "window_detected": 0,
+      "combined_detected": 0,
+      "combined_detection_rate": 0.0,
+      "median_time_to_detect_seconds": null,
+      "insufficient_windows": 0
+    },
+    "ABRUPT_POSITION": {
+      "scenarios": 22,
+      "pair_detected": 22,
+      "window_detected": 22,
+      "combined_detected": 22,
+      "combined_detection_rate": 1.0,
+      "median_time_to_detect_seconds": 0.0,
+      "insufficient_windows": 0
+    },
+    "ABRUPT_ALTITUDE": {
+      "scenarios": 22,
+      "pair_detected": 22,
+      "window_detected": 0,
+      "combined_detected": 22,
+      "combined_detection_rate": 1.0,
+      "median_time_to_detect_seconds": 0.0,
+      "insufficient_windows": 0
+    },
+    "ABRUPT_VELOCITY": {
+      "scenarios": 22,
+      "pair_detected": 22,
+      "window_detected": 22,
+      "combined_detected": 22,
+      "combined_detection_rate": 1.0,
+      "median_time_to_detect_seconds": 0.0,
+      "insufficient_windows": 0
+    },
+    "ABRUPT_HEADING": {
+      "scenarios": 22,
+      "pair_detected": 22,
+      "window_detected": 22,
+      "combined_detected": 22,
+      "combined_detection_rate": 1.0,
+      "median_time_to_detect_seconds": 0.0,
+      "insufficient_windows": 0
+    },
+    "GRADUAL_POSITION_DRIFT": {
+      "scenarios": 22,
+      "pair_detected": 0,
+      "window_detected": 22,
+      "combined_detected": 22,
+      "combined_detection_rate": 1.0,
+      "median_time_to_detect_seconds": 2.0,
+      "insufficient_windows": 0
+    },
+    "REPLAYED_TIMESTAMP": {
+      "scenarios": 22,
+      "pair_detected": 0,
+      "window_detected": 0,
+      "combined_detected": 0,
+      "combined_detection_rate": 0.0,
+      "median_time_to_detect_seconds": null,
+      "insufficient_windows": 154
+    }
+  },
+  "limitations": [
+    "The window threshold is development-only and is not calibrated against benign captured RF.",
+    "Synthetic clean performance is not a real-world false-positive rate.",
+    "The original Generator 1.0 held-out scenarios are unchanged for comparison."
+  ]
+}
