@@ -80,8 +80,8 @@ manifest. A compact reviewed baseline is stored at
 
 ## Next evidence required
 
-1. Add a short-window trajectory residual rule and measure gradual-drift detection
-   against this unchanged held-out manifest.
+1. The additive short-window trajectory result is now measured against this
+   unchanged manifest in `docs/windowed-trajectory-evaluation-v1.md`.
 2. Import a legally usable benign RF capture and report reviewed alerts per flight
    hour. Keep that number separate from synthetic clean performance.
 3. Add missing-message, latency-jitter, date-line, polar, and legitimate high-rate
