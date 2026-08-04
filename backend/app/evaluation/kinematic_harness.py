@@ -23,6 +23,7 @@ from app.services.windowed_kinematics import WindowPolicy, evaluate_window
 
 
 GENERATOR_VERSION = "1.0"
+EXTENDED_GENERATOR_VERSION = "1.1"
 SCENARIO_NAMESPACE = UUID("f8be37ef-1a4e-459e-a532-42a9df0f4571")
 EARTH_RADIUS_NM = 3440.065
 
@@ -41,6 +42,49 @@ class ScenarioType(str, Enum):
     ABRUPT_HEADING = "ABRUPT_HEADING"
     GRADUAL_POSITION_DRIFT = "GRADUAL_POSITION_DRIFT"
     REPLAYED_TIMESTAMP = "REPLAYED_TIMESTAMP"
+    MISSING_MESSAGES = "MISSING_MESSAGES"
+    LATENCY_JITTER = "LATENCY_JITTER"
+    GHOST_TRACK = "GHOST_TRACK"
+    IDENTITY_CONFLICT = "IDENTITY_CONFLICT"
+    CLEAN_HIGH_RATE = "CLEAN_HIGH_RATE"
+    CLEAN_DATE_LINE = "CLEAN_DATE_LINE"
+    CLEAN_POLAR = "CLEAN_POLAR"
+
+
+class ScenarioClass(str, Enum):
+    CONTROL = "CONTROL"
+    IMPAIRMENT = "IMPAIRMENT"
+    ATTACK = "ATTACK"
+
+
+V1_SCENARIO_TYPES = (
+    ScenarioType.CLEAN,
+    ScenarioType.ABRUPT_POSITION,
+    ScenarioType.ABRUPT_ALTITUDE,
+    ScenarioType.ABRUPT_VELOCITY,
+    ScenarioType.ABRUPT_HEADING,
+    ScenarioType.GRADUAL_POSITION_DRIFT,
+    ScenarioType.REPLAYED_TIMESTAMP,
+)
+
+EXTENDED_SCENARIO_TYPES = tuple(ScenarioType)
+
+SCENARIO_CLASSES = {
+    ScenarioType.CLEAN: ScenarioClass.CONTROL,
+    ScenarioType.CLEAN_HIGH_RATE: ScenarioClass.CONTROL,
+    ScenarioType.CLEAN_DATE_LINE: ScenarioClass.CONTROL,
+    ScenarioType.CLEAN_POLAR: ScenarioClass.CONTROL,
+    ScenarioType.MISSING_MESSAGES: ScenarioClass.IMPAIRMENT,
+    ScenarioType.LATENCY_JITTER: ScenarioClass.IMPAIRMENT,
+    ScenarioType.ABRUPT_POSITION: ScenarioClass.ATTACK,
+    ScenarioType.ABRUPT_ALTITUDE: ScenarioClass.ATTACK,
+    ScenarioType.ABRUPT_VELOCITY: ScenarioClass.ATTACK,
+    ScenarioType.ABRUPT_HEADING: ScenarioClass.ATTACK,
+    ScenarioType.GRADUAL_POSITION_DRIFT: ScenarioClass.ATTACK,
+    ScenarioType.REPLAYED_TIMESTAMP: ScenarioClass.ATTACK,
+    ScenarioType.GHOST_TRACK: ScenarioClass.ATTACK,
+    ScenarioType.IDENTITY_CONFLICT: ScenarioClass.ATTACK,
+}
 
 
 @dataclass(frozen=True)
@@ -190,6 +234,44 @@ def _clean_observations(source_session_id: str, seed: int) -> tuple[TrackObserva
     return tuple(observations)
 
 
+def _edge_control_observations(
+    source_session_id: str,
+    seed: int,
+    scenario_type: ScenarioType,
+) -> tuple[TrackObservation, ...]:
+    scenario_id = f"{source_session_id}-{scenario_type.value.lower()}"
+    timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(minutes=seed)
+    configurations = {
+        ScenarioType.CLEAN_HIGH_RATE: (34.0, -118.0, 250.0, 90.0, 0.2),
+        ScenarioType.CLEAN_DATE_LINE: (0.0, 179.999, 480.0, 90.0, 1.0),
+        ScenarioType.CLEAN_POLAR: (89.8, 30.0, 250.0, 45.0, 1.0),
+    }
+    latitude, longitude, speed, track, interval_seconds = configurations[scenario_type]
+    observations = []
+    for index in range(12):
+        observed_at = timestamp + timedelta(seconds=index * interval_seconds)
+        observations.append(
+            _make_observation(
+                scenario_id=scenario_id,
+                source_session_id=source_session_id,
+                index=index,
+                observed_at=observed_at,
+                latitude=latitude,
+                longitude=longitude,
+                altitude_ft=20_000,
+                speed_knots=speed,
+                track_degrees=track,
+            )
+        )
+        latitude, longitude = _destination(
+            latitude,
+            longitude,
+            track,
+            speed * interval_seconds / 3600,
+        )
+    return tuple(observations)
+
+
 def _source_hash(observations: Iterable[TrackObservation]) -> str:
     source = [
         observation.model_dump(mode="json", exclude={"observation_id"})
@@ -205,6 +287,15 @@ def _variant_observations(
     scenario_type: ScenarioType,
     attack_start: int,
 ) -> tuple[TrackObservation, ...]:
+    if scenario_type is ScenarioType.MISSING_MESSAGES:
+        retained = [item for index, item in enumerate(source) if index not in {5, 6}]
+        return tuple(
+            observation.model_copy(
+                update={"observation_id": _observation_id(scenario_id, index)}
+            )
+            for index, observation in enumerate(retained)
+        )
+
     variant = []
     for index, observation in enumerate(source):
         update: dict[str, object] = {"observation_id": _observation_id(scenario_id, index)}
@@ -223,6 +314,21 @@ def _variant_observations(
             update["observed_at"] = replayed_at
             update["received_at"] = replayed_at
             update["ground_speed_knots"] = None
+        elif scenario_type is ScenarioType.LATENCY_JITTER:
+            jitter_milliseconds = (0, 40, 180, 15, 320, 75)[index % 6]
+            update["received_at"] = observation.received_at + timedelta(
+                milliseconds=jitter_milliseconds
+            )
+        elif scenario_type is ScenarioType.GHOST_TRACK and index >= attack_start:
+            update["icao_hex"] = f"{(int(observation.icao_hex, 16) + 1) % 0x1000000:06X}"
+            update["callsign"] = "GHOST01"
+        elif scenario_type is ScenarioType.IDENTITY_CONFLICT and index == attack_start:
+            update["latitude"] = (observation.latitude or 0) + 0.5
+            update["longitude"] = (observation.longitude or 0) + 0.5
+            update["provenance"] = ObservationProvenance(
+                source_type=ObservationSourceType.SIMULATION,
+                source_id=f"conflicting-{observation.provenance.source_id}",
+            )
         variant.append(observation.model_copy(update=update))
     return tuple(variant)
 
@@ -239,6 +345,10 @@ def _attack_parameters(scenario_type: ScenarioType, attack_start: int) -> dict[s
             0.00002,
         ),
         ScenarioType.REPLAYED_TIMESTAMP: ("replayed_observations", 1),
+        ScenarioType.MISSING_MESSAGES: ("removed_observations", 2),
+        ScenarioType.LATENCY_JITTER: ("maximum_receive_jitter_milliseconds", 320),
+        ScenarioType.GHOST_TRACK: ("ghost_icao_offset", 1),
+        ScenarioType.IDENTITY_CONFLICT: ("conflicting_position_offset_degrees", 0.5),
     }
     name, value = specific[scenario_type]
     return {**shared, name: value}
@@ -256,7 +366,7 @@ def generate_dataset(*, seed: int = 20260720, session_count: int = 90) -> tuple[
         source_sha256 = _source_hash(source)
         split = split_for_session(source_session_id)
         attack_start = 5
-        for scenario_type in ScenarioType:
+        for scenario_type in V1_SCENARIO_TYPES:
             scenario_id = f"{source_session_id}-{scenario_type.value.lower()}"
             attacked = scenario_type is not ScenarioType.CLEAN
             observations = (
@@ -283,6 +393,78 @@ def generate_dataset(*, seed: int = 20260720, session_count: int = 90) -> tuple[
                     detection_window=(
                         DetectionWindow(attack_start, len(observations) - 1)
                         if attacked
+                        else None
+                    ),
+                    observations=observations,
+                )
+            )
+    return tuple(scenarios)
+
+
+def generate_extended_dataset(
+    *,
+    seed: int = 20260720,
+    session_count: int = 90,
+) -> tuple[KinematicScenario, ...]:
+    """Generate Generator 1.1 scenarios without changing the reviewed v1.0 suite."""
+    if session_count < 1:
+        raise ValueError("session_count must be positive")
+    scenarios = []
+    edge_controls = {
+        ScenarioType.CLEAN_HIGH_RATE,
+        ScenarioType.CLEAN_DATE_LINE,
+        ScenarioType.CLEAN_POLAR,
+    }
+    for session_index in range(session_count):
+        source_session_id = f"session-{session_index:04d}"
+        session_seed = seed + session_index
+        source = _clean_observations(source_session_id, session_seed)
+        source_sha256 = _source_hash(source)
+        split = split_for_session(source_session_id)
+        attack_start = 5
+        for scenario_type in EXTENDED_SCENARIO_TYPES:
+            scenario_id = f"{source_session_id}-{scenario_type.value.lower()}"
+            scenario_start = 0 if scenario_type is ScenarioType.GHOST_TRACK else attack_start
+            if scenario_type in edge_controls:
+                observations = _edge_control_observations(
+                    source_session_id,
+                    session_seed,
+                    scenario_type,
+                )
+                parameters: dict[str, float | int | str] = {}
+                scenario_source_sha256 = _source_hash(observations)
+            elif scenario_type is ScenarioType.CLEAN:
+                observations = tuple(
+                    observation.model_copy(
+                        update={"observation_id": _observation_id(scenario_id, index)}
+                    )
+                    for index, observation in enumerate(source)
+                )
+                parameters = {}
+                scenario_source_sha256 = source_sha256
+            else:
+                observations = _variant_observations(
+                    source,
+                    scenario_id,
+                    scenario_type,
+                    scenario_start,
+                )
+                parameters = _attack_parameters(scenario_type, scenario_start)
+                scenario_source_sha256 = source_sha256
+            is_attack = SCENARIO_CLASSES[scenario_type] is ScenarioClass.ATTACK
+            scenarios.append(
+                KinematicScenario(
+                    scenario_id=scenario_id,
+                    source_session_id=source_session_id,
+                    split=split,
+                    scenario_type=scenario_type,
+                    generator_version=EXTENDED_GENERATOR_VERSION,
+                    seed=session_seed,
+                    source_sha256=scenario_source_sha256,
+                    attack_parameters=parameters,
+                    detection_window=(
+                        DetectionWindow(scenario_start, len(observations) - 1)
+                        if is_attack
                         else None
                     ),
                     observations=observations,
@@ -343,9 +525,17 @@ def build_report(
     """Evaluate one held-out split and return machine-readable synthetic metrics."""
     selected_policy = policy or KinematicPolicy()
     selected = [scenario for scenario in scenarios if scenario.split is split]
+    generator_versions = {scenario.generator_version for scenario in selected}
+    if len(generator_versions) > 1:
+        raise ValueError("a report cannot mix generator versions")
     results = [evaluate_scenario(scenario, policy=selected_policy) for scenario in selected]
     by_type: dict[str, dict[str, object]] = {}
-    for scenario_type in ScenarioType:
+    included_types = tuple(
+        scenario_type
+        for scenario_type in ScenarioType
+        if any(result.scenario_type is scenario_type for result in results)
+    )
+    for scenario_type in included_types:
         type_results = [result for result in results if result.scenario_type is scenario_type]
         detections = sum(result.detected for result in type_results)
         delays = [
@@ -363,7 +553,9 @@ def build_report(
         }
     clean = by_type[ScenarioType.CLEAN.value]
     attacked_results = [
-        result for result in results if result.scenario_type is not ScenarioType.CLEAN
+        result
+        for result in results
+        if SCENARIO_CLASSES[result.scenario_type] is ScenarioClass.ATTACK
     ]
     return {
         "report_schema_version": "1.0",
@@ -374,7 +566,7 @@ def build_report(
             "INSUFFICIENT_DATA is reported separately and never counted as detection.",
         ],
         "generator": {
-            "version": GENERATOR_VERSION,
+            "version": next(iter(generator_versions), GENERATOR_VERSION),
             "seeds": sorted({scenario.seed for scenario in selected}),
             "source_session_count": len({scenario.source_session_id for scenario in selected}),
         },
@@ -395,6 +587,7 @@ def build_report(
                 "source_session_id": scenario.source_session_id,
                 "split": scenario.split.value,
                 "scenario_type": scenario.scenario_type.value,
+                "scenario_class": SCENARIO_CLASSES[scenario.scenario_type].value,
                 "generator_version": scenario.generator_version,
                 "seed": scenario.seed,
                 "source_sha256": scenario.source_sha256,
@@ -410,6 +603,59 @@ def build_report(
         ],
         "scenarios": [asdict(result) for result in results],
     }
+
+
+def build_extended_report(
+    scenarios: Iterable[KinematicScenario],
+    *,
+    split: DatasetSplit = DatasetSplit.TEST,
+    policy: KinematicPolicy | None = None,
+) -> dict[str, object]:
+    """Report Generator 1.1 controls, impairments, and attacks separately."""
+    selected = [scenario for scenario in scenarios if scenario.split is split]
+    report = build_report(selected, split=split, policy=policy)
+    results = [evaluate_scenario(scenario, policy=policy) for scenario in selected]
+    by_class: dict[str, dict[str, object]] = {}
+    for scenario_class in ScenarioClass:
+        class_results = [
+            result
+            for result in results
+            if SCENARIO_CLASSES[result.scenario_type] is scenario_class
+        ]
+        flagged_sequences = sum(result.detected for result in class_results)
+        by_class[scenario_class.value] = {
+            "scenarios": len(class_results),
+            "flagged_sequences": flagged_sequences,
+            "sequence_alert_rate": (
+                round(flagged_sequences / len(class_results), 4)
+                if class_results
+                else None
+            ),
+            "insufficient_pairs": sum(
+                result.insufficient_pair_count for result in class_results
+            ),
+        }
+
+    report.update(
+        {
+            "report_schema_version": "1.1",
+            "synthetic_control_sequence_alert_rate": by_class[
+                ScenarioClass.CONTROL.value
+            ]["sequence_alert_rate"],
+            "synthetic_impairment_sequence_alert_rate": by_class[
+                ScenarioClass.IMPAIRMENT.value
+            ]["sequence_alert_rate"],
+            "metrics_by_scenario_class": by_class,
+            "limitations": [
+                "Synthetic control alert rate is not a real-world false-positive rate.",
+                "Ghost tracks require existence corroboration; plausible motion alone cannot reject them.",
+                "Identity conflicts require multi-source association before kinematic scoring.",
+                "Timing loss and jitter are impairments, not attacks, without additional evidence.",
+                "INSUFFICIENT_DATA is reported separately and never counted as detection.",
+            ],
+        }
+    )
+    return report
 
 
 def evaluate_window_scenario(
@@ -504,7 +750,12 @@ def build_window_report(
         for scenario in selected
     ]
     metrics: dict[str, dict[str, object]] = {}
-    for scenario_type in ScenarioType:
+    included_types = tuple(
+        scenario_type
+        for scenario_type in ScenarioType
+        if any(result.scenario_type is scenario_type for result in results)
+    )
+    for scenario_type in included_types:
         type_results = [result for result in results if result.scenario_type is scenario_type]
         delays = [
             result.time_to_detect_seconds
