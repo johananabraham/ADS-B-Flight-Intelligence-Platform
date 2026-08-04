@@ -4,7 +4,7 @@ Last updated: 2026-08-04
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/extended-synthetic-scenarios`
+Current branch: `codex/interpretable-ml-baselines`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -473,15 +473,35 @@ Implemented on `codex/extended-synthetic-scenarios`:
   `evaluation/results/kinematic_extended_baseline_v1_1.json`, and CI enforces it.
   `docs/kinematic-evaluation-v1.1.md` records the method, results, and claim limits.
 
+Implemented on `codex/interpretable-ml-baselines`:
+
+- Feature schema 1.0 extracts 18 timing, latency, provenance, pair-rule, and window
+  features from observation prefixes. No scorable pair produces an explicit
+  `ABSTAIN` state rather than a fabricated normal result.
+- All variants from one source session remain in one split. Prefix labels become
+  positive only after the scenario start, supporting pre-alert and first-detection
+  delay measurement without message-level leakage.
+- Always-normal, pair-plus-window rules, logistic regression, bounded decision tree,
+  and bounded random forest baselines are evaluated on 22 validation and 22 held-out
+  test sessions. Model configurations, scikit-learn version, feature schema,
+  implementation revision/hash, seed, explanations, and circular features are
+  recorded.
+- Held-out rules-only precision/recall/F1 is 1.0/0.6250/0.7692. Each learned model
+  measures 1.0/0.8750/0.9333 with 0/88 generated control and 0/44 impairment alerts.
+  All models miss 22/22 plausible ghosts, preserving the corroboration requirement.
+- The reviewed artifact is `evaluation/results/ml_baselines_v1.json`; CI reproduces
+  it with `scripts/run_ml_baselines.py --check`. Promotion remains explicitly
+  `OFFLINE_EVALUATION_ONLY`; no production service or UI consumes model output.
+
 Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
-- ML, external corroboration, aircraft-type-specific performance envelopes, or
-  fused trust scoring.
+- Production ML, external corroboration, aircraft-type-specific performance
+  envelopes, or fused trust scoring.
 
 ## 3. Known Risks and Technical Debt
 
-- The latest stacked window-evidence branch passed hosted backend, frontend,
+- The latest stacked extended-scenario branch passed hosted backend, frontend,
   security, decoder, migration, simulation, clean-replay, and attack-replay CI.
   These commits still need review/merge before `main` carries that evidence.
 - Docker Scout could not run because Docker Desktop is not authenticated.
@@ -516,6 +536,9 @@ Not implemented in these checkpoints:
   crossing, and polar motion. It still does not model empirical RF noise
   distributions or aircraft-specific flight envelopes, and generated controls
   cannot substitute for benign captured RF calibration.
+- Offline learned models improve generated held-out F1 but rely heavily on
+  deterministic and generator-adjacent features. They have no reviewed captured-RF
+  alert-burden evidence and must not be described or deployed as field detectors.
 - Simulator aircraft are fictional. Do not describe demo traffic as captured or
   live traffic.
 - The existing `graphify-out/` directory contains cache fragments but no usable
@@ -711,6 +734,11 @@ Verify:
 ### Phase 5 — Interpretable ML anomaly model (Weeks 8–9)
 
 Purpose: test whether learned patterns improve over deterministic rules.
+
+Status: all three offline baselines, versioned features, abstention, leakage-safe
+prefix evaluation, explanations, itemized metrics, reviewed result, and CI gate are
+implemented. Promotion is intentionally blocked pending reviewed captured-RF
+evidence; no model is integrated into production alerts.
 
 Build:
 
@@ -1201,9 +1229,8 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
    publish only legally shareable manifests or sanitized aggregate metrics.
 5. Convert the offline episode grouping into a persisted operator-alert suppression
    policy only after the reviewed routine-RF reports support its timing.
-6. Design the Phase 5 feature schema and always-normal/rules-only evaluation contract;
-   do not retain ML unless it adds held-out value without unacceptable routine-RF
-   alert burden.
+6. Implement Phase 6 cross-source corroboration against a permitted adapter and
+   preserve `UNAVAILABLE` as source health—not suspicious behavior.
 7. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
    subtree after confirming the board model and available sensors.
 8. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
@@ -1260,7 +1287,12 @@ Use this when starting a new Codex chat:
 > Do not claim a real-world false-positive rate. The versioned LIVE_RF export,
 > hash-verified calibration report, observed-track-hour metrics, and offline alert
 > episode grouping are implemented on `codex/benign-rf-calibration-harness`; only
-> generated tests have run so far. Collect and manually review multiple private RF
-> sessions before changing thresholds or enabling production window alerts. Confirm the
-> first hosted Actions run before claiming CI is green. Deployment is planned
+> generated tests have run so far. Generator 1.1 adds classified controls,
+> impairments, ghost identity, conflict, and geographic edge cases on
+> `codex/extended-synthetic-scenarios`; hosted CI run 30919705884 is green. The
+> session-isolated logistic/tree/forest comparison is offline-only on
+> `codex/interpretable-ml-baselines`: generated held-out F1 improves from 0.7692
+> rules-only to 0.9333, but all models miss plausible ghosts and no captured-RF
+> alert burden exists. Collect and manually review multiple private RF sessions
+> before changing thresholds or enabling production alerts. Deployment is planned
 > for Section 5 Phase 10; public production deployment is not complete today.
