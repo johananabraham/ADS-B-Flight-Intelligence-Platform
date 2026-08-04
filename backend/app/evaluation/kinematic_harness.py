@@ -614,6 +614,10 @@ def build_extended_report(
     """Report Generator 1.1 controls, impairments, and attacks separately."""
     selected = [scenario for scenario in scenarios if scenario.split is split]
     report = build_report(selected, split=split, policy=policy)
+    for manifest_entry in report["scenario_manifest"]:
+        manifest_entry["scenario_parameters"] = manifest_entry.pop(
+            "attack_parameters"
+        )
     results = [evaluate_scenario(scenario, policy=policy) for scenario in selected]
     by_class: dict[str, dict[str, object]] = {}
     for scenario_class in ScenarioClass:

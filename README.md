@@ -140,6 +140,23 @@ These are synthetic regression results, not a real-world false-positive rate. Th
 window threshold remains `1.0-development` until benign captured RF calibration.
 See `docs/windowed-trajectory-evaluation-v1.md` for method, integration, and limits.
 
+Generator 1.1 adds missing-message and latency-jitter impairments, plausible ghost
+identities, cross-source ICAO conflicts, high-rate reports, Date Line crossings, and
+polar controls. It reports controls, impairments, and attacks separately while
+leaving the reviewed Generator 1.0 suite unchanged:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/run_extended_kinematic_evaluation.py --check \
+  --baseline evaluation/results/kinematic_extended_baseline_v1_1.json
+```
+
+On the 22-session held-out split, the pairwise policy flags 0/88 generated controls,
+0/44 impairment scenarios, and 88/176 attack scenarios. The missed families are
+documented detector boundaries—not hidden failures: gradual drift needs window
+evidence, while replay, ghost identity, and cross-source conflict need timing or
+corroboration evidence. See `docs/kinematic-evaluation-v1.1.md` for the taxonomy and
+complete itemized result.
+
 ### Real receiver calibration
 
 The repository now includes an offline workflow for exporting a bounded `LIVE_RF`
