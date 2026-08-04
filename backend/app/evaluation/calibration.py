@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Iterable, Iterator, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.observation import ObservationSourceType, TrackObservation
 from app.services.kinematics import (
@@ -53,6 +53,16 @@ class CalibrationManifest(BaseModel):
     captured_to: datetime
     observation_count: int = Field(ge=1)
     observations_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    reviewed_at: datetime | None = None
+    reviewed_by: str | None = Field(default=None, min_length=1, max_length=100)
+    review_notes_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("captured_from", "captured_to", "reviewed_at")
+    @classmethod
+    def require_timezone(cls, value: datetime | None) -> datetime | None:
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("manifest timestamps must include a timezone")
+        return value
 
     @model_validator(mode="after")
     def validate_claim_context(self) -> "CalibrationManifest":
@@ -68,6 +78,13 @@ class CalibrationManifest(BaseModel):
             and self.dataset_class is not DatasetClass.CAPTURED_RF
         ):
             raise ValueError("only CAPTURED_RF data can be marked routine-traffic reviewed")
+        review_evidence = (self.reviewed_at, self.reviewed_by, self.review_notes_sha256)
+        if self.review_status is ReviewStatus.ROUTINE_TRAFFIC_REVIEWED and not all(
+            review_evidence
+        ):
+            raise ValueError("reviewed datasets require reviewer, time, and notes hash")
+        if self.review_status is ReviewStatus.UNREVIEWED and any(review_evidence):
+            raise ValueError("unreviewed datasets cannot contain review evidence")
         return self
 
     @property
@@ -290,10 +307,10 @@ def build_calibration_report(
         _events(pairs, windows, observation_index),
         gap_seconds=selected_calibration_policy.episode_gap_seconds,
     )
-    observed_track_hours = round(
-        _activity_seconds(tracks, selected_calibration_policy) / 3600,
-        6,
+    raw_observed_track_hours = (
+        _activity_seconds(tracks, selected_calibration_policy) / 3600
     )
+    observed_track_hours = round(raw_observed_track_hours, 6)
     pair_flagged = sum(item.status is EvaluationStatus.FLAGGED for item in pairs)
     window_flagged = sum(item.status is EvaluationStatus.FLAGGED for item in windows)
     pair_speeds = [
@@ -330,7 +347,7 @@ def build_calibration_report(
             "evaluations": len(pairs),
             "status_counts": _status_counts(pairs),
             "flagged_evaluations_per_observed_track_hour": _rate(
-                pair_flagged, observed_track_hours
+                pair_flagged, raw_observed_track_hours
             ),
             "implied_speed_knots": _percentiles(pair_speeds),
         },
@@ -338,13 +355,15 @@ def build_calibration_report(
             "evaluations": len(windows),
             "status_counts": _status_counts(windows),
             "flagged_evaluations_per_observed_track_hour": _rate(
-                window_flagged, observed_track_hours
+                window_flagged, raw_observed_track_hours
             ),
             "position_residual_nm": _percentiles(window_residuals),
         },
         "alert_episodes": {
             "count": len(episodes),
-            "per_observed_track_hour": _rate(len(episodes), observed_track_hours),
+            "per_observed_track_hour": _rate(
+                len(episodes), raw_observed_track_hours
+            ),
             "items": [episode.to_dict() for episode in episodes],
         },
         "limitations": [

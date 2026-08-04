@@ -2,6 +2,8 @@
 
 from argparse import Namespace
 from datetime import datetime, timedelta, timezone
+import json
+import sys
 
 import pytest
 from pydantic import ValidationError
@@ -20,6 +22,7 @@ from app.schemas.observation import (
     TrackObservation,
 )
 from scripts.export_live_rf_calibration import write_dataset
+from scripts import run_observation_calibration
 
 
 START = datetime(2026, 8, 3, 12, 0, tzinfo=timezone.utc)
@@ -138,6 +141,9 @@ def test_captured_rf_manifest_requires_live_receiver_and_manual_review() -> None
         captured_to=START,
         observation_count=1,
         observations_sha256="0" * 64,
+        reviewed_at=START,
+        reviewed_by="reviewer@example.test",
+        review_notes_sha256="1" * 64,
     )
 
     assert reviewed.routine_alert_rate_eligible is True
@@ -218,3 +224,41 @@ def test_export_rejects_mixed_provenance_without_partial_files(tmp_path) -> None
         write_dataset(observations, export_arguments(tmp_path))
 
     assert list(tmp_path.iterdir()) == []
+
+
+def test_calibration_cli_writes_reproducible_report(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    observations = tuple(observation(index) for index in range(6))
+    observations_path = tmp_path / "observations.jsonl"
+    observations_path.write_text(
+        "".join(item.model_dump_json() + "\n" for item in observations),
+        encoding="utf-8",
+    )
+    manifest = manifest_for(
+        observations,
+        observations_sha256=file_sha256(observations_path),
+    )
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    report_path = tmp_path / "report.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_observation_calibration.py",
+            "--manifest",
+            str(manifest_path),
+            "--observations",
+            str(observations_path),
+            "--output",
+            str(report_path),
+        ],
+    )
+
+    run_observation_calibration.main()
+
+    stdout_report = json.loads(capsys.readouterr().out)
+    stored_report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert stored_report == stdout_report
+    assert stored_report["claim_scope"] == "engineering_validation_only"
