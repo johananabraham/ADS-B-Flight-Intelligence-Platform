@@ -57,6 +57,12 @@ jobs:
         run: >-
           python scripts/run_extended_kinematic_evaluation.py --check
           --baseline evaluation/results/kinematic_extended_baseline_v1_1.json
+      - name: Enforce offline interpretable ML baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_ml_baselines.py --check
+          --baseline evaluation/results/ml_baselines_v1.json
       - name: Validate migration SQL
         working-directory: backend
         env:

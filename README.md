@@ -157,6 +157,24 @@ evidence, while replay, ghost identity, and cross-source conflict need timing or
 corroboration evidence. See `docs/kinematic-evaluation-v1.1.md` for the taxonomy and
 complete itemized result.
 
+### Offline interpretable ML comparison
+
+The repository trains logistic regression, decision tree, and random forest
+baselines on session-isolated Generator 1.1 prefixes and compares them with
+always-normal and pair-plus-window rules:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/run_ml_baselines.py --check \
+  --baseline evaluation/results/ml_baselines_v1.json
+```
+
+On generated held-out sessions, rules-only F1 is 0.7692 and each learned baseline
+reaches 0.9333, with no alerts across 88 controls or 44 impairments. All models miss
+the plausible ghost family, demonstrating the need for independent corroboration.
+These models are offline-only because generated performance is not field evidence.
+See `docs/ml-evaluation-v1.md` for leakage controls, feature warnings, itemized
+results, and promotion requirements.
+
 ### Real receiver calibration
 
 The repository now includes an offline workflow for exporting a bounded `LIVE_RF`

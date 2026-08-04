@@ -1,0 +1,1717 @@
+{
+  "report_schema_version": "1.0",
+  "scope": "generated_scenarios_only",
+  "suite_version": "1.0-development",
+  "feature_schema_version": "1.0",
+  "generator_versions": [
+    "1.1"
+  ],
+  "implementation_revision": "a33442a",
+  "implementation_sha256": "4f6fe40a355c41ed163afc97750126f779c1f4d4c716ca91f7250d58f21bdf54",
+  "sklearn_version": "1.9.0",
+  "root_seed": 20260720,
+  "feature_names": [
+    "observation_count",
+    "duration_seconds",
+    "mean_interval_seconds",
+    "interval_std_seconds",
+    "mean_receive_latency_seconds",
+    "maximum_receive_latency_seconds",
+    "unique_icao_count",
+    "unique_provenance_count",
+    "pair_flag_count",
+    "pair_insufficient_count",
+    "maximum_implied_speed_knots",
+    "maximum_reported_acceleration_knots_per_second",
+    "maximum_turn_rate_degrees_per_second",
+    "maximum_derived_vertical_rate_fpm",
+    "maximum_speed_disagreement_knots",
+    "window_flag_count",
+    "window_insufficient_count",
+    "maximum_window_position_residual_nm"
+  ],
+  "circular_feature_warning": [
+    "pair_flag_count",
+    "window_flag_count",
+    "maximum_implied_speed_knots",
+    "maximum_reported_acceleration_knots_per_second",
+    "maximum_turn_rate_degrees_per_second",
+    "maximum_derived_vertical_rate_fpm",
+    "maximum_speed_disagreement_knots",
+    "maximum_window_position_residual_nm"
+  ],
+  "training_source_sessions": 46,
+  "test_source_sessions": 22,
+  "model_configurations": {
+    "logistic_regression": {
+      "solver": "liblinear",
+      "max_iter": 1000,
+      "threshold": 0.5
+    },
+    "decision_tree": {
+      "max_depth": 5,
+      "min_samples_leaf": 5
+    },
+    "random_forest": {
+      "estimators": 100,
+      "max_depth": 6,
+      "min_samples_leaf": 3
+    }
+  },
+  "explanations": {
+    "logistic_regression": [
+      {
+        "feature": "window_flag_count",
+        "importance": 4.185912
+      },
+      {
+        "feature": "maximum_implied_speed_knots",
+        "importance": -1.866496
+      },
+      {
+        "feature": "mean_interval_seconds",
+        "importance": -1.660533
+      },
+      {
+        "feature": "pair_insufficient_count",
+        "importance": 1.448932
+      },
+      {
+        "feature": "mean_receive_latency_seconds",
+        "importance": -1.306148
+      },
+      {
+        "feature": "pair_flag_count",
+        "importance": 1.217403
+      },
+      {
+        "feature": "maximum_window_position_residual_nm",
+        "importance": 1.195202
+      },
+      {
+        "feature": "maximum_derived_vertical_rate_fpm",
+        "importance": 1.180066
+      }
+    ],
+    "decision_tree": [
+      {
+        "feature": "pair_flag_count",
+        "importance": 0.45598
+      },
+      {
+        "feature": "window_insufficient_count",
+        "importance": 0.324713
+      },
+      {
+        "feature": "maximum_window_position_residual_nm",
+        "importance": 0.199416
+      },
+      {
+        "feature": "mean_receive_latency_seconds",
+        "importance": 0.010276
+      },
+      {
+        "feature": "observation_count",
+        "importance": 0.008601
+      },
+      {
+        "feature": "maximum_implied_speed_knots",
+        "importance": 0.001014
+      },
+      {
+        "feature": "duration_seconds",
+        "importance": 0.0
+      },
+      {
+        "feature": "mean_interval_seconds",
+        "importance": 0.0
+      }
+    ],
+    "random_forest": [
+      {
+        "feature": "pair_flag_count",
+        "importance": 0.243091
+      },
+      {
+        "feature": "observation_count",
+        "importance": 0.124867
+      },
+      {
+        "feature": "maximum_window_position_residual_nm",
+        "importance": 0.117406
+      },
+      {
+        "feature": "pair_insufficient_count",
+        "importance": 0.115017
+      },
+      {
+        "feature": "window_insufficient_count",
+        "importance": 0.089664
+      },
+      {
+        "feature": "maximum_speed_disagreement_knots",
+        "importance": 0.085919
+      },
+      {
+        "feature": "window_flag_count",
+        "importance": 0.051984
+      },
+      {
+        "feature": "duration_seconds",
+        "importance": 0.041887
+      }
+    ]
+  },
+  "promotion_decision": "OFFLINE_EVALUATION_ONLY",
+  "limitations": [
+    "Training and evaluation use generated scenarios, not labeled malicious RF.",
+    "Synthetic control alert rates are not field false-positive rates.",
+    "Kinematic outputs overlap the generator mechanisms and may be circular features.",
+    "A plausible ghost track is intentionally indistinguishable from clean motion without corroboration.",
+    "No model is integrated into operator alerts at this checkpoint."
+  ],
+  "validation_models": {
+    "always_normal": {
+      "name": "always_normal",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "scenario_count": 308,
+      "abstained_scenarios": 22,
+      "pre_scenario_alerts": 0,
+      "synthetic_control_sequence_alert_rate": 0.0,
+      "synthetic_impairment_sequence_alert_rate": 0.0,
+      "field_false_alerts_per_flight_hour": null,
+      "metrics_by_scenario_type": {
+        "CLEAN": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_POSITION": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_ALTITUDE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_VELOCITY": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_HEADING": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "GRADUAL_POSITION_DRIFT": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "REPLAYED_TIMESTAMP": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "MISSING_MESSAGES": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "LATENCY_JITTER": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "GHOST_TRACK": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "IDENTITY_CONFLICT": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_HIGH_RATE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 22,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_DATE_LINE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_POLAR": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        }
+      }
+    },
+    "rules_only": {
+      "name": "rules_only",
+      "precision": 1.0,
+      "recall": 0.625,
+      "f1": 0.7692,
+      "scenario_count": 308,
+      "abstained_scenarios": 22,
+      "pre_scenario_alerts": 0,
+      "synthetic_control_sequence_alert_rate": 0.0,
+      "synthetic_impairment_sequence_alert_rate": 0.0,
+      "field_false_alerts_per_flight_hour": null,
+      "metrics_by_scenario_type": {
+        "CLEAN": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_POSITION": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_ALTITUDE": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_VELOCITY": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_HEADING": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "GRADUAL_POSITION_DRIFT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 2.0
+        },
+        "REPLAYED_TIMESTAMP": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "MISSING_MESSAGES": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "LATENCY_JITTER": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "GHOST_TRACK": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "IDENTITY_CONFLICT": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_HIGH_RATE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 22,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_DATE_LINE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_POLAR": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        }
+      }
+    },
+    "logistic_regression": {
+      "name": "logistic_regression",
+      "precision": 1.0,
+      "recall": 0.875,
+      "f1": 0.9333,
+      "scenario_count": 308,
+      "abstained_scenarios": 22,
+      "pre_scenario_alerts": 0,
+      "synthetic_control_sequence_alert_rate": 0.0,
+      "synthetic_impairment_sequence_alert_rate": 0.0,
+      "field_false_alerts_per_flight_hour": null,
+      "metrics_by_scenario_type": {
+        "CLEAN": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_POSITION": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_ALTITUDE": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_VELOCITY": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_HEADING": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "GRADUAL_POSITION_DRIFT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 2.0
+        },
+        "REPLAYED_TIMESTAMP": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "MISSING_MESSAGES": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "LATENCY_JITTER": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "GHOST_TRACK": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "IDENTITY_CONFLICT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "CLEAN_HIGH_RATE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 22,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_DATE_LINE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_POLAR": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        }
+      }
+    },
+    "decision_tree": {
+      "name": "decision_tree",
+      "precision": 1.0,
+      "recall": 0.875,
+      "f1": 0.9333,
+      "scenario_count": 308,
+      "abstained_scenarios": 22,
+      "pre_scenario_alerts": 0,
+      "synthetic_control_sequence_alert_rate": 0.0,
+      "synthetic_impairment_sequence_alert_rate": 0.0,
+      "field_false_alerts_per_flight_hour": null,
+      "metrics_by_scenario_type": {
+        "CLEAN": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_POSITION": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_ALTITUDE": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_VELOCITY": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_HEADING": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "GRADUAL_POSITION_DRIFT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "REPLAYED_TIMESTAMP": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "MISSING_MESSAGES": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "LATENCY_JITTER": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "GHOST_TRACK": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "IDENTITY_CONFLICT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "CLEAN_HIGH_RATE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 22,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_DATE_LINE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_POLAR": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        }
+      }
+    },
+    "random_forest": {
+      "name": "random_forest",
+      "precision": 1.0,
+      "recall": 0.875,
+      "f1": 0.9333,
+      "scenario_count": 308,
+      "abstained_scenarios": 22,
+      "pre_scenario_alerts": 0,
+      "synthetic_control_sequence_alert_rate": 0.0,
+      "synthetic_impairment_sequence_alert_rate": 0.0,
+      "field_false_alerts_per_flight_hour": null,
+      "metrics_by_scenario_type": {
+        "CLEAN": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_POSITION": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_ALTITUDE": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_VELOCITY": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_HEADING": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "GRADUAL_POSITION_DRIFT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "REPLAYED_TIMESTAMP": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "MISSING_MESSAGES": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "LATENCY_JITTER": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "GHOST_TRACK": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "IDENTITY_CONFLICT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "CLEAN_HIGH_RATE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 22,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_DATE_LINE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_POLAR": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        }
+      }
+    }
+  },
+  "models": {
+    "always_normal": {
+      "name": "always_normal",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "scenario_count": 308,
+      "abstained_scenarios": 22,
+      "pre_scenario_alerts": 0,
+      "synthetic_control_sequence_alert_rate": 0.0,
+      "synthetic_impairment_sequence_alert_rate": 0.0,
+      "field_false_alerts_per_flight_hour": null,
+      "metrics_by_scenario_type": {
+        "CLEAN": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_POSITION": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_ALTITUDE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_VELOCITY": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_HEADING": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "GRADUAL_POSITION_DRIFT": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "REPLAYED_TIMESTAMP": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "MISSING_MESSAGES": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "LATENCY_JITTER": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "GHOST_TRACK": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "IDENTITY_CONFLICT": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_HIGH_RATE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 22,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_DATE_LINE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_POLAR": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        }
+      }
+    },
+    "rules_only": {
+      "name": "rules_only",
+      "precision": 1.0,
+      "recall": 0.625,
+      "f1": 0.7692,
+      "scenario_count": 308,
+      "abstained_scenarios": 22,
+      "pre_scenario_alerts": 0,
+      "synthetic_control_sequence_alert_rate": 0.0,
+      "synthetic_impairment_sequence_alert_rate": 0.0,
+      "field_false_alerts_per_flight_hour": null,
+      "metrics_by_scenario_type": {
+        "CLEAN": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_POSITION": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_ALTITUDE": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_VELOCITY": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_HEADING": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "GRADUAL_POSITION_DRIFT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 2.0
+        },
+        "REPLAYED_TIMESTAMP": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "MISSING_MESSAGES": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "LATENCY_JITTER": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "GHOST_TRACK": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "IDENTITY_CONFLICT": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_HIGH_RATE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 22,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_DATE_LINE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_POLAR": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        }
+      }
+    },
+    "logistic_regression": {
+      "name": "logistic_regression",
+      "precision": 1.0,
+      "recall": 0.875,
+      "f1": 0.9333,
+      "scenario_count": 308,
+      "abstained_scenarios": 22,
+      "pre_scenario_alerts": 0,
+      "synthetic_control_sequence_alert_rate": 0.0,
+      "synthetic_impairment_sequence_alert_rate": 0.0,
+      "field_false_alerts_per_flight_hour": null,
+      "metrics_by_scenario_type": {
+        "CLEAN": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_POSITION": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_ALTITUDE": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_VELOCITY": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_HEADING": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "GRADUAL_POSITION_DRIFT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 2.0
+        },
+        "REPLAYED_TIMESTAMP": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "MISSING_MESSAGES": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "LATENCY_JITTER": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "GHOST_TRACK": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "IDENTITY_CONFLICT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "CLEAN_HIGH_RATE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 22,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_DATE_LINE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_POLAR": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        }
+      }
+    },
+    "decision_tree": {
+      "name": "decision_tree",
+      "precision": 1.0,
+      "recall": 0.875,
+      "f1": 0.9333,
+      "scenario_count": 308,
+      "abstained_scenarios": 22,
+      "pre_scenario_alerts": 0,
+      "synthetic_control_sequence_alert_rate": 0.0,
+      "synthetic_impairment_sequence_alert_rate": 0.0,
+      "field_false_alerts_per_flight_hour": null,
+      "metrics_by_scenario_type": {
+        "CLEAN": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_POSITION": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_ALTITUDE": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_VELOCITY": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_HEADING": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "GRADUAL_POSITION_DRIFT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "REPLAYED_TIMESTAMP": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "MISSING_MESSAGES": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "LATENCY_JITTER": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "GHOST_TRACK": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "IDENTITY_CONFLICT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "CLEAN_HIGH_RATE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 22,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_DATE_LINE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_POLAR": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        }
+      }
+    },
+    "random_forest": {
+      "name": "random_forest",
+      "precision": 1.0,
+      "recall": 0.875,
+      "f1": 0.9333,
+      "scenario_count": 308,
+      "abstained_scenarios": 22,
+      "pre_scenario_alerts": 0,
+      "synthetic_control_sequence_alert_rate": 0.0,
+      "synthetic_impairment_sequence_alert_rate": 0.0,
+      "field_false_alerts_per_flight_hour": null,
+      "metrics_by_scenario_type": {
+        "CLEAN": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "ABRUPT_POSITION": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_ALTITUDE": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_VELOCITY": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "ABRUPT_HEADING": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "GRADUAL_POSITION_DRIFT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "REPLAYED_TIMESTAMP": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "MISSING_MESSAGES": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "LATENCY_JITTER": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "GHOST_TRACK": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "IDENTITY_CONFLICT": {
+          "scenarios": 22,
+          "alerted": 22,
+          "alert_rate": 1.0,
+          "detected": 22,
+          "detection_rate": 1.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": 0.0
+        },
+        "CLEAN_HIGH_RATE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 22,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_DATE_LINE": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        },
+        "CLEAN_POLAR": {
+          "scenarios": 22,
+          "alerted": 0,
+          "alert_rate": 0.0,
+          "detected": 0,
+          "detection_rate": 0.0,
+          "abstained": 0,
+          "pre_scenario_alerts": 0,
+          "median_time_to_detect_seconds": null
+        }
+      }
+    }
+  }
+}
