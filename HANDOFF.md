@@ -1,10 +1,10 @@
 # Project Handoff and Expansion Roadmap
 
-Last updated: 2026-08-03
+Last updated: 2026-08-04
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/windowed-trajectory-evidence`
+Current branch: `codex/benign-rf-calibration-harness`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -427,6 +427,28 @@ Implemented on `codex/windowed-trajectory-evidence`:
 - `docs/windowed-trajectory-evaluation-v1.md` records the method, exact results,
   limitations, and calibration work still required.
 
+Implemented on `codex/benign-rf-calibration-harness`:
+
+- A versioned calibration manifest distinguishes captured RF from generated controls,
+  records review status and licensing, and binds the observation count to a JSONL
+  SHA-256. A reviewed status requires reviewer identity, timestamp, and review-notes
+  hash. Generated or unreviewed data is ineligible for a routine-RF alert-rate claim.
+- The deterministic report groups observations by exact aircraft/source provenance,
+  runs pair policy 1.0 and window policy 1.0-development, and reports status counts,
+  residual percentiles, observed track hours, flagged-evaluation rates, and grouped
+  alert episodes.
+- Long unobserved gaps do not inflate track-hour denominators. Consecutive pair and
+  window flags are grouped into an operator-review episode instead of being presented
+  as independent alerts.
+- `scripts/export_live_rf_calibration.py` streams a bounded receiver/source/time slice
+  from PostgreSQL without overwriting evidence. `scripts/run_observation_calibration.py`
+  verifies the hash and contract before scoring it.
+- `calibration/local/` is git-ignored because raw RF observations can reveal aircraft
+  and receiver locations. `docs/rf-calibration-workflow-v1.md` documents collection,
+  review, interpretation, and threshold-promotion rules.
+- Generated test data verifies this machinery but does not produce a published field
+  metric. A real receiver capture has not yet been collected in this checkpoint.
+
 Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
@@ -435,8 +457,9 @@ Not implemented in these checkpoints:
 
 ## 3. Known Risks and Technical Debt
 
-- The dependency upgrades are verified locally but still require a GitHub-hosted
-  CI run after their branch is pushed and connected to a pull request.
+- The latest stacked window-evidence branch passed hosted backend, frontend,
+  security, decoder, migration, simulation, clean-replay, and attack-replay CI.
+  These commits still need review/merge before `main` carries that evidence.
 - Docker Scout could not run because Docker Desktop is not authenticated.
 - Root Compose contains development credentials and exposes PostgreSQL publicly on
   the host. Move secrets to environment/secret storage and bind development ports
@@ -447,9 +470,7 @@ Not implemented in these checkpoints:
   each holds a multi-aircraft transaction until the batch commit. The supported
   topology currently has one ingestion writer; add deterministic lock ordering or
   smaller transactions before active/active ingestion.
-- The new root CI workflow still needs its first successful GitHub-hosted run after
-  this branch is pushed. Authentication, authorization, and rate limiting remain
-  unimplemented.
+- Authentication, authorization, and rate limiting remain unimplemented.
 - The local host still has Node 18.12.1, which is too old for the upgraded frontend;
   use the Node 20.19 container or install Node 20.19+ for host-side frontend work.
 - Recorded replay startup settings still come from environment variables. The
@@ -458,11 +479,14 @@ Not implemented in these checkpoints:
 - Data-source identity is a frontend build-time label. It should eventually come
   from a signed backend source-status API.
 - Kinematic policy 1.0 uses conservative general limits. It has deterministic
-  clean/attack evidence but is not calibrated against hours of benign real RF;
+  clean/attack evidence but is not calibrated against hours of reviewed routine RF;
   do not publish a false-positive-rate claim yet.
 - Evaluations compare observations within one exact source. They do not yet fuse
-  independent receivers or external feeds, estimate sensor uncertainty, or detect
-  gradual low-and-slow drift over a long window.
+  independent receivers or external feeds or estimate sensor uncertainty. The
+  short-window rule closes one generated gradual-drift case but does not establish
+  coverage for longer or different low-and-slow patterns.
+- The calibration harness has generated-test verification only. No real `LIVE_RF`
+  calibration report or manually reviewed episode set has been produced yet.
 - The synthetic laboratory does not model ghost tracks, identity conflicts,
   realistic latency/noise distributions, or aircraft-specific flight envelopes
   yet. Its clean controls cannot substitute for benign captured RF calibration.
@@ -1142,16 +1166,17 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
 1. Review the stacked Phase 0, CI, dependency-security, recorded-replay, and
    replay-control PRs.
 2. Confirm the first GitHub-hosted CI run after the workflow reaches `main`.
-3. Run pair policy 1.0 and window policy 1.0-development against a legally usable
-   benign RF capture and publish reviewed
-   alerts per flight hour before claiming a false-positive rate.
-4. Design alert grouping and suppression before promoting window flags to operator
-   alerts; one sliding-window result per observation would otherwise create noise.
-5. Extend Generator 1.0 with missing-message, jitter, ghost-track, identity-conflict,
+3. Collect the first private 1–2 hour `LIVE_RF` dataset with the documented exporter,
+   run the unreviewed report, and manually inspect every grouped alert episode.
+4. Repeat across several traffic/receiver conditions before changing policy limits;
+   publish only legally shareable manifests or sanitized aggregate metrics.
+5. Convert the offline episode grouping into a persisted operator-alert suppression
+   policy only after the reviewed routine-RF reports support its timing.
+6. Extend Generator 1.0 with missing-message, jitter, ghost-track, identity-conflict,
    and legitimate high-rate edge cases before starting any ML classifier.
-6. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
+7. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
    subtree after confirming the board model and available sensors.
-7. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
+8. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
    harness exist.
 
 ## 11. Handoff Rules for the Next Engineer or Agent
@@ -1202,7 +1227,10 @@ Use this when starting a new Codex chat:
 > detects 22/22 gradual-drift scenarios at 2 seconds median delay with 0/22 generated
 > clean controls flagged; it is persisted, available through the API, shown in the
 > UI, and enforced by a reviewed CI baseline on `codex/windowed-trajectory-evidence`.
-> Do not claim a real-world false-positive rate. Benign-capture calibration and alert
-> suppression are next. Confirm the
+> Do not claim a real-world false-positive rate. The versioned LIVE_RF export,
+> hash-verified calibration report, observed-track-hour metrics, and offline alert
+> episode grouping are implemented on `codex/benign-rf-calibration-harness`; only
+> generated tests have run so far. Collect and manually review multiple private RF
+> sessions before changing thresholds or enabling production window alerts. Confirm the
 > first hosted Actions run before claiming CI is green. Deployment is planned
 > for Section 5 Phase 10; public production deployment is not complete today.

@@ -140,6 +140,24 @@ These are synthetic regression results, not a real-world false-positive rate. Th
 window threshold remains `1.0-development` until benign captured RF calibration.
 See `docs/windowed-trajectory-evaluation-v1.md` for method, integration, and limits.
 
+### Real receiver calibration
+
+The repository now includes an offline workflow for exporting a bounded `LIVE_RF`
+observation set and measuring pair/window residuals, insufficient-data rates,
+flagged evaluations, and grouped alert episodes per observed track hour:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/export_live_rf_calibration.py --help
+PYTHONPATH=backend:. python3 scripts/run_observation_calibration.py --help
+```
+
+Raw local captures are git-ignored because they may expose receiver and aircraft
+locations. Reports remain `engineering_validation_only` until the manifest identifies
+captured RF and records a completed routine-traffic review. Even then, the measured
+value is an alert rate—not a false-positive rate without authoritative ground truth.
+Follow `docs/rf-calibration-workflow-v1.md` for the complete collection, integrity,
+review, and interpretation procedure.
+
 Stop the demo with:
 
 ```bash
