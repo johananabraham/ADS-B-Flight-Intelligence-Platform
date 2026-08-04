@@ -104,6 +104,27 @@ export interface WindowKinematicEvaluation {
   rule_results: KinematicRuleResult[];
 }
 
+export type CorroborationState =
+  | 'CORROBORATED'
+  | 'LOCAL_ONLY'
+  | 'EXTERNAL_ONLY'
+  | 'CONFLICTING'
+  | 'STALE'
+  | 'UNAVAILABLE';
+
+export interface CorroborationEvidence {
+  state: CorroborationState;
+  policy_version: string;
+  icao_hex: string;
+  evaluated_at: string;
+  explanation: string;
+  local_observation_id: string | null;
+  external_observation_id: string | null;
+  time_delta_seconds: number | null;
+  position_distance_nm: number | null;
+  altitude_difference_ft: number | null;
+}
+
 export interface Stats {
   active_aircraft: number;
   total_positions_today: number;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   useFlightTrail,
+  useCorroboration,
   useKinematicEvaluations,
   useWindowKinematicEvaluations,
 } from '@/hooks';
@@ -8,6 +9,7 @@ import type { Aircraft } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import clsx from 'clsx';
 import { IntegrityEvidence } from './IntegrityEvidence';
+import { CorroborationEvidence } from './CorroborationEvidence';
 
 interface SafetyContext {
   aircraft: string;
@@ -45,6 +47,7 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
   const [flightRoute, setFlightRoute] = useState<FlightRoute | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [showIntegrity, setShowIntegrity] = useState(false);
+  const [showCorroboration, setShowCorroboration] = useState(false);
   const {
     data: kinematicEvaluations = [],
     isLoading: integrityLoading,
@@ -57,6 +60,11 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
     isError: windowError,
   } = useWindowKinematicEvaluations(aircraft.icao_hex);
   const latestWindowEvaluation = windowEvaluations[0];
+  const {
+    data: corroboration,
+    isLoading: corroborationLoading,
+    isError: corroborationError,
+  } = useCorroboration(aircraft.icao_hex, showCorroboration);
 
   // Fetch flight route on mount
   useEffect(() => {
@@ -289,6 +297,14 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
         loading={integrityLoading || windowLoading}
         error={integrityError || windowError}
         onToggle={() => setShowIntegrity(value => !value)}
+      />
+
+      <CorroborationEvidence
+        evidence={corroboration}
+        expanded={showCorroboration}
+        loading={corroborationLoading}
+        error={corroborationError}
+        onToggle={() => setShowCorroboration(value => !value)}
       />
 
       {/* Safety Context (collapsible) */}

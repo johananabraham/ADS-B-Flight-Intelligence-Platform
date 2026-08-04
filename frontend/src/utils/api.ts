@@ -2,6 +2,7 @@ import axios from 'axios';
 import type {
   Aircraft,
   Anomaly,
+  CorroborationEvidence,
   FlightTrail,
   KinematicEvaluation,
   Stats,
@@ -81,6 +82,13 @@ export async function fetchWindowKinematicEvaluations(
     '/kinematics/window-evaluations',
     { params: { icao_hex: icao, limit } }
   );
+  return data;
+}
+
+export async function fetchCorroboration(
+  icao: string
+): Promise<CorroborationEvidence> {
+  const { data } = await api.get<CorroborationEvidence>(`/corroboration/${icao}`);
   return data;
 }
 
