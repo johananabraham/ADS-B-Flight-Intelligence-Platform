@@ -5,6 +5,7 @@ import {
   fetchStats,
   fetchAnomalies,
   fetchCriticalAnomalies,
+  fetchCorroboration,
   fetchKinematicEvaluations,
   fetchWindowKinematicEvaluations,
 } from '@/utils/api';
@@ -65,5 +66,15 @@ export function useWindowKinematicEvaluations(icao: string | null) {
     queryFn: () => fetchWindowKinematicEvaluations(icao!),
     enabled: !!icao,
     refetchInterval: 5000,
+  });
+}
+
+export function useCorroboration(icao: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ['corroboration', icao],
+    queryFn: () => fetchCorroboration(icao!),
+    enabled: !!icao && enabled,
+    refetchInterval: 15000,
+    retry: false,
   });
 }
