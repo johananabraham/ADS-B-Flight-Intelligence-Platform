@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import math
 import statistics
 from dataclasses import asdict, dataclass, replace
 from enum import Enum
+from pathlib import Path
 from typing import Callable, Iterable
 
 import numpy as np
@@ -31,6 +33,10 @@ from app.services.windowed_kinematics import WindowPolicy, evaluate_window
 FEATURE_SCHEMA_VERSION = "1.0"
 MODEL_SUITE_VERSION = "1.0-development"
 MINIMUM_PREFIX_OBSERVATIONS = 2
+
+
+def implementation_sha256() -> str:
+    return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
 
 class FeatureStatus(str, Enum):
@@ -523,6 +529,7 @@ def build_ml_report(
             {scenario.generator_version for scenario in scenario_tuple}
         ),
         "implementation_revision": implementation_revision,
+        "implementation_sha256": implementation_sha256(),
         "sklearn_version": sklearn.__version__,
         "root_seed": seed,
         "feature_names": list(FEATURE_NAMES),

@@ -1,5 +1,9 @@
 """Interpretable ML feature, abstention, and evaluation contracts."""
 
+from copy import deepcopy
+
+import pytest
+
 from app.evaluation.kinematic_harness import (
     DatasetSplit,
     ScenarioType,
@@ -12,7 +16,9 @@ from app.evaluation.ml_baselines import (
     build_training_rows,
     evaluate_detector,
     extract_features,
+    implementation_sha256,
 )
+from scripts.run_ml_baselines import check_report, compact_summary
 
 
 def scenario_by_type(scenario_type: ScenarioType):
@@ -78,6 +84,7 @@ def test_ml_report_is_deterministic_and_keeps_models_offline() -> None:
     assert first["promotion_decision"] == "OFFLINE_EVALUATION_ONLY"
     assert first["feature_schema_version"] == "1.0"
     assert first["generator_versions"] == ["1.1"]
+    assert len(implementation_sha256()) == 64
     assert set(first["models"]) == {
         "always_normal",
         "rules_only",
@@ -86,6 +93,11 @@ def test_ml_report_is_deterministic_and_keeps_models_offline() -> None:
         "random_forest",
     }
     assert set(first["validation_models"]) == set(first["models"])
+    assert all(
+        "predictions" not in model
+        for model in compact_summary(first)["models"].values()
+    )
+    check_report(first)
 
 
 def test_rules_baseline_reports_known_detection_boundaries() -> None:
@@ -113,3 +125,18 @@ def test_normal_sequence_alerts_are_counted_as_false_alerts() -> None:
     assert report["synthetic_control_sequence_alert_rate"] > 0
     assert report["synthetic_impairment_sequence_alert_rate"] == 1
     assert report["precision"] < 1
+
+
+def test_regression_gate_rejects_generated_control_alerts() -> None:
+    report = build_ml_report(
+        generate_extended_dataset(session_count=12),
+        seed=123,
+        implementation_revision="test-revision",
+    )
+    regressed = deepcopy(report)
+    regressed["models"]["logistic_regression"][
+        "synthetic_control_sequence_alert_rate"
+    ] = 0.1
+
+    with pytest.raises(SystemExit, match="generated controls"):
+        check_report(regressed)
