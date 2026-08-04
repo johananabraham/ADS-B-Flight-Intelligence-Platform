@@ -19,6 +19,16 @@ class Settings(BaseSettings):
     app_name: str = "Aviation Intelligence Platform"
     debug: bool = True
 
+    # Optional OpenSky cross-source corroboration (disabled until explicitly enabled)
+    opensky_enabled: bool = False
+    opensky_client_id: str = ""
+    opensky_client_secret: str = ""
+    opensky_api_base_url: str = "https://opensky-network.org/api"
+    opensky_auth_url: str = (
+        "https://auth.opensky-network.org/auth/realms/opensky-network/"
+        "protocol/openid-connect/token"
+    )
+
     # Anomaly detection thresholds
     rapid_descent_threshold: int = 4000  # ft/min
     speed_anomaly_threshold: float = 0.3  # 30% deviation from expected
