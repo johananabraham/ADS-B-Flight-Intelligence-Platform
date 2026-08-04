@@ -1,0 +1,163 @@
+{
+  "report_schema_version": "1.1",
+  "scope": "synthetic_scenarios_only",
+  "generator": {
+    "version": "1.1",
+    "root_seed": 20260720,
+    "source_sessions": 90,
+    "variants_per_session": 14,
+    "split_source_sessions": {
+      "train": 46,
+      "validation": 22,
+      "test": 22
+    }
+  },
+  "policy_version": "1.0",
+  "evaluated_split": "test",
+  "scenario_count": 308,
+  "pair_count": 3344,
+  "synthetic_control_sequence_alert_rate": 0.0,
+  "synthetic_impairment_sequence_alert_rate": 0.0,
+  "attack_detection_rate": 0.5,
+  "metrics_by_scenario_class": {
+    "CONTROL": {
+      "scenarios": 88,
+      "flagged_sequences": 0,
+      "sequence_alert_rate": 0.0,
+      "insufficient_pairs": 242
+    },
+    "IMPAIRMENT": {
+      "scenarios": 44,
+      "flagged_sequences": 0,
+      "sequence_alert_rate": 0.0,
+      "insufficient_pairs": 0
+    },
+    "ATTACK": {
+      "scenarios": 176,
+      "flagged_sequences": 88,
+      "sequence_alert_rate": 0.5,
+      "insufficient_pairs": 66
+    }
+  },
+  "metrics_by_scenario_type": {
+    "CLEAN": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": null
+    },
+    "ABRUPT_POSITION": {
+      "scenarios": 22,
+      "detected": 22,
+      "detection_rate": 1.0,
+      "flagged_pairs": 44,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": 0.0
+    },
+    "ABRUPT_ALTITUDE": {
+      "scenarios": 22,
+      "detected": 22,
+      "detection_rate": 1.0,
+      "flagged_pairs": 44,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": 0.0
+    },
+    "ABRUPT_VELOCITY": {
+      "scenarios": 22,
+      "detected": 22,
+      "detection_rate": 1.0,
+      "flagged_pairs": 44,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": 0.0
+    },
+    "ABRUPT_HEADING": {
+      "scenarios": 22,
+      "detected": 22,
+      "detection_rate": 1.0,
+      "flagged_pairs": 44,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": 0.0
+    },
+    "GRADUAL_POSITION_DRIFT": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": null
+    },
+    "REPLAYED_TIMESTAMP": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 22,
+      "median_time_to_detect_seconds": null
+    },
+    "MISSING_MESSAGES": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": null
+    },
+    "LATENCY_JITTER": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": null
+    },
+    "GHOST_TRACK": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": null
+    },
+    "IDENTITY_CONFLICT": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 44,
+      "median_time_to_detect_seconds": null
+    },
+    "CLEAN_HIGH_RATE": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 242,
+      "median_time_to_detect_seconds": null
+    },
+    "CLEAN_DATE_LINE": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": null
+    },
+    "CLEAN_POLAR": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": null
+    }
+  },
+  "limitations": [
+    "Synthetic control alert rate is not a real-world false-positive rate.",
+    "Ghost tracks require existence corroboration; plausible motion alone cannot reject them.",
+    "Identity conflicts require multi-source association before kinematic scoring.",
+    "Timing loss and jitter are impairments, not attacks, without additional evidence.",
+    "INSUFFICIENT_DATA is reported separately and never counted as detection."
+  ]
+}

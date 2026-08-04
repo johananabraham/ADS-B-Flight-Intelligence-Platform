@@ -4,7 +4,7 @@ Last updated: 2026-08-04
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/benign-rf-calibration-harness`
+Current branch: `codex/extended-synthetic-scenarios`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -449,6 +449,30 @@ Implemented on `codex/benign-rf-calibration-harness`:
 - Generated test data verifies this machinery but does not produce a published field
   metric. A real receiver capture has not yet been collected in this checkpoint.
 
+Implemented on `codex/extended-synthetic-scenarios`:
+
+- Generator 1.1 expands each source session from seven to fourteen scenarios while
+  preserving Generator 1.0 as an unchanged regression suite.
+- New controls cover legitimate 0.2-second reports, International Date Line
+  crossing, and polar motion. New impairments cover missing messages and
+  deterministic receive-latency jitter. New attacks cover a plausible ghost
+  identity and one same-ICAO conflict from a different simulated source.
+- Scenario classes are assigned before scoring so controls, ordinary impairments,
+  and attacks are never collapsed into one misleading accuracy number. Session-level
+  train/validation/test isolation, deterministic UUIDs, seeds, source hashes,
+  parameters, and detection windows remain reproducible.
+- Held-out pairwise results cover 308 scenarios from 22 source sessions: 0/88
+  controls flagged, 0/44 impairments flagged, and 88/176 attacks detected. All four
+  abrupt families remain 22/22. Gradual drift, replay, ghost identity, and
+  cross-source conflict remain explicit boundaries requiring window, timing, or
+  corroboration evidence.
+- High-rate controls produce 242 explicit insufficient pairs rather than false
+  alerts. Identity conflicts produce 44 insufficient pairs because exact provenance
+  differs; those abstentions are not counted as detections.
+- `scripts/run_extended_kinematic_evaluation.py --check` reproduces the compact
+  `evaluation/results/kinematic_extended_baseline_v1_1.json`, and CI enforces it.
+  `docs/kinematic-evaluation-v1.1.md` records the method, results, and claim limits.
+
 Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
@@ -487,9 +511,11 @@ Not implemented in these checkpoints:
   coverage for longer or different low-and-slow patterns.
 - The calibration harness has generated-test verification only. No real `LIVE_RF`
   calibration report or manually reviewed episode set has been produced yet.
-- The synthetic laboratory does not model ghost tracks, identity conflicts,
-  realistic latency/noise distributions, or aircraft-specific flight envelopes
-  yet. Its clean controls cannot substitute for benign captured RF calibration.
+- Generator 1.1 models deterministic message loss, bounded latency jitter, plausible
+  ghost identity, one cross-source identity conflict, high-rate traffic, Date Line
+  crossing, and polar motion. It still does not model empirical RF noise
+  distributions or aircraft-specific flight envelopes, and generated controls
+  cannot substitute for benign captured RF calibration.
 - Simulator aircraft are fictional. Do not describe demo traffic as captured or
   live traffic.
 - The existing `graphify-out/` directory contains cache fragments but no usable
@@ -634,10 +660,9 @@ Verify:
 
 Purpose: detect physically inconsistent movement without machine learning.
 
-Status: the first complete vertical slice is implemented—five deterministic rules,
-versioned persisted evidence, ingestion integration, API/UI presentation, corrected
-clean fixture, isolated attack fixture, and clean/attack CI verification. Real
-benign-capture calibration, property tests, and gradual-window rules remain.
+Status: the pairwise vertical slice, property tests, additive gradual-window rule,
+API/UI presentation, generated attack replay, calibration harness, and CI evidence
+are implemented. Real benign-capture collection and review remain.
 
 Build:
 
@@ -661,6 +686,10 @@ Verify:
 ### Phase 4 — Synthetic attack dataset and evaluation harness (Weeks 6–7)
 
 Purpose: create a reproducible test laboratory without claiming real spoofing data.
+
+Status: Generator 1.1 implements the listed scenario families, leakage-safe split,
+versioned manifest, itemized held-out metrics, reviewed baseline, and CI gate.
+Routine-RF evidence remains separate and incomplete.
 
 Build:
 
@@ -1172,8 +1201,9 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
    publish only legally shareable manifests or sanitized aggregate metrics.
 5. Convert the offline episode grouping into a persisted operator-alert suppression
    policy only after the reviewed routine-RF reports support its timing.
-6. Extend Generator 1.0 with missing-message, jitter, ghost-track, identity-conflict,
-   and legitimate high-rate edge cases before starting any ML classifier.
+6. Design the Phase 5 feature schema and always-normal/rules-only evaluation contract;
+   do not retain ML unless it adds held-out value without unacceptable routine-RF
+   alert burden.
 7. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
    subtree after confirming the board model and available sensors.
 8. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation

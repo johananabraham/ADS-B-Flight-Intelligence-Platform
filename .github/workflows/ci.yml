@@ -51,6 +51,12 @@ jobs:
         run: >-
           python scripts/run_windowed_kinematic_evaluation.py --check
           --baseline evaluation/results/windowed_trajectory_baseline_v1.json
+      - name: Enforce extended synthetic scenario baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_extended_kinematic_evaluation.py --check
+          --baseline evaluation/results/kinematic_extended_baseline_v1_1.json
       - name: Validate migration SQL
         working-directory: backend
         env:

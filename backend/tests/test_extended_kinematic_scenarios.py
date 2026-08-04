@@ -108,3 +108,7 @@ def test_extended_report_separates_controls_impairments_and_attacks() -> None:
     assert metrics[ScenarioType.GHOST_TRACK.value]["detection_rate"] == 0
     assert metrics[ScenarioType.IDENTITY_CONFLICT.value]["insufficient_pairs"] > 0
     assert metrics[ScenarioType.CLEAN_HIGH_RATE.value]["insufficient_pairs"] > 0
+    assert all(
+        "scenario_parameters" in entry and "attack_parameters" not in entry
+        for entry in report["scenario_manifest"]
+    )
