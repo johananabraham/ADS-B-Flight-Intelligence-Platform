@@ -51,3 +51,6 @@ htmlcov/
 
 # Data files (NTSB, ChromaDB)
 data/
+
+# Local RF captures may contain sensitive receiver/aircraft location data
+/calibration/local/
