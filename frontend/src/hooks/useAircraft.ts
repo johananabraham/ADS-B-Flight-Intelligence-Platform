@@ -3,6 +3,7 @@ import {
   fetchAircraft,
   fetchFlightTrail,
   fetchStats,
+  fetchStations,
   fetchAnomalies,
   fetchCriticalAnomalies,
   fetchCorroboration,
@@ -76,5 +77,13 @@ export function useCorroboration(icao: string | null, enabled: boolean) {
     enabled: !!icao && enabled,
     refetchInterval: 15000,
     retry: false,
+  });
+}
+
+export function useStations() {
+  return useQuery({
+    queryKey: ['stations'],
+    queryFn: fetchStations,
+    refetchInterval: 5000,
   });
 }
