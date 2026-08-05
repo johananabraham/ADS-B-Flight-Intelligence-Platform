@@ -1,0 +1,139 @@
+# Production Docker Compose Override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# IMPORTANT: Before deployment:
+# 1. Set all environment variables in a .env file or secret manager
+# 2. Generate strong passwords for POSTGRES_PASSWORD
+# 3. Never expose PostgreSQL port (5432) to the internet
+# 4. Configure HTTPS via reverse proxy (nginx/caddy)
+#
+# Required environment variables:
+#   POSTGRES_PASSWORD - Strong database password
+#   LLM_API_KEY - API key for LLM provider
+#   SECRET_KEY - FastAPI session secret (generate with: openssl rand -hex 32)
+#
+# Optional environment variables:
+#   ANTHROPIC_API_KEY - For AI summaries
+#   OPENSKY_CLIENT_ID - For cross-source corroboration
+#   OPENSKY_CLIENT_SECRET - For cross-source corroboration
+
+version: '3.8'
+
+services:
+  db:
+    # Remove direct port exposure in production
+    # Access PostgreSQL only through backend service
+    ports: []
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend:
+    # Remove source bind mounts in production
+    volumes:
+      - chroma_data:/app/data/chroma
+      - manifests_data:/app/data/manifests
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?}@db:5432/adsb_intel
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY required}
+      # Disable debug mode
+      DEBUG: "false"
+      # Production LLM settings
+      LLM_API_KEY: ${LLM_API_KEY:?LLM_API_KEY required}
+      # Optional integrations
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENSKY_ENABLED: ${OPENSKY_ENABLED:-false}
+      OPENSKY_CLIENT_ID: ${OPENSKY_CLIENT_ID:-}
+      OPENSKY_CLIENT_SECRET: ${OPENSKY_CLIENT_SECRET:-}
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  ingestion:
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?}@db:5432/adsb_intel
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  anomaly-detection:
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?}@db:5432/adsb_intel
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    # In production, serve pre-built static files via nginx
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    # Remove source bind mounts
+    volumes: []
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # Optional: nginx reverse proxy with HTTPS
+  # Uncomment and configure for production deployment
+  #
+  # nginx:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/certs:/etc/nginx/certs:ro
+  #   depends_on:
+  #     - backend
+  #     - frontend
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 64M
+
+volumes:
+  postgres_data:
+  chroma_data:
+  manifests_data:

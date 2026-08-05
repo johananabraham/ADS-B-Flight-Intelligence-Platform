@@ -8,6 +8,13 @@ Current branch: `main`
 
 All feature work consolidated: PRs #1-8 merged to main.
 
+Recent additions (2026-08-05):
+- Claims/evidence table in README
+- Safety research ingestion pipeline (NTSB + eCFR)
+- 30-case evaluation harness for safety agent
+- Portfolio architecture diagram and case study
+- Production docker-compose and deployment guide
+
 Branch point before Phase 0 implementation: `fc21cf1`
 
 ## 0. Start Here — Explanation for a Junior Developer
