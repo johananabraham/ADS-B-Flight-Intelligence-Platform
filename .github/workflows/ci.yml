@@ -63,6 +63,12 @@ jobs:
         run: >-
           python scripts/run_ml_baselines.py --check
           --baseline evaluation/results/ml_baselines_v1.json
+      - name: Enforce offline cross-source corroboration baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_corroboration_evaluation.py --check
+          --baseline evaluation/results/corroboration_offline_v1.json
       - name: Validate migration SQL
         working-directory: backend
         env:

@@ -175,6 +175,38 @@ These models are offline-only because generated performance is not field evidenc
 See `docs/ml-evaluation-v1.md` for leakage controls, feature warnings, itemized
 results, and promotion requirements.
 
+### Cross-source corroboration
+
+The selected-aircraft UI can compare a provenance-bearing local observation with a
+bounded OpenSky state-vector query. The adapter normalizes external observations,
+caches snapshots, honors provider retry headers, and exposes backoff, circuit-breaker,
+credit, and source-health state. OpenSky access is disabled by default:
+
+```bash
+OPENSKY_ENABLED=true
+# Optional OAuth2 credentials; anonymous access has lower limits.
+OPENSKY_CLIENT_ID=
+OPENSKY_CLIENT_SECRET=
+```
+
+The result is one of `CORROBORATED`, `LOCAL_ONLY`, `EXTERNAL_ONLY`, `CONFLICTING`,
+`STALE`, or `UNAVAILABLE`. `UNAVAILABLE` is source health, not an aircraft anomaly.
+The UI fetches only when an operator expands the cross-source panel and refreshes no
+faster than every 15 seconds.
+
+The checked-in four-hour fixture verifies all six states without contacting a live
+provider:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/run_corroboration_evaluation.py --check \
+  --baseline evaluation/results/corroboration_offline_v1.json
+```
+
+This is an offline synthetic regression—not measured OpenSky coverage or latency.
+A permitted multi-hour live run and human review of real conflicts remain required.
+See `docs/corroboration-evaluation-v1.md` for the exact evidence boundary and current
+OpenSky operational constraints.
+
 ### Real receiver calibration
 
 The repository now includes an offline workflow for exporting a bounded `LIVE_RF`
