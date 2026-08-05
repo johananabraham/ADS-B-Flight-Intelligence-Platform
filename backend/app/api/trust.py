@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Literal
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -20,7 +21,12 @@ from ..services.kinematic_persistence import record_to_observation
 from ..services.kinematics import EvaluationStatus
 from ..services.station_health import StationHealthResult
 from ..services.station_records import evaluate_station_record
-from ..services.trust_assessment import TrustAssessmentInputs, assess_trust
+from ..services.trust_assessment import (
+    TrustAssessmentInputs,
+    TrustAssessmentResult,
+    assess_trust,
+)
+from ..services.trust_persistence import create_snapshot, insert_snapshot
 from .corroboration import get_corroboration_service
 
 
@@ -47,12 +53,53 @@ class TrustAssessmentResponse(BaseModel):
     numeric_score: None = None
 
 
+class PersistedTrustAssessmentResponse(BaseModel):
+    assessment_id: UUID
+    inserted: bool
+    assessment: TrustAssessmentResponse
+
+
 @router.get("/{icao_hex}", response_model=TrustAssessmentResponse)
 async def get_trust_assessment(
     icao_hex: str,
     db: Session = Depends(get_db),
     corroboration_service: CorroborationService = Depends(get_corroboration_service),
 ) -> TrustAssessmentResponse:
+    response, _assessment = await _evaluate_trust(
+        icao_hex, db, corroboration_service
+    )
+    return response
+
+
+@router.post(
+    "/{icao_hex}/assessments", response_model=PersistedTrustAssessmentResponse
+)
+async def create_trust_assessment(
+    icao_hex: str,
+    db: Session = Depends(get_db),
+    corroboration_service: CorroborationService = Depends(get_corroboration_service),
+) -> PersistedTrustAssessmentResponse:
+    response, assessment = await _evaluate_trust(
+        icao_hex, db, corroboration_service
+    )
+    snapshot = create_snapshot(
+        assessment,
+        tuple(component.model_dump(mode="json") for component in response.components),
+    )
+    inserted = insert_snapshot(db, snapshot)
+    db.commit()
+    return PersistedTrustAssessmentResponse(
+        assessment_id=snapshot.assessment_id,
+        inserted=inserted,
+        assessment=response,
+    )
+
+
+async def _evaluate_trust(
+    icao_hex: str,
+    db: Session,
+    corroboration_service: CorroborationService,
+) -> tuple[TrustAssessmentResponse, TrustAssessmentResult]:
     normalized = _normalize_icao(icao_hex)
     now = datetime.now(timezone.utc)
     pair = _latest_pair(db, normalized)
@@ -83,7 +130,7 @@ async def get_trust_assessment(
         station_node_id=station.node_id if station else None,
     )
     assessment = assess_trust(inputs)
-    return TrustAssessmentResponse(
+    response = TrustAssessmentResponse(
         state=assessment.state.value,
         policy_version=assessment.policy_version,
         icao_hex=normalized,
@@ -91,6 +138,7 @@ async def get_trust_assessment(
         reasons=assessment.reasons,
         components=_components(pair, window, corroboration, station, now),
     )
+    return response, assessment
 
 
 def _latest_pair(db: Session, icao_hex: str) -> KinematicEvaluationRecord | None:
