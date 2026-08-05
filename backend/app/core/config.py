@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     ntsb_data_url: str = "https://data.ntsb.gov/avdata/FileDirectory/DownloadFile?fileID=C%3A%5Cavdata%5Cavall.zip"
     ecfr_api_base_url: str = "https://www.ecfr.gov/api/versioner/v1"
 
+    # Authentication Settings
+    jwt_secret_key: str = "changeme-insecure-default-secret-key-for-development-only"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 1440  # 24 hours
+
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()

@@ -3,10 +3,12 @@
 from typing import Literal
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from ..core.config import get_settings
+from ..models.user import User
+from ..auth.dependencies import require_operator
 
 router = APIRouter(prefix="/replay", tags=["replay"])
 settings = get_settings()
@@ -67,6 +69,9 @@ async def replay_status() -> dict:
 
 
 @router.post("/commands", response_model=ReplayStatus)
-async def replay_command(command: ReplayCommand) -> dict:
-    """Apply one validated playback command."""
+async def replay_command(
+    command: ReplayCommand,
+    current_user: User = Depends(require_operator),
+) -> dict:
+    """Apply one validated playback command (requires operator or admin role)."""
     return await request_replay("POST", "/commands", command.model_dump())

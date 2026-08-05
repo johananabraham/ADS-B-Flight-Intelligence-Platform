@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api import register_api_routes
 from .core.config import get_settings
 from .core.database import engine, Base
+from .auth.rate_limiter import RateLimitMiddleware
 
 settings = get_settings()
 
@@ -12,6 +13,9 @@ app = FastAPI(
     description="Real-time ADS-B flight tracking and anomaly detection",
     version="1.0.0",
 )
+
+# Rate limiting middleware (first to limit requests early)
+app.add_middleware(RateLimitMiddleware)
 
 # CORS middleware for frontend
 app.add_middleware(

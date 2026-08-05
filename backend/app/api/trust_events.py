@@ -13,7 +13,9 @@ from sqlalchemy.orm import Session
 
 from ..core.database import get_db
 from ..models.trust import TrustAssessmentRecord, TrustOperatorActionRecord
+from ..models.user import User
 from ..services.trust_persistence import OperatorAction, insert_action
+from ..auth.dependencies import require_operator
 
 
 router = APIRouter(prefix="/trust-events", tags=["trust"])
@@ -125,6 +127,7 @@ def create_operator_action(
     assessment_id: UUID,
     request: OperatorActionRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_operator),
 ) -> ActionCreatedResponse:
     _assessment_or_404(db, assessment_id)
     existing = (

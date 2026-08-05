@@ -11,6 +11,7 @@ from .observation import TrackObservationRecord
 from .kinematics import KinematicEvaluationRecord, WindowKinematicEvaluationRecord
 from .edge import SensorNodeRecord, StationPresenceRecord, StationTelemetryRecord
 from .trust import TrustAssessmentRecord, TrustOperatorActionRecord
+from .user import User, UserRole
 
 __all__ = [
     "Aircraft",
@@ -29,4 +30,6 @@ __all__ = [
     "StationTelemetryRecord",
     "TrustAssessmentRecord",
     "TrustOperatorActionRecord",
+    "User",
+    "UserRole",
 ]

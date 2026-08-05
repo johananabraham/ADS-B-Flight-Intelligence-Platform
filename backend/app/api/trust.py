@@ -15,6 +15,8 @@ from ..core.database import get_db
 from ..models.edge import SensorNodeRecord
 from ..models.kinematics import KinematicEvaluationRecord, WindowKinematicEvaluationRecord
 from ..models.observation import TrackObservationRecord
+from ..models.user import User
+from ..auth.dependencies import require_operator
 from ..services.corroboration import CorroborationResult, compare_observations
 from ..services.corroboration_service import CorroborationService
 from ..services.kinematic_persistence import record_to_observation
@@ -78,6 +80,7 @@ async def create_trust_assessment(
     icao_hex: str,
     db: Session = Depends(get_db),
     corroboration_service: CorroborationService = Depends(get_corroboration_service),
+    current_user: User = Depends(require_operator),
 ) -> PersistedTrustAssessmentResponse:
     response, assessment = await _evaluate_trust(
         icao_hex, db, corroboration_service
