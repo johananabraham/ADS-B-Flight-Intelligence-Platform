@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
@@ -21,6 +22,7 @@ def telemetry(**updates) -> StationTelemetry:
     values = {
         "node_id": "roof-node-1",
         "firmware_version": "1.0.0",
+        "boot_id": UUID("00000000-0000-4000-8000-000000000001"),
         "sequence": 10,
         "observed_at": NOW,
         "uptime_seconds": 3_600,
@@ -49,6 +51,8 @@ def test_station_contract_rejects_naive_time_and_invalid_node_id():
         telemetry(observed_at=datetime(2026, 8, 4, 12))
     with pytest.raises(ValidationError, match="string_pattern_mismatch"):
         telemetry(node_id="../other-node")
+    with pytest.raises(ValidationError, match="extra_forbidden"):
+        telemetry(unexpected_field="not allowed")
 
 
 def test_topics_are_versioned_and_reject_wildcard_injection():
