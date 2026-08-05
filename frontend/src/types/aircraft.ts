@@ -151,6 +151,32 @@ export interface TrustAssessment {
   numeric_score: null;
 }
 
+export interface PersistedTrustAssessment {
+  assessment_id: string;
+  inserted: boolean;
+  assessment: TrustAssessment;
+}
+
+export interface TrustEvent {
+  assessment_id: string;
+  policy_version: string;
+  icao_hex: string;
+  evaluated_at: string;
+  state: TrustState;
+  reasons: string[];
+  components: TrustComponent[];
+}
+
+export interface TrustOperatorAction {
+  action_id: string;
+  assessment_id: string;
+  action_type: 'ACKNOWLEDGE' | 'ANNOTATE';
+  actor: string;
+  note: string | null;
+  created_at: string;
+  identity_assurance: 'SELF_ASSERTED';
+}
+
 export interface Stats {
   active_aircraft: number;
   total_positions_today: number;

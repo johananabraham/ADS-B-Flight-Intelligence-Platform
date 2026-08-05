@@ -308,7 +308,7 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
       />
 
       <TrustEvidence
-        assessment={trustAssessment}
+        result={trustAssessment}
         expanded={showTrust}
         loading={trustLoading}
         error={trustError}
