@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import api_router
+from .api import register_api_routes
 from .core.config import get_settings
 from .core.database import engine, Base
 
@@ -22,8 +22,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API routes
-app.include_router(api_router, prefix="/api/v1")
+# Include API routes directly; nested APIRouters can be lazily cached by FastAPI.
+register_api_routes(app)
 
 
 @app.on_event("startup")
