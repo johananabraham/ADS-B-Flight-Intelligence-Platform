@@ -1,0 +1,87 @@
+{
+  "configuration": {
+    "evaluated_at": "2026-08-04T12:00:00+00:00",
+    "policy_version": "1.0",
+    "scenario_count": 7
+  },
+  "evidence_class": "OFFLINE_SYNTHETIC_ONLY",
+  "implementation_revision": "9a0938c",
+  "implementation_sha256": "36efc9b5c48198598ac4846ef1aed366f187db774bc395510c848cb21c690acc",
+  "results": {
+    "classification_mismatches": [],
+    "exact_match_accuracy": 1.0,
+    "samples": [
+      {
+        "actual_state": "NO_DATA",
+        "expected_state": "NO_DATA",
+        "reasons": [
+          "No station telemetry or presence message has been received."
+        ],
+        "scenario": "no_data"
+      },
+      {
+        "actual_state": "HEALTHY",
+        "expected_state": "HEALTHY",
+        "reasons": [
+          "The latest heartbeat is fresh and all reported limits pass."
+        ],
+        "scenario": "fresh_nominal"
+      },
+      {
+        "actual_state": "DEGRADED",
+        "expected_state": "DEGRADED",
+        "reasons": [
+          "Wi-Fi RSSI is weak at -85 dBm."
+        ],
+        "scenario": "weak_wifi"
+      },
+      {
+        "actual_state": "DEGRADED",
+        "expected_state": "DEGRADED",
+        "reasons": [
+          "The bounded offline queue contains 4 message(s)."
+        ],
+        "scenario": "offline_backpressure"
+      },
+      {
+        "actual_state": "DEGRADED",
+        "expected_state": "DEGRADED",
+        "reasons": [
+          "The node reports 1 watchdog reset(s)."
+        ],
+        "scenario": "watchdog_recovery"
+      },
+      {
+        "actual_state": "STALE",
+        "expected_state": "STALE",
+        "reasons": [
+          "The latest telemetry heartbeat exceeded the freshness limit."
+        ],
+        "scenario": "heartbeat_timeout"
+      },
+      {
+        "actual_state": "OFFLINE",
+        "expected_state": "OFFLINE",
+        "reasons": [
+          "Broker presence reports OFFLINE: mqtt-last-will."
+        ],
+        "scenario": "broker_last_will"
+      }
+    ],
+    "state_counts": {
+      "DEGRADED": 3,
+      "HEALTHY": 1,
+      "NO_DATA": 1,
+      "OFFLINE": 1,
+      "STALE": 1
+    }
+  },
+  "suite_version": "1.0-offline-synthetic",
+  "verification_boundaries": {
+    "field_reliability_claim_permitted": false,
+    "live_mqtt_messages": 0,
+    "next_required_evidence": "Run the firmware on the target ESP32, interrupt Wi-Fi and broker connectivity, and record recovery plus long-duration stability.",
+    "physical_esp32_sessions": 0,
+    "rf_health_claim_permitted": false
+  }
+}

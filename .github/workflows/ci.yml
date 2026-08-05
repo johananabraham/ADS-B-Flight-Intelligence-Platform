@@ -69,6 +69,12 @@ jobs:
         run: >-
           python scripts/run_corroboration_evaluation.py --check
           --baseline evaluation/results/corroboration_offline_v1.json
+      - name: Enforce offline edge-station health baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_station_health_evaluation.py --check
+          --baseline evaluation/results/station_health_offline_v1.json
       - name: Validate migration SQL
         working-directory: backend
         env:
