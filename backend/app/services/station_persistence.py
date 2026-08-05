@@ -57,6 +57,7 @@ def build_telemetry_node_upsert(telemetry: StationTelemetry, received_at: dateti
         node_id=telemetry.node_id,
         firmware_version=telemetry.firmware_version,
         boot_id=telemetry.boot_id,
+        telemetry_message_id=telemetry.message_id,
         last_sequence=telemetry.sequence,
         first_seen_at=received_at,
         last_received_at=received_at,
@@ -76,6 +77,7 @@ def build_telemetry_node_upsert(telemetry: StationTelemetry, received_at: dateti
         set_={
             "firmware_version": excluded.firmware_version,
             "boot_id": excluded.boot_id,
+            "telemetry_message_id": excluded.telemetry_message_id,
             "last_sequence": excluded.last_sequence,
             "last_received_at": excluded.last_received_at,
             "last_observed_at": excluded.last_observed_at,
@@ -98,6 +100,7 @@ def build_presence_node_upsert(presence: StationPresence, received_at: datetime)
         first_seen_at=received_at,
         last_received_at=received_at,
         presence_status=presence.status.value,
+        presence_message_id=presence.message_id,
         presence_received_at=received_at,
     )
     excluded = statement.excluded
@@ -106,6 +109,7 @@ def build_presence_node_upsert(presence: StationPresence, received_at: datetime)
         set_={
             "last_received_at": excluded.last_received_at,
             "presence_status": excluded.presence_status,
+            "presence_message_id": excluded.presence_message_id,
             "presence_received_at": excluded.presence_received_at,
         },
         where=or_(
