@@ -29,6 +29,33 @@ broker_ready() {
     -t '$SYS/broker/uptime' -C 1 -W 1 >/dev/null 2>&1
 }
 
+publish_is_visible() {
+  local username="$1"
+  local password="$2"
+  local topic="$3"
+  local subscriber_pid
+  local subscriber_status
+  local publisher_auth=()
+  if [[ -n "$username" ]]; then
+    publisher_auth=(-u "$username" -P "$password")
+  fi
+
+  "${client[@]}" mosquitto_sub -V 5 --cafile /ca.crt \
+    -h "$broker_name" -p 8883 -u station-consumer -P "$consumer_password" \
+    -t "$topic" -C 1 -W 2 >/dev/null 2>&1 &
+  subscriber_pid=$!
+  sleep 0.25
+  "${client[@]}" mosquitto_pub -V 5 --cafile /ca.crt \
+    -h "$broker_name" -p 8883 "${publisher_auth[@]}" \
+    -t "$topic" -q 1 -m '{}' >/dev/null 2>&1 || true
+  if wait "$subscriber_pid"; then
+    subscriber_status=0
+  else
+    subscriber_status=$?
+  fi
+  [[ "$subscriber_status" -eq 0 ]]
+}
+
 docker run -d --name "$broker_name" --network "$network_name" \
   --entrypoint mosquitto \
   -v "${project_root}/edge/mosquitto/config:/mosquitto/config:ro" \
@@ -47,29 +74,28 @@ if ! broker_ready; then
 fi
 
 # Authenticated station can write its own telemetry topic over verified TLS.
-"${client[@]}" mosquitto_pub -V 5 --cafile /ca.crt -h "$broker_name" -p 8883 \
-  -u roof-node-1 -P "$node_password" \
-  -t adsb/stations/v1/roof-node-1/telemetry -q 1 -m '{}'
+if ! publish_is_visible roof-node-1 "$node_password" \
+  adsb/stations/v1/roof-node-1/telemetry; then
+  echo "authorized station publish was not delivered" >&2
+  exit 1
+fi
 
 # Anonymous TLS connections are rejected.
-if "${client[@]}" mosquitto_pub -V 5 --cafile /ca.crt -h "$broker_name" -p 8883 \
-  -t adsb/stations/v1/roof-node-1/telemetry -q 1 -m '{}'; then
+if publish_is_visible "" "" adsb/stations/v1/roof-node-1/telemetry; then
   echo "anonymous publish unexpectedly succeeded" >&2
   exit 1
 fi
 
 # The same station cannot impersonate another node's topic.
-if "${client[@]}" mosquitto_pub -V 5 --cafile /ca.crt -h "$broker_name" -p 8883 \
-  -u roof-node-1 -P "$node_password" \
-  -t adsb/stations/v1/other-node/telemetry -q 1 -m '{}'; then
+if publish_is_visible roof-node-1 "$node_password" \
+  adsb/stations/v1/other-node/telemetry; then
   echo "cross-node publish unexpectedly succeeded" >&2
   exit 1
 fi
 
 # The fleet consumer cannot publish station messages.
-if "${client[@]}" mosquitto_pub -V 5 --cafile /ca.crt -h "$broker_name" -p 8883 \
-  -u station-consumer -P "$consumer_password" \
-  -t adsb/stations/v1/roof-node-1/telemetry -q 1 -m '{}'; then
+if publish_is_visible station-consumer "$consumer_password" \
+  adsb/stations/v1/roof-node-1/telemetry; then
   echo "read-only consumer publish unexpectedly succeeded" >&2
   exit 1
 fi
