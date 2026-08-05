@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useFlightTrail } from '@/hooks';
+import {
+  useFlightTrail,
+  useCorroboration,
+  useKinematicEvaluations,
+  useWindowKinematicEvaluations,
+  useTrustAssessment,
+} from '@/hooks';
 import type { Aircraft } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import clsx from 'clsx';
+import { IntegrityEvidence } from './IntegrityEvidence';
+import { CorroborationEvidence } from './CorroborationEvidence';
+import { TrustEvidence } from './TrustEvidence';
 
 interface SafetyContext {
   aircraft: string;
@@ -39,6 +48,31 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
   const [showSafety, setShowSafety] = useState(false);
   const [flightRoute, setFlightRoute] = useState<FlightRoute | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [showIntegrity, setShowIntegrity] = useState(false);
+  const [showCorroboration, setShowCorroboration] = useState(false);
+  const [showTrust, setShowTrust] = useState(false);
+  const {
+    data: kinematicEvaluations = [],
+    isLoading: integrityLoading,
+    isError: integrityError,
+  } = useKinematicEvaluations(aircraft.icao_hex);
+  const latestEvaluation = kinematicEvaluations[0];
+  const {
+    data: windowEvaluations = [],
+    isLoading: windowLoading,
+    isError: windowError,
+  } = useWindowKinematicEvaluations(aircraft.icao_hex);
+  const latestWindowEvaluation = windowEvaluations[0];
+  const {
+    data: corroboration,
+    isLoading: corroborationLoading,
+    isError: corroborationError,
+  } = useCorroboration(aircraft.icao_hex, showCorroboration);
+  const {
+    data: trustAssessment,
+    isLoading: trustLoading,
+    isError: trustError,
+  } = useTrustAssessment(aircraft.icao_hex, showTrust);
 
   // Fetch flight route on mount
   useEffect(() => {
@@ -263,6 +297,31 @@ export function AircraftDetail({ aircraft, onClose }: AircraftDetailProps) {
           <AltitudeChart positions={trail.positions} />
         </div>
       )}
+
+      <IntegrityEvidence
+        evaluation={latestEvaluation}
+        windowEvaluation={latestWindowEvaluation}
+        expanded={showIntegrity}
+        loading={integrityLoading || windowLoading}
+        error={integrityError || windowError}
+        onToggle={() => setShowIntegrity(value => !value)}
+      />
+
+      <TrustEvidence
+        result={trustAssessment}
+        expanded={showTrust}
+        loading={trustLoading}
+        error={trustError}
+        onToggle={() => setShowTrust(value => !value)}
+      />
+
+      <CorroborationEvidence
+        evidence={corroboration}
+        expanded={showCorroboration}
+        loading={corroborationLoading}
+        error={corroborationError}
+        onToggle={() => setShowCorroboration(value => !value)}
+      />
 
       {/* Safety Context (collapsible) */}
       <div className="border-b border-surface-3">

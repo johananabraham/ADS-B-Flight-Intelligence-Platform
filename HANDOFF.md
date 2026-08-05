@@ -1,10 +1,10 @@
 # Project Handoff and Expansion Roadmap
 
-Last updated: 2026-07-19
+Last updated: 2026-08-04
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/recorded-replay-format`
+Current branch: `codex/operator-trust-workflow`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -324,15 +324,276 @@ Implemented on `codex/recorded-replay-format`:
 - Normal simulation mode was restored after testing and its verifier passed with
   six aircraft and 25/25 unique recent observations.
 
+Implemented on `codex/replay-control-ui`:
+
+- One authoritative, monotonic replay controller now owns playback position,
+  event index, pause/resume state, restart, seek, loop behavior, and
+  0.5x/1x/2x/10x speed changes.
+- The replay container exposes an internal FastAPI control service on port 8081;
+  its HTTP health check does not consume replay messages.
+- The public backend proxies validated status and command requests at
+  `/api/v1/replay/status` and `/api/v1/replay/commands`. The replay service is not
+  published directly to the host or browser.
+- Recorded mode adds an accessible operator timeline with explicit playing,
+  paused, and completed states; pause/resume, restart, seek, and speed controls;
+  progress and event counts; busy/error feedback; and 44-pixel control targets.
+- The timeline appears only under the explicit `RECORDED REPLAY` build mode.
+- Browser verification confirmed clean rendering, pause/resume, restart, speed
+  selection, accessible names/state, and no console warnings or errors.
+- The automated verifier proved restart, 2x speed, a frozen paused clock, seek to
+  one second while paused, and resume. It also preserved exactly six unique
+  observations for two aircraft and the original `2026-07-19 12:00:00` through
+  `12:00:02` timestamp range.
+- Checkpoint gate: 35 Python tests, Ruff, frontend ESLint, TypeScript/Vite build,
+  actionlint, `git diff --check`, and the secret-pattern scan pass. Python and npm
+  dependency audits report zero known vulnerabilities.
+
+Implemented on `codex/kinematic-plausibility-engine`:
+
+- A versioned `KinematicPolicy` evaluates consecutive complete positions from the
+  same aircraft and exact source provenance. It computes great-circle distance,
+  implied ground speed, reported acceleration, shortest-path turn rate, derived
+  vertical rate, and reported-versus-implied speed disagreement.
+- Every rule result stores the measured value, threshold, unit, explanation,
+  policy version, and both immutable observation IDs. Results are `PASS`,
+  `FLAGGED`, or `INSUFFICIENT_DATA`; reversed, tiny, long-gap, and partial pairs
+  are not mislabeled as attacks.
+- Evaluation IDs are deterministic UUIDv5 values and PostgreSQL inserts are
+  idempotent. Foreign keys prevent evidence from referencing missing observations;
+  a status check constraint and pair/policy uniqueness protect the table.
+- Ingestion evaluates only newly inserted position observations. Flagged results
+  create one explainable `KINEMATIC_PLAUSIBILITY` anomaly; two or more failed rules
+  are high severity, while a single failure is medium severity.
+- FastAPI exposes provenance-filterable evidence at
+  `/api/v1/kinematics/evaluations`. The aircraft detail UI shows explicit pass,
+  flagged, insufficient, loading, empty, and error states plus exact failed values
+  and thresholds. It always states that consistency checks do not authenticate a
+  transmitter or prove spoofing.
+- Building the engine revealed that the original generated replay coordinates did
+  not match their reported speeds. The corrected `columbus-generated-v2` fixture
+  now produces four passing evaluations and zero flags.
+- A separate CC0 `kinematic-attack-generated-v2` fixture isolates the new engine:
+  reported speed/vertical rate remain within the legacy detector envelope while
+  the cross-observation jump fails all five kinematic rules.
+- End-to-end clean evidence: 6/6 unique observations, two aircraft, exact original
+  timestamps, all replay controls, four evaluations, and zero flags.
+- End-to-end attack evidence: two observations, one evaluation, one idempotent
+  alert, and exactly five failed rules. Repeated loops do not duplicate evidence.
+- Browser evidence confirmed the `FLAGGED` state, all five values/thresholds,
+  provenance, keyboard-expandable disclosure, bounded scrolling, and zero console
+  warnings/errors.
+- Checkpoint gate: 48 Python tests, Ruff, frontend ESLint, TypeScript/Vite build,
+  actionlint, Compose validation, migration SQL generation, `git diff --check`, and
+  secret scan pass. Python and npm audits report zero known vulnerabilities.
+
+Implemented on `codex/kinematic-evaluation-harness`:
+
+- Generator 1.0 creates 90 deterministic clean source sessions and seven variants
+  per session. A SHA-256 partition assigns each source session before variants are
+  created: 46 train, 22 validation, and 22 held-out test sessions.
+- Scenario manifests record version, seed, source-session hash, split, attack
+  parameters, detection window, and deterministic observation identities.
+- The six generated manipulation families cover abrupt position, altitude,
+  velocity, and heading changes; subtle gradual position drift; and replayed
+  timestamps. `INSUFFICIENT_DATA` is never counted as a detection.
+- Policy 1.0 held-out results: all four abrupt families detect 22/22 scenarios at
+  zero-second median delay; gradual drift detects 0/22; replayed timestamps detect
+  0/22 and produce 22 insufficient pairs; clean generated controls flag 0/22.
+  These are synthetic regression metrics, not a real-world false-positive claim.
+- Hypothesis explores 100 examples each for polar/date-line geography, inclusive
+  0.5–30 second intervals, and noisy heading wrap. Determinism and split-leakage
+  tests protect the dataset contract.
+- `scripts/run_kinematic_evaluation.py --check` is a CI regression gate. It requires
+  zero generated-clean alerts and 100% detection for each obvious abrupt family,
+  while preserving measured gaps rather than pretending unsupported coverage.
+- The compact reviewed result is
+  `evaluation/results/kinematic_rules_baseline_v1.json`; the CLI emits the complete
+  per-scenario reproduction manifest and results.
+
+Implemented on `codex/windowed-trajectory-evidence`:
+
+- A versioned short-window residual rule dead-reckons the reported endpoint from
+  6–31 same-aircraft, same-provenance observations over 5–30 seconds.
+- The unchanged Generator 1.0 held-out comparison improves gradual-drift detection
+  from 0/22 pairwise to 22/22 combined at 2 seconds median delay. Generated clean
+  controls remain 0/22 flagged. This is synthetic evidence, not a field false-positive
+  rate; the threshold is explicitly `1.0-development`.
+- Window evidence is persisted idempotently with immutable observation references,
+  exposed at `/api/v1/kinematics/window-evaluations`, and rendered in the aircraft
+  Integrity Evidence panel. It does not create standalone alerts yet.
+- The reviewed artifact is
+  `evaluation/results/windowed_trajectory_baseline_v1.json`; CI reproduces and
+  compares it on every supported branch and pull request.
+- `docs/windowed-trajectory-evaluation-v1.md` records the method, exact results,
+  limitations, and calibration work still required.
+
+Implemented on `codex/benign-rf-calibration-harness`:
+
+- A versioned calibration manifest distinguishes captured RF from generated controls,
+  records review status and licensing, and binds the observation count to a JSONL
+  SHA-256. A reviewed status requires reviewer identity, timestamp, and review-notes
+  hash. Generated or unreviewed data is ineligible for a routine-RF alert-rate claim.
+- The deterministic report groups observations by exact aircraft/source provenance,
+  runs pair policy 1.0 and window policy 1.0-development, and reports status counts,
+  residual percentiles, observed track hours, flagged-evaluation rates, and grouped
+  alert episodes.
+- Long unobserved gaps do not inflate track-hour denominators. Consecutive pair and
+  window flags are grouped into an operator-review episode instead of being presented
+  as independent alerts.
+- `scripts/export_live_rf_calibration.py` streams a bounded receiver/source/time slice
+  from PostgreSQL without overwriting evidence. `scripts/run_observation_calibration.py`
+  verifies the hash and contract before scoring it.
+- `calibration/local/` is git-ignored because raw RF observations can reveal aircraft
+  and receiver locations. `docs/rf-calibration-workflow-v1.md` documents collection,
+  review, interpretation, and threshold-promotion rules.
+- Generated test data verifies this machinery but does not produce a published field
+  metric. A real receiver capture has not yet been collected in this checkpoint.
+
+Implemented on `codex/extended-synthetic-scenarios`:
+
+- Generator 1.1 expands each source session from seven to fourteen scenarios while
+  preserving Generator 1.0 as an unchanged regression suite.
+- New controls cover legitimate 0.2-second reports, International Date Line
+  crossing, and polar motion. New impairments cover missing messages and
+  deterministic receive-latency jitter. New attacks cover a plausible ghost
+  identity and one same-ICAO conflict from a different simulated source.
+- Scenario classes are assigned before scoring so controls, ordinary impairments,
+  and attacks are never collapsed into one misleading accuracy number. Session-level
+  train/validation/test isolation, deterministic UUIDs, seeds, source hashes,
+  parameters, and detection windows remain reproducible.
+- Held-out pairwise results cover 308 scenarios from 22 source sessions: 0/88
+  controls flagged, 0/44 impairments flagged, and 88/176 attacks detected. All four
+  abrupt families remain 22/22. Gradual drift, replay, ghost identity, and
+  cross-source conflict remain explicit boundaries requiring window, timing, or
+  corroboration evidence.
+- High-rate controls produce 242 explicit insufficient pairs rather than false
+  alerts. Identity conflicts produce 44 insufficient pairs because exact provenance
+  differs; those abstentions are not counted as detections.
+- `scripts/run_extended_kinematic_evaluation.py --check` reproduces the compact
+  `evaluation/results/kinematic_extended_baseline_v1_1.json`, and CI enforces it.
+  `docs/kinematic-evaluation-v1.1.md` records the method, results, and claim limits.
+
+Implemented on `codex/interpretable-ml-baselines`:
+
+- Feature schema 1.0 extracts 18 timing, latency, provenance, pair-rule, and window
+  features from observation prefixes. No scorable pair produces an explicit
+  `ABSTAIN` state rather than a fabricated normal result.
+- All variants from one source session remain in one split. Prefix labels become
+  positive only after the scenario start, supporting pre-alert and first-detection
+  delay measurement without message-level leakage.
+- Always-normal, pair-plus-window rules, logistic regression, bounded decision tree,
+  and bounded random forest baselines are evaluated on 22 validation and 22 held-out
+  test sessions. Model configurations, scikit-learn version, feature schema,
+  implementation revision/hash, seed, explanations, and circular features are
+  recorded.
+- Held-out rules-only precision/recall/F1 is 1.0/0.6250/0.7692. Each learned model
+  measures 1.0/0.8750/0.9333 with 0/88 generated control and 0/44 impairment alerts.
+  All models miss 22/22 plausible ghosts, preserving the corroboration requirement.
+- The reviewed artifact is `evaluation/results/ml_baselines_v1.json`; CI reproduces
+  it with `scripts/run_ml_baselines.py --check`. Promotion remains explicitly
+  `OFFLINE_EVALUATION_ONLY`; no production service or UI consumes model output.
+
+Implemented on `codex/cross-source-corroboration`:
+
+- A provider-independent comparison engine produces `CORROBORATED`, `LOCAL_ONLY`,
+  `EXTERNAL_ONLY`, `CONFLICTING`, `STALE`, and `UNAVAILABLE` using versioned ICAO,
+  freshness, time, position, and altitude association rules.
+- The OpenSky adapter uses the current `/states/all` contract, bounded geographic
+  queries, optional OAuth2 client credentials, normalized external provenance,
+  caching, minimum poll intervals, retry headers, exponential backoff, and a circuit
+  breaker. Provider health is available separately from aircraft evidence.
+- `GET /api/v1/corroboration/{icao_hex}` compares the latest provenance-bearing local
+  observation; `GET /api/v1/corroboration/source-health` reports adapter health.
+  OpenSky is disabled by default and disabled/outage states are `UNAVAILABLE`, not
+  suspicious behavior.
+- The aircraft detail UI requests external evidence only when the operator expands
+  the cross-source panel and refreshes every 15 seconds to limit provider usage.
+- The reviewed offline artifact covers 720 synthetic comparisons over a four-hour
+  fixture with 120 examples of every state and zero classification mismatches. It
+  explicitly records zero live requests, zero captured-RF sessions, and no human
+  conflict review; its synthetic coverage/latency values are not field metrics.
+- CI reproduces `evaluation/results/corroboration_offline_v1.json` with
+  `scripts/run_corroboration_evaluation.py --check`.
+
+Implemented on `codex/edge-station-telemetry`:
+
+- Versioned MQTT topics and strict telemetry/presence contracts preserve node,
+  firmware, boot, sequence, timing, queue, reconnect, Wi-Fi, heap, and watchdog
+  evidence. PostgreSQL stores immutable events plus one current node record.
+- The Paho consumer uses verified TLS 1.2+, hostname validation, QoS 1, persistent
+  sessions, manual acknowledgement after database commit, bounded reconnect delay,
+  and file-backed credentials. Poison messages are acknowledged and logged while
+  database failures remain unacknowledged for broker redelivery.
+- Mosquitto is pinned to `2.0.22-openssl`, listens only on TLS port 8883, rejects
+  anonymous clients, and enforces explicit per-node publish and read-only consumer
+  ACLs. `scripts/test_edge_mqtt_security.sh` is the hosted proof for TLS,
+  authentication, cross-node denial, and consumer publish denial.
+- Generic ESP32 ESP-IDF 6.0.2 firmware compiles in hosted CI and implements SNTP,
+  certificate validation, per-node credentials, QoS 1, retained presence and LWT,
+  bounded store-and-forward, exponential Wi-Fi recovery, task watchdog, and honest
+  compute/connectivity telemetry. It does not receive or assess 1090 MHz RF.
+- The station API and React fleet panel expose `HEALTHY`, `DEGRADED`, `STALE`,
+  `OFFLINE`, and `NO_DATA` with exact reasons and evidence IDs. The offline checked-in
+  health artifact classifies 7/7 controlled cases and explicitly records zero
+  physical sessions and zero live MQTT sessions.
+- The hardware-free MQTT simulator is labeled `0.1.0+simulator`. Physical power-loss,
+  Wi-Fi-loss, queue recovery, and measured recovery-time evidence still require the
+  user's ESP32 and network.
+
+Phase 8 foundation was introduced on `codex/edge-station-telemetry` and the operator
+workflow is implemented on `codex/operator-trust-workflow`:
+
+- A versioned, deterministic trust policy combines pair kinematics, window
+  kinematics, corroboration, and station state without hiding components behind an
+  uncalibrated numeric score. Strong contradictions produce `QUESTIONABLE`; missing
+  required evidence produces `INSUFFICIENT_DATA`; weak source/station evidence
+  produces `LOW_CONFIDENCE`; only fully supportive evidence produces `TRUSTED`.
+- `GET /api/v1/trust/{icao_hex}` returns the overall state plus every component's
+  state, policy, evidence age, reasons, and identifiers. The offline ML candidate is
+  shown as `NOT_PROMOTED` and does not affect production state.
+- The aircraft detail UI displays the component timeline and explicitly explains
+  why no numeric score is presented.
+- Immutable `trust_assessments` and append-only `trust_operator_actions` preserve
+  the evidence snapshot and operator activity. Stable UUIDv5 assessment identities
+  and caller-provided action IDs make retries idempotent.
+- `POST /api/v1/trust/{icao_hex}/assessments` computes evidence on the server;
+  clients cannot submit a fabricated component result. `/api/v1/trust-events/`
+  supports history filtering, detail inspection, acknowledge/annotate actions, and
+  JSON export.
+- The UI persists the expanded assessment, exposes 44-pixel operator controls,
+  filters history by state, and presents explicit loading, empty, and error states.
+  It warns that actor labels are self-asserted until authentication/RBAC exists.
+- A full-application route contract prevents FastAPI router-registration regressions.
+  This was added after live Docker validation found that a stale host Uvicorn process
+  could hide the current container and initially produce misleading 404 results.
+- Local verification at commit `1101c47` passed 170 backend tests, Python lint,
+  frontend lint/build, both declared Python requirements audits, npm audit, tracked
+  secret-pattern scan, and the Docker-backed trust workflow. The live proof produced
+  one stable `QUESTIONABLE` assessment and one idempotent annotation action.
+- GitHub Actions run `30971117992` passed every job at commit `1101c47`, including
+  security audits, C++ decoder tests, ESP-IDF firmware compilation, MQTT transport
+  authorization proof, migrations, recorded replay provenance, exact kinematic
+  evidence, and the persisted trust/operator workflow in a clean Docker environment.
+- GitHub Actions run `30969158892` passed every job at commit `68bae5c`: backend,
+  all checked-in evaluation baselines, migration validation, frontend lint/build,
+  dependency audits, C++ decoder build/tests, ESP-IDF 6.0.2 firmware compile,
+  delivery-based MQTT TLS/authentication/ACL proof, and the complete Docker
+  demo/recorded-replay/kinematic-attack verification path.
+
 Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
-- Kinematic anomaly rules, ML, external corroboration, or trust scoring.
+- Production ML, live multi-hour corroboration evidence, aircraft-type-specific
+  performance envelopes, authenticated operator identities/RBAC, or a field-calibrated
+  numeric trust score.
+- A second-developer usability review. Automated localhost browser review was blocked
+  by the browser security policy, so no visual-review claim is made for this checkpoint.
 
 ## 3. Known Risks and Technical Debt
 
-- The dependency upgrades are verified locally but still require a GitHub-hosted
-  CI run after their branch is pushed and connected to a pull request.
+- The latest stacked extended-scenario branch passed hosted backend, frontend,
+  security, decoder, migration, simulation, clean-replay, and attack-replay CI.
+  These commits still need review/merge before `main` carries that evidence.
 - Docker Scout could not run because Docker Desktop is not authenticated.
 - Root Compose contains development credentials and exposes PostgreSQL publicly on
   the host. Move secrets to environment/secret storage and bind development ports
@@ -343,16 +604,42 @@ Not implemented in these checkpoints:
   each holds a multi-aircraft transaction until the batch commit. The supported
   topology currently has one ingestion writer; add deterministic lock ordering or
   smaller transactions before active/active ingestion.
-- The new root CI workflow still needs its first successful GitHub-hosted run after
-  this branch is pushed. Authentication, authorization, and rate limiting remain
-  unimplemented.
+- Authentication, authorization, and rate limiting remain unimplemented.
 - The local host still has Node 18.12.1, which is too old for the upgraded frontend;
-  use the Node 20.19 container or install Node 20.19+ for host-side frontend work.
-- Recorded replay currently takes startup settings from environment variables.
-  Pause/resume/seek/speed controls are implemented only in the playback domain
-  object; an authenticated control API and operator timeline UI are still pending.
+  the build currently completes with a warning, while hosted CI uses a supported
+  Node version. Use the Node 20.19 container or install Node 20.19+ for host-side
+  frontend work.
+- GitHub Actions reports that several `actions/*@v4`/`@v5` releases still target the
+  deprecated Node 20 action runtime and are temporarily forced onto Node 24. Upgrade
+  those actions when their maintainers publish compatible major versions.
+- Recorded replay startup settings still come from environment variables. The
+  control API is intentionally internal and unauthenticated; add authorization and
+  audit logging before exposing operator controls in a public deployment.
 - Data-source identity is a frontend build-time label. It should eventually come
   from a signed backend source-status API.
+- Kinematic policy 1.0 uses conservative general limits. It has deterministic
+  clean/attack evidence but is not calibrated against hours of reviewed routine RF;
+  do not publish a false-positive-rate claim yet.
+- Evaluations compare observations within one exact source. They do not yet fuse
+  independent receivers or external feeds or estimate sensor uncertainty. The
+  short-window rule closes one generated gradual-drift case but does not establish
+  coverage for longer or different low-and-slow patterns.
+- The calibration harness has generated-test verification only. No real `LIVE_RF`
+  calibration report or manually reviewed episode set has been produced yet.
+- Generator 1.1 models deterministic message loss, bounded latency jitter, plausible
+  ghost identity, one cross-source identity conflict, high-rate traffic, Date Line
+  crossing, and polar motion. It still does not model empirical RF noise
+  distributions or aircraft-specific flight envelopes, and generated controls
+  cannot substitute for benign captured RF calibration.
+- Offline learned models improve generated held-out F1 but rely heavily on
+  deterministic and generator-adjacent features. They have no reviewed captured-RF
+  alert-burden evidence and must not be described or deployed as field detectors.
+- Cross-source classification and provider-failure behavior are verified offline,
+  but no live OpenSky comparison has been run and no real conflicts have been
+  manually reviewed. Do not claim measured external coverage, latency, availability,
+  or demonstrated live corroboration yet.
+- OpenSky is documented for research/non-commercial use and may block hyperscaler
+  traffic. Review current terms and deployment topology before enabling it publicly.
 - Simulator aircraft are fictional. Do not describe demo traffic as captured or
   live traffic.
 - The existing `graphify-out/` directory contains cache fragments but no usable
@@ -473,6 +760,10 @@ Verify:
 
 Purpose: create repeatable scenarios for detection development.
 
+Status: implemented through the replay format, generated fixture, internal control
+service, backend proxy, operator timeline, and deterministic integration verifier.
+Authentication and audit logging remain deployment hardening work.
+
 Build:
 
 - A versioned recording format containing messages, original timestamps, source,
@@ -492,6 +783,10 @@ Verify:
 ### Phase 3 — Deterministic kinematic plausibility engine (Weeks 4–5)
 
 Purpose: detect physically inconsistent movement without machine learning.
+
+Status: the pairwise vertical slice, property tests, additive gradual-window rule,
+API/UI presentation, generated attack replay, calibration harness, and CI evidence
+are implemented. Real benign-capture collection and review remain.
 
 Build:
 
@@ -516,6 +811,10 @@ Verify:
 
 Purpose: create a reproducible test laboratory without claiming real spoofing data.
 
+Status: Generator 1.1 implements the listed scenario families, leakage-safe split,
+versioned manifest, itemized held-out metrics, reviewed baseline, and CI gate.
+Routine-RF evidence remains separate and incomplete.
+
 Build:
 
 - Transform complete track/capture sessions into labeled test cases for abrupt and
@@ -536,6 +835,11 @@ Verify:
 ### Phase 5 — Interpretable ML anomaly model (Weeks 8–9)
 
 Purpose: test whether learned patterns improve over deterministic rules.
+
+Status: all three offline baselines, versioned features, abstention, leakage-safe
+prefix evaluation, explanations, itemized metrics, reviewed result, and CI gate are
+implemented. Promotion is intentionally blocked pending reviewed captured-RF
+evidence; no model is integrated into production alerts.
 
 Build:
 
@@ -1017,14 +1321,24 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
 
 ## 10. Immediate Next Actions
 
-1. Review the stacked Phase 0, CI, dependency-security, and recorded-replay PRs.
+1. Review the stacked Phase 0, CI, dependency-security, recorded-replay, and
+   replay-control PRs.
 2. Confirm the first GitHub-hosted CI run after the workflow reaches `main`.
-3. Add a replay-control API with pause/resume/restart/seek/speed state.
-4. Add the operator replay timeline and explicit `RECORDED REPLAY` UI state.
-5. Add deterministic kinematic checks over immutable observations.
-6. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
-   subtree after confirming the board model and available sensors.
-7. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
+3. Collect the first private 1–2 hour `LIVE_RF` dataset with the documented exporter,
+   run the unreviewed report, and manually inspect every grouped alert episode.
+4. Repeat across several traffic/receiver conditions before changing policy limits;
+   publish only legally shareable manifests or sanitized aggregate metrics.
+5. Convert the offline episode grouping into a persisted operator-alert suppression
+   policy only after the reviewed routine-RF reports support its timing.
+6. With permitted OpenSky access, run the Phase 6 multi-hour live comparison and
+   manually review sampled conflicts; preserve `UNAVAILABLE` as source health.
+7. Flash the generic `firmware/esp32-station/` build after confirming the exact
+   board model, then execute and record the physical outage/recovery matrix.
+8. Ask another developer to complete the Phase 8 usability script in
+   `docs/trust-operator-workflow-v1.md` and record whether they can explain a flagged
+   track without backend logs.
+9. Begin Phase 9 with idempotent NTSB/eCFR ingestion manifests and validation reports.
+10. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
    harness exist.
 
 ## 11. Handoff Rules for the Next Engineer or Agent
@@ -1062,6 +1376,32 @@ Use this when starting a new Codex chat:
 > verifier are implemented on `codex/ci-demo-verifier`. Dependency audits are at
 > zero known findings on `codex/dependency-security-upgrades`. Recording format
 > 1.0, deterministic playback, a CC0 generated fixture, and recorded-mode verifier
-> are on `codex/recorded-replay-format`; control API/UI work is next. Confirm the
-> first hosted Actions run before claiming CI is green. Deployment is planned
+> are on `codex/recorded-replay-format`. The internal replay-control API, backend
+> proxy, accessible operator timeline, and deterministic control verification are
+> on `codex/replay-control-ui`. The versioned five-rule kinematic engine, persisted
+> evidence, API/UI disclosure, corrected clean fixture, isolated attack fixture,
+> and deterministic clean/attack verifiers are on
+> `codex/kinematic-plausibility-engine`. The leakage-safe synthetic scenario
+> generator, held-out rules baseline, Hypothesis boundary tests, compact report,
+> and CI regression gate are on `codex/kinematic-evaluation-harness`. The current
+> pairwise rules detect all 22 held-out examples for each abrupt family but miss
+> gradual drift and replayed timestamps. The additive development window rule now
+> detects 22/22 gradual-drift scenarios at 2 seconds median delay with 0/22 generated
+> clean controls flagged; it is persisted, available through the API, shown in the
+> UI, and enforced by a reviewed CI baseline on `codex/windowed-trajectory-evidence`.
+> Do not claim a real-world false-positive rate. The versioned LIVE_RF export,
+> hash-verified calibration report, observed-track-hour metrics, and offline alert
+> episode grouping are implemented on `codex/benign-rf-calibration-harness`; only
+> generated tests have run so far. Generator 1.1 adds classified controls,
+> impairments, ghost identity, conflict, and geographic edge cases on
+> `codex/extended-synthetic-scenarios`; hosted CI run 30919705884 is green. The
+> session-isolated logistic/tree/forest comparison is offline-only on
+> `codex/interpretable-ml-baselines`: generated held-out F1 improves from 0.7692
+> rules-only to 0.9333, but all models miss plausible ghosts and no captured-RF
+> alert burden exists. The six-state comparison engine, bounded resilient OpenSky
+> adapter, API/UI evidence, source health, and four-hour offline regression are on
+> `codex/cross-source-corroboration`. That regression performs zero live provider
+> requests; a permitted multi-hour run and human conflict review remain pending.
+> Collect and manually review multiple private RF sessions
+> before changing thresholds or enabling production alerts. Deployment is planned
 > for Section 5 Phase 10; public production deployment is not complete today.

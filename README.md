@@ -26,6 +26,8 @@ Real-time aircraft tracking and anomaly detection system using Software Defined 
 - **Real-time ADS-B ingestion** via RTL-SDR + dump1090
 - **Live flight tracking** on interactive map
 - **Anomaly detection** for altitude, speed, squawk codes, restricted airspace
+- **Explainable kinematic integrity checks** tied to immutable source observations
+- **Short-window trajectory residuals** for subtle cumulative drift evidence
 - **AI-generated intelligence summaries** via Claude API
 - **Historical data analysis** with time-series queries
 
@@ -76,12 +78,212 @@ same saved messages with their original relative timing and timestamps:
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.demo.yml \
   -f docker-compose.recorded.yml up --build --renew-anon-volumes -d
+docker compose exec -T backend alembic -c alembic.ini upgrade head
 python3 scripts/verify_recorded_replay.py
 ```
 
+The website is labeled `RECORDED REPLAY` and adds an operator timeline with
+pause/resume, restart, seek, and 0.5x/1x/2x/10x playback controls. Commands travel
+through the public FastAPI backend to an internal replay-control service, so the
+browser never receives direct access to the replay container.
+
 The verifier requires exactly six immutable observations, six unique IDs, two
-aircraft, and the expected original timestamp range. See
+aircraft, the expected original timestamp range, working replay controls, four
+passing kinematic evaluations, and zero kinematic flags. See
 `docs/recording-format-v1.md` for the format and integrity rules.
+
+### Deterministic integrity scenario
+
+Switch replay and ingestion to the explicitly generated impossible-motion fixture:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.demo.yml \
+  -f docker-compose.recorded.yml -f docker-compose.kinematic-attack.yml \
+  up --build --force-recreate -d replay ingestion
+python3 scripts/verify_kinematic_replay.py
+```
+
+Select `TEST001` and expand **Integrity Evidence**. The system shows each measured
+value, policy threshold, source, and policy version. The verifier requires exactly
+two immutable observations, one evaluation, one idempotent alert, and all five
+expected failed rules. This demonstrates inconsistent motion; it does not prove
+that a transmitter was spoofed.
+
+### Reproducible kinematic evaluation
+
+Run the leakage-safe generated scenario suite without Docker or radio hardware:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/run_kinematic_evaluation.py --check \
+  --baseline evaluation/results/kinematic_rules_baseline_v1.json
+```
+
+The generator splits 90 original source sessions before creating any variants, then
+scores only the 22-session held-out test split. Policy 1.0 detects 100% of the
+generated abrupt position, altitude, velocity, and heading scenarios with zero
+delay. It detects 0% of the subtle gradual-drift and replayed-timestamp scenarios;
+those measured gaps define the next engineering work. Generated clean sessions
+produce zero alerts, but that is **not** a real-world false-positive-rate claim.
+See `docs/kinematic-evaluation-v1.md` for methodology and the checked-in result.
+
+The additive short-window policy closes the measured gradual-drift gap on the same
+held-out scenarios: pairwise detection is 0/22 and combined detection is 22/22,
+with a 2-second median delay and 0/22 generated clean controls flagged. Reproduce
+the reviewed comparison with:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/run_windowed_kinematic_evaluation.py --check \
+  --baseline evaluation/results/windowed_trajectory_baseline_v1.json
+```
+
+These are synthetic regression results, not a real-world false-positive rate. The
+window threshold remains `1.0-development` until benign captured RF calibration.
+See `docs/windowed-trajectory-evaluation-v1.md` for method, integration, and limits.
+
+Generator 1.1 adds missing-message and latency-jitter impairments, plausible ghost
+identities, cross-source ICAO conflicts, high-rate reports, Date Line crossings, and
+polar controls. It reports controls, impairments, and attacks separately while
+leaving the reviewed Generator 1.0 suite unchanged:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/run_extended_kinematic_evaluation.py --check \
+  --baseline evaluation/results/kinematic_extended_baseline_v1_1.json
+```
+
+On the 22-session held-out split, the pairwise policy flags 0/88 generated controls,
+0/44 impairment scenarios, and 88/176 attack scenarios. The missed families are
+documented detector boundaries—not hidden failures: gradual drift needs window
+evidence, while replay, ghost identity, and cross-source conflict need timing or
+corroboration evidence. See `docs/kinematic-evaluation-v1.1.md` for the taxonomy and
+complete itemized result.
+
+### Offline interpretable ML comparison
+
+The repository trains logistic regression, decision tree, and random forest
+baselines on session-isolated Generator 1.1 prefixes and compares them with
+always-normal and pair-plus-window rules:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/run_ml_baselines.py --check \
+  --baseline evaluation/results/ml_baselines_v1.json
+```
+
+On generated held-out sessions, rules-only F1 is 0.7692 and each learned baseline
+reaches 0.9333, with no alerts across 88 controls or 44 impairments. All models miss
+the plausible ghost family, demonstrating the need for independent corroboration.
+These models are offline-only because generated performance is not field evidence.
+See `docs/ml-evaluation-v1.md` for leakage controls, feature warnings, itemized
+results, and promotion requirements.
+
+### Cross-source corroboration
+
+The selected-aircraft UI can compare a provenance-bearing local observation with a
+bounded OpenSky state-vector query. The adapter normalizes external observations,
+caches snapshots, honors provider retry headers, and exposes backoff, circuit-breaker,
+credit, and source-health state. OpenSky access is disabled by default:
+
+```bash
+OPENSKY_ENABLED=true
+# Optional OAuth2 credentials; anonymous access has lower limits.
+OPENSKY_CLIENT_ID=
+OPENSKY_CLIENT_SECRET=
+```
+
+The result is one of `CORROBORATED`, `LOCAL_ONLY`, `EXTERNAL_ONLY`, `CONFLICTING`,
+`STALE`, or `UNAVAILABLE`. `UNAVAILABLE` is source health, not an aircraft anomaly.
+The UI fetches only when an operator expands the cross-source panel and refreshes no
+faster than every 15 seconds.
+
+The checked-in four-hour fixture verifies all six states without contacting a live
+provider:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/run_corroboration_evaluation.py --check \
+  --baseline evaluation/results/corroboration_offline_v1.json
+```
+
+This is an offline synthetic regression—not measured OpenSky coverage or latency.
+A permitted multi-hour live run and human review of real conflicts remain required.
+See `docs/corroboration-evaluation-v1.md` for the exact evidence boundary and current
+OpenSky operational constraints.
+
+### Secure edge-station telemetry
+
+An ESP32 can report receiver-station compute and connectivity health without an SDR
+attached to the ESP32 itself. The TLS-only Mosquitto path, QoS 1 consumer, immutable
+PostgreSQL events, fleet API, and station dashboard are available with:
+
+```bash
+scripts/provision_edge_mqtt.sh mqtt
+docker compose -f docker-compose.yml -f docker-compose.edge.yml up --build -d
+```
+
+For a hardware-free transport demo, publish correctly labeled simulator heartbeats:
+
+```bash
+STATION_NODE_ID=roof-node-1 \
+STATION_MQTT_PASSWORD_FILE=edge/mosquitto/secrets/roof-node-1.password \
+MQTT_CA_CERT=edge/mosquitto/secrets/ca.crt \
+python3 -m services.edge_telemetry.simulator
+```
+
+Open **STATIONS** in the top status bar. The panel distinguishes healthy, degraded,
+stale, offline, and missing data, but it does not claim to measure ADS-B RF quality.
+The ESP-IDF firmware and flashing instructions are in
+`firmware/esp32-station/README.md`. Run the broker authorization proof with
+`scripts/test_edge_mqtt_security.sh`; it requires Docker.
+
+The checked-in station-health artifact is an offline 7/7 classification regression,
+not physical outage evidence. ESP32 power/Wi-Fi loss and queue recovery still need
+to be measured on hardware before making a resilience claim.
+
+### Explainable trust assessment
+
+Expand **EXPLAINABLE TRUST STATE** for a selected aircraft to inspect pairwise and
+windowed motion checks, cross-source corroboration, station health, and the status of
+the offline-only ML candidate. The API is:
+
+```bash
+curl http://localhost:8000/api/v1/trust/ABC123
+```
+
+It returns `TRUSTED`, `QUESTIONABLE`, `LOW_CONFIDENCE`, or `INSUFFICIENT_DATA` with
+component policy versions, ages, reasons, and evidence identifiers. It intentionally
+returns `numeric_score: null`: a combined score will not be published until it is
+calibrated against reviewed field evidence.
+
+Expanding the panel persists the evidence snapshot as an immutable trust assessment.
+Operators can then acknowledge or annotate it, filter the event history, inspect the
+record, and export a JSON evidence bundle. Assessment and action retries are
+idempotent, so a retried request does not create duplicate evidence. Run the complete
+Docker-backed proof with:
+
+```bash
+python3 scripts/verify_trust_workflow.py
+```
+
+Operator labels are currently **self-asserted**, not authenticated identities. This
+workflow is suitable for local engineering validation, but public deployment remains
+blocked on authentication, authorization, and an audit-retention policy. See
+`docs/trust-operator-workflow-v1.md` for the API and evidence boundaries.
+
+### Real receiver calibration
+
+The repository now includes an offline workflow for exporting a bounded `LIVE_RF`
+observation set and measuring pair/window residuals, insufficient-data rates,
+flagged evaluations, and grouped alert episodes per observed track hour:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/export_live_rf_calibration.py --help
+PYTHONPATH=backend:. python3 scripts/run_observation_calibration.py --help
+```
+
+Raw local captures are git-ignored because they may expose receiver and aircraft
+locations. Reports remain `engineering_validation_only` until the manifest identifies
+captured RF and records a completed routine-traffic review. Even then, the measured
+value is an alert rate—not a false-positive rate without authoritative ground truth.
+Follow `docs/rf-calibration-workflow-v1.md` for the complete collection, integrity,
+review, and interpretation procedure.
 
 Stop the demo with:
 
@@ -180,10 +382,12 @@ label replayed traffic as live RF.
 
 ## Continuous Integration
 
-GitHub Actions runs Python lint/tests, migration SQL validation, frontend
+GitHub Actions runs Python lint/tests, pairwise and short-window held-out synthetic
+kinematic regression gates, migration SQL validation, frontend
 lint/build, C++ decoder build/tests, dependency audits, and the complete Docker
-demo verifier. Security audits currently report known pinned-dependency findings
-as a non-blocking job until the dedicated dependency-upgrade checkpoint lands.
+demo, clean replay, and kinematic attack verifiers. Security audits are retained as
+a non-blocking job so code-quality failures remain distinguishable from newly
+published dependency advisories.
 
 ## Project Structure
 
@@ -225,6 +429,12 @@ The system flags these anomaly types:
 | SQUAWK_7700 | General emergency | CRITICAL |
 | GHOST_FLIGHT | Aircraft disappeared mid-flight | MEDIUM |
 | RESTRICTED_AIRSPACE | Entered no-fly zone | HIGH |
+| KINEMATIC_PLAUSIBILITY | Two observations exceed one or more versioned motion limits | MEDIUM/HIGH |
+
+Kinematic evidence currently checks implied ground speed, reported acceleration,
+turn rate, derived vertical rate, and disagreement between reported and implied
+speed. Thresholds are conservative general limits, not aircraft-type performance
+models, and the UI states that inconsistency is not proof of spoofing.
 
 ## License
 

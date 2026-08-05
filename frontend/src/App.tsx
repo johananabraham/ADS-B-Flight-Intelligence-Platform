@@ -9,6 +9,8 @@ import { FilterPanel } from '@/components/FilterPanel';
 import { StatsPanel } from '@/components/StatsPanel';
 import { GeofencePanel } from '@/components/GeofencePanel';
 import { SafetyPanel } from '@/components/SafetyPanel';
+import { ReplayControls } from '@/components/ReplayControls';
+import { StationFleetPanel } from '@/components/StationFleetPanel';
 import type { Geofence } from '@/components/GeofencePanel';
 import { useWebSocket } from '@/hooks';
 import type { Aircraft } from '@/types';
@@ -42,6 +44,7 @@ const defaultFilters: Filters = {
 const MILITARY_PREFIXES = ['RCH', 'REACH', 'EVAC', 'NAVY', 'ARMY', 'USAF', 'MC', 'PAT', 'TOPCAT', 'GOLD', 'SENTRY', 'AWAC'];
 const EMERGENCY_SQUAWKS = ['7500', '7600', '7700'];
 const SOURCE_MODE = import.meta.env.VITE_DATA_SOURCE_MODE;
+const IS_RECORDED_REPLAY = SOURCE_MODE === 'RECORDED REPLAY';
 
 function AppContent() {
   const [selectedAircraft, setSelectedAircraft] = useState<string | null>(null);
@@ -52,6 +55,7 @@ function AppContent() {
   const [showStats, setShowStats] = useState(false);
   const [showGeofences, setShowGeofences] = useState(false);
   const [showSafety, setShowSafety] = useState(false);
+  const [showStations, setShowStations] = useState(false);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [geofences, setGeofences] = useState<Geofence[]>([]);
 
@@ -102,6 +106,7 @@ function AppContent() {
         setShowStats(false);
         setShowGeofences(false);
         setShowSafety(false);
+        setShowStations(false);
       }
       if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
         setShowAlerts(prev => !prev);
@@ -123,6 +128,9 @@ function AppContent() {
       }
       if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
         setShowSafety(prev => !prev);
+      }
+      if (e.key === 'n' && !e.metaKey && !e.ctrlKey) {
+        setShowStations(prev => !prev);
       }
     };
 
@@ -162,6 +170,8 @@ function AppContent() {
           onToggleOverlays={() => setShowOverlays(!showOverlays)}
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters(!showFilters)}
+          stationsOpen={showStations}
+          onToggleStations={() => setShowStations(!showStations)}
           connected={connected}
           stats={stats}
           lastUpdate={lastUpdate}
@@ -183,7 +193,7 @@ function AppContent() {
 
       {/* Aircraft detail - center bottom (when selected) */}
       {selectedAircraftData && (
-        <div className="absolute bottom-4 left-80 right-80 z-[1000] max-w-xl mx-auto">
+        <div className={`absolute left-80 right-80 z-[1000] mx-auto max-w-xl overflow-y-auto ${IS_RECORDED_REPLAY ? 'bottom-44 max-h-[calc(100vh-13rem)]' : 'bottom-4 max-h-[calc(100vh-6rem)]'}`}>
           <AircraftDetail
             aircraft={selectedAircraftData}
             onClose={() => setSelectedAircraft(null)}
@@ -192,7 +202,7 @@ function AppContent() {
       )}
 
       {/* Alerts panel - right (conditional) */}
-      {showAlerts && (
+      {showAlerts && !showStations && (
         <div className="absolute top-16 right-4 bottom-4 w-80 z-[1000]">
           <AlertsPanel onClose={() => setShowAlerts(false)} />
         </div>
@@ -211,7 +221,7 @@ function AppContent() {
       )}
 
       {/* Stats panel - right side (conditional) */}
-      {showStats && !showAlerts && !showGeofences && (
+      {showStats && !showAlerts && !showGeofences && !showStations && (
         <div className="absolute top-16 right-4 z-[1000]">
           <StatsPanel
             aircraft={aircraft}
@@ -222,7 +232,7 @@ function AppContent() {
       )}
 
       {/* Geofence panel - right side (conditional) */}
-      {showGeofences && !showAlerts && !showSafety && (
+      {showGeofences && !showAlerts && !showSafety && !showStations && (
         <div className="absolute top-16 right-4 z-[1000]">
           <GeofencePanel
             geofences={geofences}
@@ -236,7 +246,19 @@ function AppContent() {
       )}
 
       {/* Safety Research panel - positioned by component */}
-      {showSafety && <SafetyPanel onClose={() => setShowSafety(false)} />}
+      {showSafety && !showStations && <SafetyPanel onClose={() => setShowSafety(false)} />}
+
+      {showStations && (
+        <div className="absolute bottom-4 right-4 top-16 z-[1001] w-[26rem] max-w-[calc(100vw-2rem)]">
+          <StationFleetPanel onClose={() => setShowStations(false)} />
+        </div>
+      )}
+
+      {IS_RECORDED_REPLAY && (
+        <div className="absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2">
+          <ReplayControls />
+        </div>
+      )}
 
       {/* Connection status indicator */}
       <div className={`absolute top-16 right-4 z-[999] flex items-center gap-2 px-2 py-1 rounded text-2xs ${
@@ -248,7 +270,7 @@ function AppContent() {
 
       {/* Keyboard shortcuts hint */}
       <div className="absolute bottom-4 right-4 z-[1000] text-2xs text-slate-600">
-        <span className="opacity-50">A</span>lerts · <span className="opacity-50">S</span>tats · <span className="opacity-50">G</span>eofence · <span className="opacity-50">R</span>esearch · <span className="opacity-50">F</span>ilter · <span className="opacity-50">H</span>eatmap · <span className="opacity-50">O</span>verlays · <span className="opacity-50">ESC</span>
+        <span className="opacity-50">A</span>lerts · <span className="opacity-50">S</span>tats · <span className="opacity-50">G</span>eofence · <span className="opacity-50">R</span>esearch · <span className="opacity-50">N</span>odes · <span className="opacity-50">F</span>ilter · <span className="opacity-50">H</span>eatmap · <span className="opacity-50">O</span>verlays · <span className="opacity-50">ESC</span>
       </div>
     </div>
   );

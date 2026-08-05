@@ -1,0 +1,12 @@
+# Station accounts are explicit so the fleet consumer never inherits station
+# write access from a global username pattern. Add one block per provisioned
+# node; the username must equal the payload node_id.
+user roof-node-1
+topic write adsb/stations/v1/roof-node-1/telemetry
+topic write adsb/stations/v1/roof-node-1/presence
+
+# The backend consumer has read-only fleet access and broker health visibility.
+user station-consumer
+topic read adsb/stations/v1/+/telemetry
+topic read adsb/stations/v1/+/presence
+topic read $SYS/broker/uptime

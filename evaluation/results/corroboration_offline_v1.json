@@ -1,0 +1,137 @@
+{
+  "configuration": {
+    "comparison_count": 720,
+    "hours": 4,
+    "interval_seconds": 20,
+    "scenario_cycle": [
+      "AGREEMENT",
+      "LOCAL_ONLY",
+      "EXTERNAL_ONLY",
+      "POSITION_CONFLICT",
+      "STALE_EXTERNAL",
+      "PROVIDER_OUTAGE"
+    ],
+    "start": "2026-08-04T00:00:00+00:00"
+  },
+  "evidence_class": "OFFLINE_SYNTHETIC_ONLY",
+  "implementation_revision": "362e422",
+  "implementation_sha256": "eec06a7a563c829b4062c76a1708583c14313e4a6cd83fba81465b5f0027c9a1",
+  "results": {
+    "both_source_coverage_rate": 0.5,
+    "classification_mismatches": [],
+    "conflict_samples": [
+      {
+        "altitude_difference_ft": 0,
+        "evaluated_at": "2026-08-04T00:01:00+00:00",
+        "human_review_status": "NOT_PERFORMED",
+        "icao_hex": "000003",
+        "position_distance_nm": 60.04089465129054,
+        "synthetic_expectation": "POSITION_CONFLICT"
+      },
+      {
+        "altitude_difference_ft": 0,
+        "evaluated_at": "2026-08-04T00:03:00+00:00",
+        "human_review_status": "NOT_PERFORMED",
+        "icao_hex": "000009",
+        "position_distance_nm": 60.04089465129054,
+        "synthetic_expectation": "POSITION_CONFLICT"
+      },
+      {
+        "altitude_difference_ft": 0,
+        "evaluated_at": "2026-08-04T00:05:00+00:00",
+        "human_review_status": "NOT_PERFORMED",
+        "icao_hex": "00000F",
+        "position_distance_nm": 60.04089465129054,
+        "synthetic_expectation": "POSITION_CONFLICT"
+      },
+      {
+        "altitude_difference_ft": 0,
+        "evaluated_at": "2026-08-04T00:07:00+00:00",
+        "human_review_status": "NOT_PERFORMED",
+        "icao_hex": "000015",
+        "position_distance_nm": 60.04089465129054,
+        "synthetic_expectation": "POSITION_CONFLICT"
+      },
+      {
+        "altitude_difference_ft": 0,
+        "evaluated_at": "2026-08-04T00:09:00+00:00",
+        "human_review_status": "NOT_PERFORMED",
+        "icao_hex": "00001B",
+        "position_distance_nm": 60.04089465129054,
+        "synthetic_expectation": "POSITION_CONFLICT"
+      },
+      {
+        "altitude_difference_ft": 0,
+        "evaluated_at": "2026-08-04T00:11:00+00:00",
+        "human_review_status": "NOT_PERFORMED",
+        "icao_hex": "000021",
+        "position_distance_nm": 60.04089465129054,
+        "synthetic_expectation": "POSITION_CONFLICT"
+      },
+      {
+        "altitude_difference_ft": 0,
+        "evaluated_at": "2026-08-04T00:13:00+00:00",
+        "human_review_status": "NOT_PERFORMED",
+        "icao_hex": "000027",
+        "position_distance_nm": 60.04089465129054,
+        "synthetic_expectation": "POSITION_CONFLICT"
+      },
+      {
+        "altitude_difference_ft": 0,
+        "evaluated_at": "2026-08-04T00:15:00+00:00",
+        "human_review_status": "NOT_PERFORMED",
+        "icao_hex": "00002D",
+        "position_distance_nm": 60.04089465129054,
+        "synthetic_expectation": "POSITION_CONFLICT"
+      },
+      {
+        "altitude_difference_ft": 0,
+        "evaluated_at": "2026-08-04T00:17:00+00:00",
+        "human_review_status": "NOT_PERFORMED",
+        "icao_hex": "000033",
+        "position_distance_nm": 60.04089465129054,
+        "synthetic_expectation": "POSITION_CONFLICT"
+      },
+      {
+        "altitude_difference_ft": 0,
+        "evaluated_at": "2026-08-04T00:19:00+00:00",
+        "human_review_status": "NOT_PERFORMED",
+        "icao_hex": "000039",
+        "position_distance_nm": 60.04089465129054,
+        "synthetic_expectation": "POSITION_CONFLICT"
+      }
+    ],
+    "provider_availability_rate": 0.8333333333333334,
+    "simulated_external_latency_seconds": {
+      "maximum": 2.5,
+      "p50": 1.5,
+      "p95": 2.5,
+      "sample_count": 480
+    },
+    "state_counts": {
+      "CONFLICTING": 120,
+      "CORROBORATED": 120,
+      "EXTERNAL_ONLY": 120,
+      "LOCAL_ONLY": 120,
+      "STALE": 120,
+      "UNAVAILABLE": 120
+    },
+    "state_rates": {
+      "CONFLICTING": 0.16666666666666666,
+      "CORROBORATED": 0.16666666666666666,
+      "EXTERNAL_ONLY": 0.16666666666666666,
+      "LOCAL_ONLY": 0.16666666666666666,
+      "STALE": 0.16666666666666666,
+      "UNAVAILABLE": 0.16666666666666666
+    }
+  },
+  "suite_version": "1.0-offline-synthetic",
+  "verification_boundaries": {
+    "captured_rf_sessions": 0,
+    "field_coverage_claim_permitted": false,
+    "field_latency_claim_permitted": false,
+    "human_conflict_review": "NOT_PERFORMED",
+    "live_provider_requests": 0,
+    "next_required_evidence": "Run a permitted multi-hour live comparison and manually review a sample of real conflicts."
+  }
+}

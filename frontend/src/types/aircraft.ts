@@ -59,6 +59,124 @@ export interface Anomaly {
   acknowledged: number;
 }
 
+export type KinematicEvaluationStatus = 'PASS' | 'FLAGGED' | 'INSUFFICIENT_DATA';
+
+export interface KinematicRuleResult {
+  rule: string;
+  status: KinematicEvaluationStatus;
+  value: number;
+  threshold: number;
+  unit: string;
+  explanation: string;
+  observation_ids: string[];
+}
+
+export interface KinematicEvaluation {
+  evaluation_id: string;
+  policy_version: string;
+  previous_observation_id: string;
+  current_observation_id: string;
+  source_type: string;
+  source_id: string;
+  icao_hex: string;
+  evaluated_at: string;
+  status: KinematicEvaluationStatus;
+  reason: string | null;
+  delta_seconds: number;
+  measurements: Record<string, number>;
+  rule_results: KinematicRuleResult[];
+}
+
+export interface WindowKinematicEvaluation {
+  evaluation_id: string;
+  policy_version: string;
+  first_observation_id: string;
+  current_observation_id: string;
+  observation_ids: string[];
+  source_type: string;
+  source_id: string;
+  icao_hex: string;
+  evaluated_at: string;
+  status: KinematicEvaluationStatus;
+  reason: string | null;
+  duration_seconds: number;
+  measurements: Record<string, number>;
+  rule_results: KinematicRuleResult[];
+}
+
+export type CorroborationState =
+  | 'CORROBORATED'
+  | 'LOCAL_ONLY'
+  | 'EXTERNAL_ONLY'
+  | 'CONFLICTING'
+  | 'STALE'
+  | 'UNAVAILABLE';
+
+export interface CorroborationEvidence {
+  state: CorroborationState;
+  policy_version: string;
+  icao_hex: string;
+  evaluated_at: string;
+  explanation: string;
+  local_observation_id: string | null;
+  external_observation_id: string | null;
+  time_delta_seconds: number | null;
+  position_distance_nm: number | null;
+  altitude_difference_ft: number | null;
+}
+
+export type TrustState =
+  | 'TRUSTED'
+  | 'QUESTIONABLE'
+  | 'LOW_CONFIDENCE'
+  | 'INSUFFICIENT_DATA';
+
+export interface TrustComponent {
+  component: 'PAIR_KINEMATICS' | 'WINDOW_KINEMATICS' | 'CORROBORATION' | 'STATION' | 'ML';
+  state: string;
+  policy_version: string | null;
+  evaluated_at: string | null;
+  age_seconds: number | null;
+  evidence_ids: string[];
+  reasons: string[];
+}
+
+export interface TrustAssessment {
+  state: TrustState;
+  policy_version: string;
+  icao_hex: string;
+  evaluated_at: string;
+  reasons: string[];
+  components: TrustComponent[];
+  numeric_score: null;
+}
+
+export interface PersistedTrustAssessment {
+  assessment_id: string;
+  inserted: boolean;
+  assessment: TrustAssessment;
+}
+
+export interface TrustEvent {
+  assessment_id: string;
+  policy_version: string;
+  icao_hex: string;
+  evaluated_at: string;
+  state: TrustState;
+  reasons: string[];
+  components: TrustComponent[];
+}
+
+export interface TrustOperatorAction {
+  action_id: string;
+  assessment_id: string;
+  action_type: 'ACKNOWLEDGE' | 'ANNOTATE';
+  actor: string;
+  note: string | null;
+  created_at: string;
+  identity_assurance: 'SELF_ASSERTED';
+}
+
 export interface Stats {
   active_aircraft: number;
   total_positions_today: number;

@@ -1,0 +1,86 @@
+{
+  "report_schema_version": "1.0",
+  "scope": "synthetic_scenarios_only",
+  "command": "PYTHONPATH=backend:. python scripts/run_kinematic_evaluation.py --check",
+  "generator": {
+    "version": "1.0",
+    "root_seed": 20260720,
+    "source_sessions": 90,
+    "variants_per_session": 7,
+    "split_source_sessions": {
+      "train": 46,
+      "validation": 22,
+      "test": 22
+    }
+  },
+  "policy_version": "1.0",
+  "evaluated_split": "test",
+  "scenario_count": 154,
+  "pair_count": 1694,
+  "synthetic_clean_sequence_alert_rate": 0.0,
+  "attack_detection_rate": 0.6667,
+  "metrics_by_scenario_type": {
+    "CLEAN": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": null
+    },
+    "ABRUPT_POSITION": {
+      "scenarios": 22,
+      "detected": 22,
+      "detection_rate": 1.0,
+      "flagged_pairs": 44,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": 0.0
+    },
+    "ABRUPT_ALTITUDE": {
+      "scenarios": 22,
+      "detected": 22,
+      "detection_rate": 1.0,
+      "flagged_pairs": 44,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": 0.0
+    },
+    "ABRUPT_VELOCITY": {
+      "scenarios": 22,
+      "detected": 22,
+      "detection_rate": 1.0,
+      "flagged_pairs": 44,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": 0.0
+    },
+    "ABRUPT_HEADING": {
+      "scenarios": 22,
+      "detected": 22,
+      "detection_rate": 1.0,
+      "flagged_pairs": 44,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": 0.0
+    },
+    "GRADUAL_POSITION_DRIFT": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 0,
+      "median_time_to_detect_seconds": null
+    },
+    "REPLAYED_TIMESTAMP": {
+      "scenarios": 22,
+      "detected": 0,
+      "detection_rate": 0.0,
+      "flagged_pairs": 0,
+      "insufficient_pairs": 22,
+      "median_time_to_detect_seconds": null
+    }
+  },
+  "limitations": [
+    "Synthetic clean alert rate is not a real-world false-positive rate.",
+    "The rules-only engine evaluates consecutive pairs and misses this subtle gradual-drift scenario.",
+    "Replayed timestamps produce insufficient evidence and are not counted as detections.",
+    "Real benign RF calibration has not yet been completed."
+  ]
+}

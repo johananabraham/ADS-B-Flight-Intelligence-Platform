@@ -1,5 +1,18 @@
 import axios from 'axios';
-import type { Aircraft, Anomaly, FlightTrail, Stats } from '@/types';
+import type {
+  Aircraft,
+  Anomaly,
+  CorroborationEvidence,
+  FlightTrail,
+  KinematicEvaluation,
+  Stats,
+  Station,
+  PersistedTrustAssessment,
+  TrustEvent,
+  TrustOperatorAction,
+  TrustState,
+  WindowKinematicEvaluation,
+} from '@/types';
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -53,6 +66,67 @@ export async function acknowledgeAnomaly(
   const { data } = await api.patch<Anomaly>(`/anomalies/${id}/acknowledge`, {
     acknowledged,
   });
+  return data;
+}
+
+export async function fetchKinematicEvaluations(
+  icao: string,
+  limit: number = 5
+): Promise<KinematicEvaluation[]> {
+  const { data } = await api.get<KinematicEvaluation[]>('/kinematics/evaluations', {
+    params: { icao_hex: icao, limit },
+  });
+  return data;
+}
+
+export async function fetchWindowKinematicEvaluations(
+  icao: string,
+  limit: number = 5
+): Promise<WindowKinematicEvaluation[]> {
+  const { data } = await api.get<WindowKinematicEvaluation[]>(
+    '/kinematics/window-evaluations',
+    { params: { icao_hex: icao, limit } }
+  );
+  return data;
+}
+
+export async function fetchCorroboration(
+  icao: string
+): Promise<CorroborationEvidence> {
+  const { data } = await api.get<CorroborationEvidence>(`/corroboration/${icao}`);
+  return data;
+}
+
+export async function fetchStations(): Promise<Station[]> {
+  const { data } = await api.get<Station[]>('/stations/');
+  return data;
+}
+
+export async function createTrustAssessment(icao: string): Promise<PersistedTrustAssessment> {
+  const { data } = await api.post<PersistedTrustAssessment>(`/trust/${icao}/assessments`);
+  return data;
+}
+
+export async function fetchTrustEvents(
+  icao: string,
+  state?: TrustState
+): Promise<TrustEvent[]> {
+  const { data } = await api.get<TrustEvent[]>('/trust-events/', {
+    params: { icao_hex: icao, state },
+  });
+  return data;
+}
+
+export async function createTrustAction(
+  assessmentId: string,
+  action: {
+    action_id: string;
+    action_type: 'ACKNOWLEDGE' | 'ANNOTATE';
+    actor: string;
+    note?: string;
+  }
+): Promise<{ inserted: boolean; action: TrustOperatorAction }> {
+  const { data } = await api.post(`/trust-events/${assessmentId}/actions`, action);
   return data;
 }
 

@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     # dump1090
     dump1090_url: str = "http://localhost:8080/data/aircraft.json"
+    replay_control_url: str = "http://replay:8081"
 
     # API Keys
     anthropic_api_key: str = ""
@@ -17,6 +18,16 @@ class Settings(BaseSettings):
     # App settings
     app_name: str = "Aviation Intelligence Platform"
     debug: bool = True
+
+    # Optional OpenSky cross-source corroboration (disabled until explicitly enabled)
+    opensky_enabled: bool = False
+    opensky_client_id: str = ""
+    opensky_client_secret: str = ""
+    opensky_api_base_url: str = "https://opensky-network.org/api"
+    opensky_auth_url: str = (
+        "https://auth.opensky-network.org/auth/realms/opensky-network/"
+        "protocol/openid-connect/token"
+    )
 
     # Anomaly detection thresholds
     rapid_descent_threshold: int = 4000  # ft/min

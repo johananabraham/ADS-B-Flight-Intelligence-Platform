@@ -39,6 +39,42 @@ jobs:
         env:
           PYTHONPATH: backend:.
         run: pytest -q backend/tests
+      - name: Enforce synthetic kinematic baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_kinematic_evaluation.py --check
+          --baseline evaluation/results/kinematic_rules_baseline_v1.json
+      - name: Enforce short-window trajectory baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_windowed_kinematic_evaluation.py --check
+          --baseline evaluation/results/windowed_trajectory_baseline_v1.json
+      - name: Enforce extended synthetic scenario baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_extended_kinematic_evaluation.py --check
+          --baseline evaluation/results/kinematic_extended_baseline_v1_1.json
+      - name: Enforce offline interpretable ML baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_ml_baselines.py --check
+          --baseline evaluation/results/ml_baselines_v1.json
+      - name: Enforce offline cross-source corroboration baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_corroboration_evaluation.py --check
+          --baseline evaluation/results/corroboration_offline_v1.json
+      - name: Enforce offline edge-station health baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_station_health_evaluation.py --check
+          --baseline evaluation/results/station_health_offline_v1.json
       - name: Validate migration SQL
         working-directory: backend
         env:
@@ -91,6 +127,27 @@ jobs:
         working-directory: frontend
         run: npm audit --audit-level=high
 
+  edge-transport-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prove MQTT TLS, authentication, and least-privilege ACLs
+        run: scripts/test_edge_mqtt_security.sh
+
+  esp32-firmware:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare non-production CA fixture
+        run: cp firmware/esp32-station/certs/broker_ca.pem.example firmware/esp32-station/certs/broker_ca.pem
+      - name: Compile generic ESP32 station firmware with ESP-IDF 6.0.2
+        run: >-
+          docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp
+          -v "$PWD:/project" -w /project/firmware/esp32-station
+          espressif/idf:v6.0.2 idf.py set-target esp32 build
+
   demo:
     needs: [backend, frontend, decoder]
     runs-on: ubuntu-latest
@@ -109,6 +166,15 @@ jobs:
           -f docker-compose.recorded.yml up --build --force-recreate -d replay ingestion
       - name: Verify recorded replay provenance and timestamps
         run: python scripts/verify_recorded_replay.py --timeout 60
+      - name: Start deterministic kinematic attack replay
+        run: >-
+          docker compose -f docker-compose.yml -f docker-compose.demo.yml
+          -f docker-compose.recorded.yml -f docker-compose.kinematic-attack.yml
+          up --build --force-recreate -d replay ingestion
+      - name: Verify exact kinematic rule evidence
+        run: python scripts/verify_kinematic_replay.py --timeout 60
+      - name: Verify persisted trust and operator workflow
+        run: python scripts/verify_trust_workflow.py
       - name: Capture service logs
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.demo.yml logs --no-color > demo.log

@@ -1,0 +1,9 @@
+services:
+  replay:
+    environment:
+      REPLAY_RECORDING_PATH: /app/services/replay/recordings/kinematic_attack_generated_v2.json
+
+  ingestion:
+    environment:
+      OBSERVATION_SOURCE_ID: kinematic-attack-fixture-v2
+      OBSERVATION_RECORDING_ID: kinematic-attack-generated-v2

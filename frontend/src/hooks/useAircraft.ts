@@ -3,8 +3,13 @@ import {
   fetchAircraft,
   fetchFlightTrail,
   fetchStats,
+  fetchStations,
+  createTrustAssessment,
   fetchAnomalies,
   fetchCriticalAnomalies,
+  fetchCorroboration,
+  fetchKinematicEvaluations,
+  fetchWindowKinematicEvaluations,
 } from '@/utils/api';
 
 export function useAircraft() {
@@ -45,5 +50,51 @@ export function useCriticalAnomalies(hours: number = 24) {
     queryKey: ['criticalAnomalies', hours],
     queryFn: () => fetchCriticalAnomalies(hours),
     refetchInterval: 5000,
+  });
+}
+
+export function useKinematicEvaluations(icao: string | null) {
+  return useQuery({
+    queryKey: ['kinematicEvaluations', icao],
+    queryFn: () => fetchKinematicEvaluations(icao!),
+    enabled: !!icao,
+    refetchInterval: 5000,
+  });
+}
+
+export function useWindowKinematicEvaluations(icao: string | null) {
+  return useQuery({
+    queryKey: ['windowKinematicEvaluations', icao],
+    queryFn: () => fetchWindowKinematicEvaluations(icao!),
+    enabled: !!icao,
+    refetchInterval: 5000,
+  });
+}
+
+export function useCorroboration(icao: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ['corroboration', icao],
+    queryFn: () => fetchCorroboration(icao!),
+    enabled: !!icao && enabled,
+    refetchInterval: 15000,
+    retry: false,
+  });
+}
+
+export function useStations() {
+  return useQuery({
+    queryKey: ['stations'],
+    queryFn: fetchStations,
+    refetchInterval: 5000,
+  });
+}
+
+export function useTrustAssessment(icao: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ['trustAssessment', icao],
+    queryFn: () => createTrustAssessment(icao!),
+    enabled: !!icao && enabled,
+    refetchInterval: 15000,
+    retry: false,
   });
 }
