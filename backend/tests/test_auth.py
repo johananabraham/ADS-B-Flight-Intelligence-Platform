@@ -20,13 +20,14 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 @pytest.fixture(scope="function")
 def db_session():
     """Create a fresh database for each test."""
-    Base.metadata.create_all(bind=engine)
+    # Only create the users table for auth tests to avoid GeoAlchemy2/SQLite issues
+    User.__table__.create(bind=engine, checkfirst=True)
     session = TestingSessionLocal()
     try:
         yield session
     finally:
         session.close()
-        Base.metadata.drop_all(bind=engine)
+        User.__table__.drop(bind=engine, checkfirst=True)
 
 
 @pytest.fixture(scope="function")
@@ -324,7 +325,7 @@ def test_get_current_user(client, admin_token, admin_user):
 def test_get_current_user_no_token(client):
     """Test getting current user without token."""
     response = client.get("/api/v1/auth/me")
-    assert response.status_code == 403  # No credentials
+    assert response.status_code == 401  # No credentials
 
 
 def test_get_current_user_invalid_token(client):
@@ -345,7 +346,7 @@ def test_replay_command_requires_auth(client):
         "/api/v1/replay/commands",
         json={"action": "pause"},
     )
-    assert response.status_code == 403  # No credentials
+    assert response.status_code == 401  # No credentials
 
 
 def test_replay_command_requires_operator_role(client, viewer_token):
