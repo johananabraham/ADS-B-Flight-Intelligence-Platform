@@ -18,8 +18,10 @@ EDGE_SECRET_DIR="$scratch_dir" \
   "${project_root}/scripts/provision_edge_mqtt.sh" "$broker_name"
 docker network create "$network_name" >/dev/null
 docker run -d --name "$broker_name" --network "$network_name" \
+  --entrypoint mosquitto \
   -v "${project_root}/edge/mosquitto/config:/mosquitto/config:ro" \
-  -v "${scratch_dir}:/mosquitto/secrets:ro" "$image" >/dev/null
+  -v "${scratch_dir}:/mosquitto/secrets:ro" "$image" \
+  -c /mosquitto/config/mosquitto.conf >/dev/null
 
 for _attempt in $(seq 1 30); do
   if docker logs "$broker_name" 2>&1 | grep -q "mosquitto version .* running"; then

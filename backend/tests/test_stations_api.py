@@ -47,6 +47,7 @@ class FakeSession:
 
 
 def station_record(**updates) -> SimpleNamespace:
+    current_time = datetime.now(timezone.utc)
     values = {
         "node_id": "roof-node-1",
         "firmware_version": "1.0.0",
@@ -54,11 +55,11 @@ def station_record(**updates) -> SimpleNamespace:
         "telemetry_message_id": TELEMETRY_ID,
         "presence_message_id": PRESENCE_ID,
         "last_sequence": 42,
-        "first_seen_at": NOW,
-        "last_received_at": NOW,
-        "last_observed_at": NOW,
+        "first_seen_at": current_time,
+        "last_received_at": current_time,
+        "last_observed_at": current_time,
         "presence_status": "ONLINE",
-        "presence_received_at": NOW,
+        "presence_received_at": current_time,
         "uptime_seconds": 3_600,
         "reconnect_count": 1,
         "rssi_dbm": -60,
