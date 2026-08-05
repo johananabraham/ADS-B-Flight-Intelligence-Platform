@@ -155,13 +155,13 @@ static bool build_telemetry(telemetry_message_t *message)
         "\"observed_at\":\"%s\",\"uptime_seconds\":%llu,"
         "\"reconnect_count\":%lu,\"wifi_rssi_dbm\":%d,"
         "\"free_heap_bytes\":%lu,\"queue_depth\":%u,"
-        "\"watchdog_reset_detected\":%s}",
+        "\"watchdog_reset_count\":%u}",
         message_id, CONFIG_EDGE_NODE_ID, CONFIG_EDGE_FIRMWARE_VERSION, boot_id,
         (unsigned long long)sequence, observed_at,
         (unsigned long long)(esp_timer_get_time() / 1000000),
         (unsigned long)atomic_load(&reconnect_count), rssi,
         (unsigned long)esp_get_free_heap_size(), queue_depth,
-        reset_was_watchdog() ? "true" : "false");
+        reset_was_watchdog() ? 1U : 0U);
     return written > 0 && (size_t)written < sizeof(message->payload);
 }
 
@@ -209,7 +209,7 @@ static void mqtt_event_handler(void *argument, esp_event_base_t base,
     if (event_id == MQTT_EVENT_CONNECTED) {
         char online[PRESENCE_PAYLOAD_CAPACITY];
         xEventGroupSetBits(connectivity_events, MQTT_CONNECTED_BIT);
-        if (build_presence(online, sizeof(online), "online", "connected")) {
+        if (build_presence(online, sizeof(online), "ONLINE", "connected")) {
             (void)esp_mqtt_client_enqueue(mqtt_client, presence_topic, online, 0,
                                           1, 1, true);
         }
@@ -256,7 +256,7 @@ static void synchronize_clock(void)
 
 static void initialize_mqtt(void)
 {
-    if (!build_presence(offline_presence, sizeof(offline_presence), "offline",
+    if (!build_presence(offline_presence, sizeof(offline_presence), "OFFLINE",
                         "mqtt-last-will")) {
         ESP_LOGE(TAG, "could not build MQTT last-will payload");
         abort();

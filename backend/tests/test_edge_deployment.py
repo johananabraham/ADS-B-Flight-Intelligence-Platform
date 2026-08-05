@@ -33,3 +33,12 @@ def test_compose_uses_pinned_broker_and_runtime_secrets():
     assert "MQTT_CONSUMER_PASSWORD_FILE" in compose
     assert "MQTT_CONSUMER_PASSWORD:" not in compose
     assert "${MQTT_BIND_ADDRESS:-127.0.0.1}:8883:8883" in compose
+
+
+def test_firmware_emits_exact_backend_contract_names_and_enum_values():
+    source = (ROOT / "firmware/esp32-station/main/main.c").read_text()
+
+    assert '\\"watchdog_reset_count\\"' in source
+    assert "watchdog_reset_detected" not in source
+    assert '"ONLINE", "connected"' in source
+    assert '"OFFLINE",' in source
