@@ -2,9 +2,14 @@
 
 from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Optional
+from typing import Any, Optional
 
-from ..safety import run_agent, tool_get_aircraft_safety_context, tool_query_incident_database
+from ..safety import (
+    run_agent,
+    tool_get_aircraft_safety_context,
+    tool_query_incident_database,
+    get_ingestion_status,
+)
 
 router = APIRouter(prefix="/safety", tags=["safety"])
 
@@ -62,3 +67,9 @@ async def get_incident_stats(
         has_fatalities=has_fatalities,
         aggregation=aggregation,
     )
+
+
+@router.get("/ingestion/status")
+async def ingestion_status() -> dict[str, Any]:
+    """Get current NTSB/eCFR ingestion status and collection stats."""
+    return get_ingestion_status()
