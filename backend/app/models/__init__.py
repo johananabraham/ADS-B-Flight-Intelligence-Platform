@@ -10,6 +10,7 @@ from .safety import Incident, Regulation
 from .observation import TrackObservationRecord
 from .kinematics import KinematicEvaluationRecord, WindowKinematicEvaluationRecord
 from .edge import SensorNodeRecord, StationPresenceRecord, StationTelemetryRecord
+from .trust import TrustAssessmentRecord, TrustOperatorActionRecord
 
 __all__ = [
     "Aircraft",
@@ -26,4 +27,6 @@ __all__ = [
     "SensorNodeRecord",
     "StationPresenceRecord",
     "StationTelemetryRecord",
+    "TrustAssessmentRecord",
+    "TrustOperatorActionRecord",
 ]
