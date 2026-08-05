@@ -173,6 +173,8 @@ jobs:
           up --build --force-recreate -d replay ingestion
       - name: Verify exact kinematic rule evidence
         run: python scripts/verify_kinematic_replay.py --timeout 60
+      - name: Verify persisted trust and operator workflow
+        run: python scripts/verify_trust_workflow.py
       - name: Capture service logs
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.demo.yml logs --no-color > demo.log
