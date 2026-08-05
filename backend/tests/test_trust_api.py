@@ -41,6 +41,12 @@ class FakeSession:
     def query(self, model: type) -> FakeQuery:
         return FakeQuery(self.records.get(model, []))
 
+    def execute(self, _statement):
+        return SimpleNamespace(rowcount=1)
+
+    def commit(self) -> None:
+        return None
+
 
 def evaluation(evaluation_id: UUID) -> SimpleNamespace:
     return SimpleNamespace(
@@ -122,3 +128,18 @@ async def test_rejects_invalid_icao_address():
         response = await client.get("/trust/not-an-icao")
 
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_persists_server_computed_assessment_with_evidence_id():
+    transport = httpx.ASGITransport(app=build_app())
+
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/trust/abc123/assessments")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["inserted"] is True
+    assert UUID(body["assessment_id"])
+    assert body["assessment"]["state"] == "INSUFFICIENT_DATA"
+    assert body["assessment"]["numeric_score"] is None
