@@ -11,9 +11,11 @@ import { GeofencePanel } from '@/components/GeofencePanel';
 import { SafetyPanel } from '@/components/SafetyPanel';
 import { ReplayControls } from '@/components/ReplayControls';
 import { StationFleetPanel } from '@/components/StationFleetPanel';
+import { LoginForm } from '@/components/LoginForm';
 import type { Geofence } from '@/components/GeofencePanel';
 import { useWebSocket } from '@/hooks';
 import type { Aircraft } from '@/types';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +49,7 @@ const SOURCE_MODE = import.meta.env.VITE_DATA_SOURCE_MODE;
 const IS_RECORDED_REPLAY = SOURCE_MODE === 'RECORDED REPLAY';
 
 function AppContent() {
+  const { isAuthenticated, isLoading: authLoading, user, logout } = useAuth();
   const [selectedAircraft, setSelectedAircraft] = useState<string | null>(null);
   const [showAlerts, setShowAlerts] = useState(false);
   const [showOverlays, setShowOverlays] = useState(true);
@@ -132,11 +135,16 @@ function AppContent() {
       if (e.key === 'n' && !e.metaKey && !e.ctrlKey) {
         setShowStations(prev => !prev);
       }
+      if (e.key === 'l' && !e.metaKey && !e.ctrlKey && user) {
+        if (confirm('Are you sure you want to logout?')) {
+          logout();
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [user, logout]);
 
   const handleSelectAircraft = useCallback((icao: string | null) => {
     setSelectedAircraft(icao);
@@ -260,6 +268,26 @@ function AppContent() {
         </div>
       )}
 
+      {/* User info and logout */}
+      {user && (
+        <div className="absolute top-4 right-4 z-[1002] flex items-center gap-2 px-3 py-1.5 rounded bg-gray-800 text-sm text-slate-300">
+          <span className="font-medium">{user.username}</span>
+          <span className="text-slate-500">•</span>
+          <span className="text-xs text-slate-400 uppercase">{user.role}</span>
+          <button
+            onClick={() => {
+              if (confirm('Are you sure you want to logout?')) {
+                logout();
+              }
+            }}
+            className="ml-2 text-xs text-red-400 hover:text-red-300"
+            title="Press L to logout"
+          >
+            Logout
+          </button>
+        </div>
+      )}
+
       {/* Connection status indicator */}
       <div className={`absolute top-16 right-4 z-[999] flex items-center gap-2 px-2 py-1 rounded text-2xs ${
         connected ? 'text-green-400' : 'text-red-400'
@@ -270,7 +298,7 @@ function AppContent() {
 
       {/* Keyboard shortcuts hint */}
       <div className="absolute bottom-4 right-4 z-[1000] text-2xs text-slate-600">
-        <span className="opacity-50">A</span>lerts · <span className="opacity-50">S</span>tats · <span className="opacity-50">G</span>eofence · <span className="opacity-50">R</span>esearch · <span className="opacity-50">N</span>odes · <span className="opacity-50">F</span>ilter · <span className="opacity-50">H</span>eatmap · <span className="opacity-50">O</span>verlays · <span className="opacity-50">ESC</span>
+        <span className="opacity-50">A</span>lerts · <span className="opacity-50">S</span>tats · <span className="opacity-50">G</span>eofence · <span className="opacity-50">R</span>esearch · <span className="opacity-50">N</span>odes · <span className="opacity-50">F</span>ilter · <span className="opacity-50">H</span>eatmap · <span className="opacity-50">O</span>verlays · <span className="opacity-50">L</span>ogout · <span className="opacity-50">ESC</span>
       </div>
     </div>
   );
@@ -279,7 +307,9 @@ function AppContent() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
