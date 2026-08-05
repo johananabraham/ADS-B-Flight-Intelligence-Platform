@@ -6,6 +6,7 @@ import type {
   FlightTrail,
   KinematicEvaluation,
   Stats,
+  Station,
   WindowKinematicEvaluation,
 } from '@/types';
 
@@ -89,6 +90,11 @@ export async function fetchCorroboration(
   icao: string
 ): Promise<CorroborationEvidence> {
   const { data } = await api.get<CorroborationEvidence>(`/corroboration/${icao}`);
+  return data;
+}
+
+export async function fetchStations(): Promise<Station[]> {
+  const { data } = await api.get<Station[]>('/stations/');
   return data;
 }
 
