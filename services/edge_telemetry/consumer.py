@@ -38,7 +38,7 @@ class ConsumerSettings:
             host=_required("MQTT_HOST"),
             port=int(os.environ.get("MQTT_PORT", "8883")),
             username=_required("MQTT_CONSUMER_USERNAME"),
-            password=_required("MQTT_CONSUMER_PASSWORD"),
+            password=_secret("MQTT_CONSUMER_PASSWORD"),
             ca_cert=_required("MQTT_CA_CERT"),
             client_cert=os.environ.get("MQTT_CLIENT_CERT") or None,
             client_key=os.environ.get("MQTT_CLIENT_KEY") or None,
@@ -139,6 +139,24 @@ def _required(name: str) -> str:
     if not value:
         raise ValueError(f"{name} is required")
     return value
+
+
+def _secret(name: str) -> str:
+    file_path = os.environ.get(f"{name}_FILE", "").strip()
+    inline_value = os.environ.get(name, "").strip()
+    if file_path and inline_value:
+        raise ValueError(f"configure only one of {name} or {name}_FILE")
+    if file_path:
+        try:
+            value = open(file_path, encoding="utf-8").read().strip()
+        except OSError as exc:
+            raise ValueError(f"could not read {name}_FILE") from exc
+        if value:
+            return value
+        raise ValueError(f"{name}_FILE must not be empty")
+    if inline_value:
+        return inline_value
+    raise ValueError(f"{name} or {name}_FILE is required")
 
 
 if __name__ == "__main__":

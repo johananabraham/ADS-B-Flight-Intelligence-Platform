@@ -88,6 +88,30 @@ def test_settings_require_valid_port_and_certificate_pair():
         settings(client_cert="/client.crt")
 
 
+def test_settings_read_password_from_runtime_secret_file(tmp_path, monkeypatch):
+    password_file = tmp_path / "consumer-password"
+    password_file.write_text("runtime-secret\n", encoding="utf-8")
+    monkeypatch.setenv("MQTT_HOST", "mqtt")
+    monkeypatch.setenv("MQTT_CONSUMER_USERNAME", "station-consumer")
+    monkeypatch.setenv("MQTT_CONSUMER_PASSWORD_FILE", str(password_file))
+    monkeypatch.setenv("MQTT_CA_CERT", "/run/secrets/ca.crt")
+
+    loaded = consumer.ConsumerSettings.from_environment()
+
+    assert loaded.password == "runtime-secret"
+
+
+def test_settings_reject_ambiguous_password_sources(monkeypatch):
+    monkeypatch.setenv("MQTT_HOST", "mqtt")
+    monkeypatch.setenv("MQTT_CONSUMER_USERNAME", "station-consumer")
+    monkeypatch.setenv("MQTT_CONSUMER_PASSWORD", "inline")
+    monkeypatch.setenv("MQTT_CONSUMER_PASSWORD_FILE", "/run/secrets/password")
+    monkeypatch.setenv("MQTT_CA_CERT", "/run/secrets/ca.crt")
+
+    with pytest.raises(ValueError, match="only one"):
+        consumer.ConsumerSettings.from_environment()
+
+
 def test_client_requires_tls_verification_and_callback_v2(monkeypatch):
     fake_context = FakeTlsContext()
     monkeypatch.setattr(
