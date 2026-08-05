@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Literal
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 NODE_ID_PATTERN = r"^[a-z0-9][a-z0-9-]{0,62}$"
@@ -22,10 +22,13 @@ class PresenceStatus(str, Enum):
 class StationTelemetry(BaseModel):
     """One immutable station heartbeat; schema 1.0 is firmware/API stable."""
 
+    model_config = ConfigDict(extra="forbid")
+
     schema_version: Literal["1.0"] = "1.0"
     message_id: UUID = Field(default_factory=uuid4)
     node_id: str = Field(pattern=NODE_ID_PATTERN)
     firmware_version: str = Field(pattern=FIRMWARE_VERSION_PATTERN)
+    boot_id: UUID
     sequence: int = Field(ge=0)
     observed_at: datetime
     uptime_seconds: int = Field(ge=0)
@@ -47,6 +50,8 @@ class StationTelemetry(BaseModel):
 
 class StationPresence(BaseModel):
     """Retained MQTT presence message, including the broker last-will payload."""
+
+    model_config = ConfigDict(extra="forbid")
 
     schema_version: Literal["1.0"] = "1.0"
     message_id: UUID = Field(default_factory=uuid4)
