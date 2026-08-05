@@ -552,8 +552,12 @@ Phase 8 foundation on the same branch:
   shown as `NOT_PROMOTED` and does not affect production state.
 - The aircraft detail UI displays the component timeline and explicitly explains
   why no numeric score is presented. Seventeen focused policy/API tests and the
-  156-test local backend suite pass; full hosted verification is pending the latest
-  branch run.
+  156-test local backend suite pass.
+- GitHub Actions run `30969158892` passed every job at commit `68bae5c`: backend,
+  all checked-in evaluation baselines, migration validation, frontend lint/build,
+  dependency audits, C++ decoder build/tests, ESP-IDF 6.0.2 firmware compile,
+  delivery-based MQTT TLS/authentication/ACL proof, and the complete Docker
+  demo/recorded-replay/kinematic-attack verification path.
 
 Not implemented in these checkpoints:
 
