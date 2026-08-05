@@ -142,9 +142,7 @@ class OpenSkyObservationSource:
         cache_key = self._cache_key(bounds, icao_hex)
         cached = self._cache.get(cache_key)
         if cached and now < cached.expires_at:
-            self._health = replace(
-                self._health, cache_hits=self._health.cache_hits + 1
-            )
+            self._health = replace(self._health, cache_hits=self._health.cache_hits + 1)
             return replace(cached.result, from_cache=True)
 
         blocked_reason = self._blocked_reason(now)
@@ -178,9 +176,12 @@ class OpenSkyObservationSource:
             return self._record_failure(now, f"request failed: {type(exc).__name__}")
 
         if response.status_code == 429:
-            retry_seconds = _non_negative_int(
-                response.headers.get("X-Rate-Limit-Retry-After-Seconds")
-            ) or 60
+            retry_seconds = (
+                _non_negative_int(
+                    response.headers.get("X-Rate-Limit-Retry-After-Seconds")
+                )
+                or 60
+            )
             retry_at = now + timedelta(seconds=retry_seconds)
             self._next_request_at = retry_at
             self._health = replace(
@@ -198,13 +199,17 @@ class OpenSkyObservationSource:
                 reason="provider rate limit active",
             )
         if response.status_code != 200:
-            return self._record_failure(now, f"provider returned HTTP {response.status_code}")
+            return self._record_failure(
+                now, f"provider returned HTTP {response.status_code}"
+            )
 
         try:
             payload = response.json()
             observations = tuple(self._parse_states(payload, received_at=now))
         except (TypeError, ValueError, IndexError) as exc:
-            return self._record_failure(now, f"invalid provider payload: {type(exc).__name__}")
+            return self._record_failure(
+                now, f"invalid provider payload: {type(exc).__name__}"
+            )
 
         credits = _non_negative_int(response.headers.get("X-Rate-Limit-Remaining"))
         self._health = replace(
@@ -232,7 +237,11 @@ class OpenSkyObservationSource:
         if not self._config.client_id or not self._config.client_secret:
             return {}
         now = self._now()
-        if self._access_token and self._token_expires_at and now < self._token_expires_at:
+        if (
+            self._access_token
+            and self._token_expires_at
+            and now < self._token_expires_at
+        ):
             return {"Authorization": f"Bearer {self._access_token}"}
         response = await self._request(
             "POST",
@@ -307,7 +316,9 @@ class OpenSkyObservationSource:
             observed_timestamp = row[3] if row[3] is not None else row[4]
             if observed_timestamp is None:
                 continue
-            observed_at = datetime.fromtimestamp(float(observed_timestamp), tz=timezone.utc)
+            observed_at = datetime.fromtimestamp(
+                float(observed_timestamp), tz=timezone.utc
+            )
             latitude = _optional_float(row[6])
             longitude = _optional_float(row[5])
             if (latitude is None) != (longitude is None):

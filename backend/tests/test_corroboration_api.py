@@ -108,7 +108,9 @@ def build_test_app(record: object | None, service: FakeService) -> FastAPI:
     app = FastAPI()
     app.include_router(corroboration_api.router)
     app.dependency_overrides[get_db] = lambda: FakeSession(record)
-    app.dependency_overrides[corroboration_api.get_corroboration_service] = lambda: service
+    app.dependency_overrides[corroboration_api.get_corroboration_service] = (
+        lambda: service
+    )
     return app
 
 
@@ -132,7 +134,9 @@ async def test_returns_corroboration_evidence(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_disabled_external_source_is_unavailable_not_suspicious(monkeypatch) -> None:
+async def test_disabled_external_source_is_unavailable_not_suspicious(
+    monkeypatch,
+) -> None:
     service = FakeService(result())
     monkeypatch.setattr(
         corroboration_api,
