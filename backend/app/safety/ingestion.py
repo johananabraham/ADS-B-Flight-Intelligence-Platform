@@ -443,7 +443,7 @@ def ingest_ecfr_data(
             errors.append(f"Failed to fetch Part {part}: {e}")
 
     # Fetch section text and insert
-    session = get_session()
+    session = SessionLocal()
     try:
         for i, section_data in enumerate(all_sections):
             section_num = section_data["cfr_section"]

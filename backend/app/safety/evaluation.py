@@ -23,13 +23,6 @@ from pathlib import Path
 from typing import Any
 
 from app.safety.agent import AgentResponse, run_agent
-from app.safety.tools import (
-    tool_get_aircraft_safety_context,
-    tool_get_incident_detail,
-    tool_query_incident_database,
-    tool_search_faa_regulations,
-    tool_search_incident_narratives,
-)
 
 logger = logging.getLogger(__name__)
 
