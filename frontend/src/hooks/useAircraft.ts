@@ -4,7 +4,7 @@ import {
   fetchFlightTrail,
   fetchStats,
   fetchStations,
-  fetchTrustAssessment,
+  createTrustAssessment,
   fetchAnomalies,
   fetchCriticalAnomalies,
   fetchCorroboration,
@@ -92,7 +92,7 @@ export function useStations() {
 export function useTrustAssessment(icao: string | null, enabled: boolean) {
   return useQuery({
     queryKey: ['trustAssessment', icao],
-    queryFn: () => fetchTrustAssessment(icao!),
+    queryFn: () => createTrustAssessment(icao!),
     enabled: !!icao && enabled,
     refetchInterval: 15000,
     retry: false,

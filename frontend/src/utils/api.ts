@@ -7,7 +7,10 @@ import type {
   KinematicEvaluation,
   Stats,
   Station,
-  TrustAssessment,
+  PersistedTrustAssessment,
+  TrustEvent,
+  TrustOperatorAction,
+  TrustState,
   WindowKinematicEvaluation,
 } from '@/types';
 
@@ -99,8 +102,31 @@ export async function fetchStations(): Promise<Station[]> {
   return data;
 }
 
-export async function fetchTrustAssessment(icao: string): Promise<TrustAssessment> {
-  const { data } = await api.get<TrustAssessment>(`/trust/${icao}`);
+export async function createTrustAssessment(icao: string): Promise<PersistedTrustAssessment> {
+  const { data } = await api.post<PersistedTrustAssessment>(`/trust/${icao}/assessments`);
+  return data;
+}
+
+export async function fetchTrustEvents(
+  icao: string,
+  state?: TrustState
+): Promise<TrustEvent[]> {
+  const { data } = await api.get<TrustEvent[]>('/trust-events/', {
+    params: { icao_hex: icao, state },
+  });
+  return data;
+}
+
+export async function createTrustAction(
+  assessmentId: string,
+  action: {
+    action_id: string;
+    action_type: 'ACKNOWLEDGE' | 'ANNOTATE';
+    actor: string;
+    note?: string;
+  }
+): Promise<{ inserted: boolean; action: TrustOperatorAction }> {
+  const { data } = await api.post(`/trust-events/${assessmentId}/actions`, action);
   return data;
 }
 
