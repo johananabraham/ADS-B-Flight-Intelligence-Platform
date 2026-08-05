@@ -1,6 +1,8 @@
 services:
   mqtt:
     image: eclipse-mosquitto:2.0.22-openssl
+    entrypoint: ["mosquitto"]
+    command: ["-c", "/mosquitto/config/mosquitto.conf"]
     container_name: adsb-mqtt
     restart: unless-stopped
     ports:

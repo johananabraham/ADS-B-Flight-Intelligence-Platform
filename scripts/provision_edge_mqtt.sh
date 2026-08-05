@@ -67,6 +67,8 @@ docker run --rm --user "$(id -u):$(id -g)" \
   -v "${secret_dir}:/work" --entrypoint mosquitto_passwd "$image" \
   -b /work/passwords roof-node-1 "$node_password"
 chmod 0600 "${secret_dir}"/*.key "${secret_dir}"/*.password "${secret_dir}/passwords"
+chmod 0755 "${secret_dir}"
+chmod 0644 "${secret_dir}/ca.crt" "${secret_dir}/server.crt"
 docker run --rm --user 0:0 -v "${secret_dir}:/work" \
   --entrypoint /bin/chown "$image" \
   "${runtime_uid}:${runtime_gid}" \
