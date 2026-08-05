@@ -7,5 +7,6 @@ export { FilterPanel } from './FilterPanel';
 export { StatsPanel } from './StatsPanel';
 export { GeofencePanel } from './GeofencePanel';
 export { StationFleetPanel } from './StationFleetPanel';
+export { TrustEvidence } from './TrustEvidence';
 export type { Geofence } from './GeofencePanel';
 export { RangeRings, AirportMarkers } from './MapOverlays';
