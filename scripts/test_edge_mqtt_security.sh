@@ -14,11 +14,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
-EDGE_SECRET_DIR="$scratch_dir" EDGE_RUNTIME_UID="$(id -u)" EDGE_RUNTIME_GID="$(id -g)" \
+EDGE_SECRET_DIR="$scratch_dir" \
   "${project_root}/scripts/provision_edge_mqtt.sh" "$broker_name"
 docker network create "$network_name" >/dev/null
 docker run -d --name "$broker_name" --network "$network_name" \
-  --user "$(id -u):$(id -g)" \
   -v "${project_root}/edge/mosquitto/config:/mosquitto/config:ro" \
   -v "${scratch_dir}:/mosquitto/secrets:ro" "$image" >/dev/null
 
@@ -28,10 +27,15 @@ for _attempt in $(seq 1 30); do
   fi
   sleep 1
 done
-docker logs "$broker_name" 2>&1 | grep -q "mosquitto version .* running"
+if ! docker logs "$broker_name" 2>&1 | grep -q "mosquitto version .* running"; then
+  docker logs "$broker_name" >&2
+  exit 1
+fi
 
-node_password="$(tr -d '\r\n' < "${scratch_dir}/roof-node-1.password")"
-consumer_password="$(tr -d '\r\n' < "${scratch_dir}/station-consumer.password")"
+node_password="$(docker run --rm --user 0:0 -v "${scratch_dir}:/work:ro" \
+  --entrypoint /bin/cat "$image" /work/roof-node-1.password | tr -d '\r\n')"
+consumer_password="$(docker run --rm --user 0:0 -v "${scratch_dir}:/work:ro" \
+  --entrypoint /bin/cat "$image" /work/station-consumer.password | tr -d '\r\n')"
 client=(docker run --rm --network "$network_name" -v "${scratch_dir}/ca.crt:/ca.crt:ro" "$image")
 
 # Authenticated station can write its own telemetry topic over verified TLS.
