@@ -2,6 +2,19 @@
 
 Real-time aircraft tracking and anomaly detection system using Software Defined Radio (SDR).
 
+[![CI](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/workflows/ci.yml)
+
+## Metrics Summary
+
+| Metric | Value | Evidence |
+|--------|-------|----------|
+| Backend test coverage | 170 tests passing | CI `backend` job |
+| Kinematic detection (abrupt) | 100% | Held-out 22 sessions |
+| Kinematic detection (gradual) | 100% with window | Held-out 22 sessions |
+| Generated clean FP rate | 0% | 88 control scenarios |
+| ML baseline F1 | 0.9333 | Held-out evaluation |
+| Dependency vulnerabilities | 0 | pip-audit + npm audit |
+
 ## Architecture
 
 ```
