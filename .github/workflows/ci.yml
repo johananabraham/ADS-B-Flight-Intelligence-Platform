@@ -129,6 +129,19 @@ jobs:
       - name: Prove MQTT TLS, authentication, and least-privilege ACLs
         run: scripts/test_edge_mqtt_security.sh
 
+  esp32-firmware:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare non-production CA fixture
+        run: cp firmware/esp32-station/certs/broker_ca.pem.example firmware/esp32-station/certs/broker_ca.pem
+      - name: Compile generic ESP32 station firmware with ESP-IDF 6.0.2
+        run: >-
+          docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp
+          -v "$PWD:/project" -w /project/firmware/esp32-station
+          espressif/idf:v6.0.2 idf.py set-target esp32 build
+
   demo:
     needs: [backend, frontend, decoder]
     runs-on: ubuntu-latest
