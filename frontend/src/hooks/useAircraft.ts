@@ -4,6 +4,7 @@ import {
   fetchFlightTrail,
   fetchStats,
   fetchStations,
+  fetchTrustAssessment,
   fetchAnomalies,
   fetchCriticalAnomalies,
   fetchCorroboration,
@@ -85,5 +86,15 @@ export function useStations() {
     queryKey: ['stations'],
     queryFn: fetchStations,
     refetchInterval: 5000,
+  });
+}
+
+export function useTrustAssessment(icao: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ['trustAssessment', icao],
+    queryFn: () => fetchTrustAssessment(icao!),
+    enabled: !!icao && enabled,
+    refetchInterval: 15000,
+    retry: false,
   });
 }

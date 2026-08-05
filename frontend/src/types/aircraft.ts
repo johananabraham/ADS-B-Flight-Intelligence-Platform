@@ -125,6 +125,32 @@ export interface CorroborationEvidence {
   altitude_difference_ft: number | null;
 }
 
+export type TrustState =
+  | 'TRUSTED'
+  | 'QUESTIONABLE'
+  | 'LOW_CONFIDENCE'
+  | 'INSUFFICIENT_DATA';
+
+export interface TrustComponent {
+  component: 'PAIR_KINEMATICS' | 'WINDOW_KINEMATICS' | 'CORROBORATION' | 'STATION' | 'ML';
+  state: string;
+  policy_version: string | null;
+  evaluated_at: string | null;
+  age_seconds: number | null;
+  evidence_ids: string[];
+  reasons: string[];
+}
+
+export interface TrustAssessment {
+  state: TrustState;
+  policy_version: string;
+  icao_hex: string;
+  evaluated_at: string;
+  reasons: string[];
+  components: TrustComponent[];
+  numeric_score: null;
+}
+
 export interface Stats {
   active_aircraft: number;
   total_positions_today: number;
