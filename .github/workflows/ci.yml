@@ -121,6 +121,14 @@ jobs:
         working-directory: frontend
         run: npm audit --audit-level=high
 
+  edge-transport-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prove MQTT TLS, authentication, and least-privilege ACLs
+        run: scripts/test_edge_mqtt_security.sh
+
   demo:
     needs: [backend, frontend, decoder]
     runs-on: ubuntu-latest

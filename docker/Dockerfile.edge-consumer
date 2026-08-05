@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r /app/backend-requirements.txt
 COPY backend/ /app/backend/
 COPY services/edge_telemetry/ /app/services/edge_telemetry/
 
-RUN useradd --create-home --uid 10001 appuser \
+RUN useradd --create-home --uid 1883 appuser \
     && chown -R appuser:appuser /app
 USER appuser
 

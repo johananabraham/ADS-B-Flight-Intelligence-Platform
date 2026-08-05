@@ -54,3 +54,7 @@ data/
 
 # Local RF captures may contain sensitive receiver/aircraft location data
 /calibration/local/
+
+# Generated edge credentials and private keys
+/edge/mosquitto/secrets/*
+!/edge/mosquitto/secrets/README.md
