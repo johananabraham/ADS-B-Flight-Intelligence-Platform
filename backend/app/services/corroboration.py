@@ -27,6 +27,7 @@ class CorroborationPolicy:
 
     version: str = "1.0"
     max_age_seconds: float = 30.0
+    max_future_skew_seconds: float = 2.0
     max_time_delta_seconds: float = 15.0
     max_position_distance_nm: float = 3.0
     max_altitude_difference_ft: int = 1_500
@@ -34,6 +35,7 @@ class CorroborationPolicy:
     def __post_init__(self) -> None:
         values = (
             self.max_age_seconds,
+            self.max_future_skew_seconds,
             self.max_time_delta_seconds,
             self.max_position_distance_nm,
             self.max_altitude_difference_ft,
@@ -109,6 +111,8 @@ def compare_observations(
     if (
         local_age > policy.max_age_seconds
         or external_age > policy.max_age_seconds
+        or local_age < -policy.max_future_skew_seconds
+        or external_age < -policy.max_future_skew_seconds
         or time_delta > policy.max_time_delta_seconds
     ):
         return _result(
@@ -199,9 +203,7 @@ def _result(
     )
 
 
-def _icao_hex(
-    local: TrackObservation | None, external: TrackObservation | None
-) -> str:
+def _icao_hex(local: TrackObservation | None, external: TrackObservation | None) -> str:
     observation = local or external
     if observation is None:
         raise ValueError("at least one observation is required")
@@ -218,10 +220,9 @@ def _position_distance_nm(
     delta_lat = lat2 - lat1
     delta_lon = radians(external.longitude - local.longitude)  # type: ignore[operator]
     haversine = (
-        sin(delta_lat / 2) ** 2
-        + cos(lat1) * cos(lat2) * sin(delta_lon / 2) ** 2
+        sin(delta_lat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(delta_lon / 2) ** 2
     )
-    return 2 * earth_radius_nm * asin(sqrt(haversine))
+    return 2 * earth_radius_nm * asin(sqrt(min(1.0, max(0.0, haversine))))
 
 
 def _altitude_difference_ft(

@@ -13,6 +13,7 @@ from app.services.corroboration import (
     CorroborationState,
     compare_observations,
 )
+from app.services.corroboration_service import CorroborationService
 from app.services.external_observations import (
     ExternalFetchStatus,
     GeographicBounds,
@@ -37,9 +38,15 @@ def observation(
     return TrackObservation(
         provenance=ObservationProvenance(
             source_type=source_type,
-            source_id="local" if source_type is not ObservationSourceType.EXTERNAL_FEED else "external",
-            receiver_id="receiver-1" if source_type is ObservationSourceType.LIVE_RF else None,
-            provider="test-provider" if source_type is ObservationSourceType.EXTERNAL_FEED else None,
+            source_id="local"
+            if source_type is not ObservationSourceType.EXTERNAL_FEED
+            else "external",
+            receiver_id="receiver-1"
+            if source_type is ObservationSourceType.LIVE_RF
+            else None,
+            provider="test-provider"
+            if source_type is ObservationSourceType.EXTERNAL_FEED
+            else None,
         ),
         icao_hex=icao_hex,
         observed_at=observed_at,
@@ -53,9 +60,24 @@ def observation(
 @pytest.mark.parametrize(
     ("local", "external", "available", "expected"),
     [
-        (observation(ObservationSourceType.LIVE_RF), None, True, CorroborationState.LOCAL_ONLY),
-        (None, observation(ObservationSourceType.EXTERNAL_FEED), True, CorroborationState.EXTERNAL_ONLY),
-        (observation(ObservationSourceType.LIVE_RF), None, False, CorroborationState.UNAVAILABLE),
+        (
+            observation(ObservationSourceType.LIVE_RF),
+            None,
+            True,
+            CorroborationState.LOCAL_ONLY,
+        ),
+        (
+            None,
+            observation(ObservationSourceType.EXTERNAL_FEED),
+            True,
+            CorroborationState.EXTERNAL_ONLY,
+        ),
+        (
+            observation(ObservationSourceType.LIVE_RF),
+            None,
+            False,
+            CorroborationState.UNAVAILABLE,
+        ),
     ],
 )
 def test_presence_and_source_health_states(local, external, available, expected):
@@ -120,6 +142,20 @@ def test_old_or_temporally_misaligned_evidence_is_stale():
     assert result.state is CorroborationState.STALE
 
 
+def test_future_dated_evidence_beyond_clock_skew_is_stale():
+    result = compare_observations(
+        local=observation(
+            ObservationSourceType.LIVE_RF,
+            observed_at=NOW + timedelta(seconds=3),
+        ),
+        external=observation(ObservationSourceType.EXTERNAL_FEED),
+        evaluated_at=NOW,
+        source_available=True,
+    )
+
+    assert result.state is CorroborationState.STALE
+
+
 def test_missing_comparable_measurements_does_not_claim_corroboration():
     result = compare_observations(
         local=observation(
@@ -139,6 +175,26 @@ def test_missing_comparable_measurements_does_not_claim_corroboration():
     )
 
     assert result.state is CorroborationState.STALE
+
+
+@pytest.mark.asyncio
+async def test_service_does_not_query_global_feed_without_local_position():
+    class SourceThatMustNotBeCalled:
+        async def fetch_states(self, **_kwargs):
+            raise AssertionError("external source should not be queried")
+
+    local = observation(
+        ObservationSourceType.LIVE_RF,
+        latitude=None,
+        longitude=None,
+        altitude_ft=10_000,
+    )
+    service = CorroborationService(SourceThatMustNotBeCalled())
+
+    result = await service.corroborate(local, evaluated_at=NOW)
+
+    assert result.state is CorroborationState.STALE
+    assert "no complete position" in result.explanation
 
 
 def opensky_row(*, observed_at: datetime = NOW) -> list[object]:
@@ -216,9 +272,7 @@ async def test_opensky_cache_prevents_duplicate_provider_request():
 
 @pytest.mark.asyncio
 async def test_rate_limit_is_unavailable_and_honors_retry_header():
-    response = httpx.Response(
-        429, headers={"X-Rate-Limit-Retry-After-Seconds": "120"}
-    )
+    response = httpx.Response(429, headers={"X-Rate-Limit-Retry-After-Seconds": "120"})
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(lambda request: response)
     ) as client:
@@ -266,7 +320,9 @@ async def test_oauth_client_credentials_token_is_cached_and_sent_as_bearer():
         nonlocal auth_requests, api_authorization
         if request.url.path.endswith("/token"):
             auth_requests += 1
-            return httpx.Response(200, json={"access_token": "test-token", "expires_in": 1800})
+            return httpx.Response(
+                200, json={"access_token": "test-token", "expires_in": 1800}
+            )
         api_authorization = request.headers.get("Authorization")
         return httpx.Response(200, json={"states": [opensky_row()]})
 

@@ -6,7 +6,12 @@ from datetime import datetime, timezone
 from typing import Protocol
 
 from ..schemas.observation import TrackObservation
-from .corroboration import CorroborationPolicy, CorroborationResult, compare_observations
+from .corroboration import (
+    CorroborationPolicy,
+    CorroborationResult,
+    CorroborationState,
+    compare_observations,
+)
 from .external_observations import (
     ExternalFetchResult,
     ExternalFetchStatus,
@@ -35,7 +40,9 @@ class CorroborationService:
         search_radius_degrees: float = 0.25,
     ) -> None:
         if search_radius_degrees <= 0 or search_radius_degrees > 2.5:
-            raise ValueError("search radius must be greater than zero and at most 2.5 degrees")
+            raise ValueError(
+                "search radius must be greater than zero and at most 2.5 degrees"
+            )
         self._source = source
         self._policy = policy
         self._search_radius_degrees = search_radius_degrees
@@ -52,12 +59,16 @@ class CorroborationService:
     ) -> CorroborationResult:
         now = evaluated_at or datetime.now(timezone.utc)
         if local.latitude is None or local.longitude is None:
-            return compare_observations(
-                local=local,
-                external=None,
+            return CorroborationResult(
+                state=CorroborationState.STALE,
+                policy_version=self._policy.version,
+                icao_hex=local.icao_hex,
                 evaluated_at=now,
-                source_available=True,
-                policy=self._policy,
+                explanation=(
+                    "The local observation has no complete position for a bounded "
+                    "external comparison."
+                ),
+                local_observation_id=str(local.observation_id),
             )
         fetched = await self._source.fetch_states(
             bounds=self._bounds_around(local.latitude, local.longitude),
