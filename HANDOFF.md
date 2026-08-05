@@ -4,7 +4,7 @@ Last updated: 2026-08-04
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/interpretable-ml-baselines`
+Current branch: `codex/cross-source-corroboration`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -493,11 +493,33 @@ Implemented on `codex/interpretable-ml-baselines`:
   it with `scripts/run_ml_baselines.py --check`. Promotion remains explicitly
   `OFFLINE_EVALUATION_ONLY`; no production service or UI consumes model output.
 
+Implemented on `codex/cross-source-corroboration`:
+
+- A provider-independent comparison engine produces `CORROBORATED`, `LOCAL_ONLY`,
+  `EXTERNAL_ONLY`, `CONFLICTING`, `STALE`, and `UNAVAILABLE` using versioned ICAO,
+  freshness, time, position, and altitude association rules.
+- The OpenSky adapter uses the current `/states/all` contract, bounded geographic
+  queries, optional OAuth2 client credentials, normalized external provenance,
+  caching, minimum poll intervals, retry headers, exponential backoff, and a circuit
+  breaker. Provider health is available separately from aircraft evidence.
+- `GET /api/v1/corroboration/{icao_hex}` compares the latest provenance-bearing local
+  observation; `GET /api/v1/corroboration/source-health` reports adapter health.
+  OpenSky is disabled by default and disabled/outage states are `UNAVAILABLE`, not
+  suspicious behavior.
+- The aircraft detail UI requests external evidence only when the operator expands
+  the cross-source panel and refreshes every 15 seconds to limit provider usage.
+- The reviewed offline artifact covers 720 synthetic comparisons over a four-hour
+  fixture with 120 examples of every state and zero classification mismatches. It
+  explicitly records zero live requests, zero captured-RF sessions, and no human
+  conflict review; its synthetic coverage/latency values are not field metrics.
+- CI reproduces `evaluation/results/corroboration_offline_v1.json` with
+  `scripts/run_corroboration_evaluation.py --check`.
+
 Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
-- Production ML, external corroboration, aircraft-type-specific performance
-  envelopes, or fused trust scoring.
+- Production ML, live multi-hour corroboration evidence, aircraft-type-specific
+  performance envelopes, or fused trust scoring.
 
 ## 3. Known Risks and Technical Debt
 
@@ -539,6 +561,12 @@ Not implemented in these checkpoints:
 - Offline learned models improve generated held-out F1 but rely heavily on
   deterministic and generator-adjacent features. They have no reviewed captured-RF
   alert-burden evidence and must not be described or deployed as field detectors.
+- Cross-source classification and provider-failure behavior are verified offline,
+  but no live OpenSky comparison has been run and no real conflicts have been
+  manually reviewed. Do not claim measured external coverage, latency, availability,
+  or demonstrated live corroboration yet.
+- OpenSky is documented for research/non-commercial use and may block hyperscaler
+  traffic. Review current terms and deployment topology before enabling it publicly.
 - Simulator aircraft are fictional. Do not describe demo traffic as captured or
   live traffic.
 - The existing `graphify-out/` directory contains cache fragments but no usable
@@ -1229,8 +1257,8 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
    publish only legally shareable manifests or sanitized aggregate metrics.
 5. Convert the offline episode grouping into a persisted operator-alert suppression
    policy only after the reviewed routine-RF reports support its timing.
-6. Implement Phase 6 cross-source corroboration against a permitted adapter and
-   preserve `UNAVAILABLE` as source health—not suspicious behavior.
+6. With permitted OpenSky access, run the Phase 6 multi-hour live comparison and
+   manually review sampled conflicts; preserve `UNAVAILABLE` as source health.
 7. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
    subtree after confirming the board model and available sensors.
 8. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
@@ -1293,6 +1321,10 @@ Use this when starting a new Codex chat:
 > session-isolated logistic/tree/forest comparison is offline-only on
 > `codex/interpretable-ml-baselines`: generated held-out F1 improves from 0.7692
 > rules-only to 0.9333, but all models miss plausible ghosts and no captured-RF
-> alert burden exists. Collect and manually review multiple private RF sessions
+> alert burden exists. The six-state comparison engine, bounded resilient OpenSky
+> adapter, API/UI evidence, source health, and four-hour offline regression are on
+> `codex/cross-source-corroboration`. That regression performs zero live provider
+> requests; a permitted multi-hour run and human conflict review remain pending.
+> Collect and manually review multiple private RF sessions
 > before changing thresholds or enabling production alerts. Deployment is planned
 > for Section 5 Phase 10; public production deployment is not complete today.
