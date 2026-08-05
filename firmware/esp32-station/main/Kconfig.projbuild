@@ -1,0 +1,38 @@
+menu "ADS-B edge station"
+
+config EDGE_NODE_ID
+    string "Station node ID"
+    default "roof-node-1"
+    help
+        Must match the station's MQTT username and broker ACL entry.
+
+config EDGE_FIRMWARE_VERSION
+    string "Firmware version reported in telemetry"
+    default "0.1.0"
+
+config EDGE_WIFI_SSID
+    string "Wi-Fi SSID"
+    default "replace-me"
+
+config EDGE_WIFI_PASSWORD
+    string "Wi-Fi password"
+    default "replace-me"
+
+config EDGE_MQTT_URI
+    string "TLS MQTT URI"
+    default "mqtts://mqtt:8883"
+
+config EDGE_MQTT_USERNAME
+    string "MQTT username"
+    default "roof-node-1"
+
+config EDGE_MQTT_PASSWORD
+    string "MQTT password"
+    default "replace-me"
+
+config EDGE_TELEMETRY_INTERVAL_SECONDS
+    int "Telemetry interval in seconds"
+    range 5 300
+    default 15
+
+endmenu

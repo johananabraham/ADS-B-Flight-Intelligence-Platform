@@ -54,3 +54,13 @@ data/
 
 # Local RF captures may contain sensitive receiver/aircraft location data
 /calibration/local/
+
+# Generated edge credentials and private keys
+/edge/mosquitto/secrets/*
+!/edge/mosquitto/secrets/README.md
+
+# ESP-IDF generated configuration, build output, and provisioned CA
+/firmware/esp32-station/build/
+/firmware/esp32-station/sdkconfig
+/firmware/esp32-station/sdkconfig.old
+/firmware/esp32-station/certs/broker_ca.pem

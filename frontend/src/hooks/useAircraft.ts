@@ -3,6 +3,8 @@ import {
   fetchAircraft,
   fetchFlightTrail,
   fetchStats,
+  fetchStations,
+  fetchTrustAssessment,
   fetchAnomalies,
   fetchCriticalAnomalies,
   fetchCorroboration,
@@ -73,6 +75,24 @@ export function useCorroboration(icao: string | null, enabled: boolean) {
   return useQuery({
     queryKey: ['corroboration', icao],
     queryFn: () => fetchCorroboration(icao!),
+    enabled: !!icao && enabled,
+    refetchInterval: 15000,
+    retry: false,
+  });
+}
+
+export function useStations() {
+  return useQuery({
+    queryKey: ['stations'],
+    queryFn: fetchStations,
+    refetchInterval: 5000,
+  });
+}
+
+export function useTrustAssessment(icao: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ['trustAssessment', icao],
+    queryFn: () => fetchTrustAssessment(icao!),
     enabled: !!icao && enabled,
     refetchInterval: 15000,
     retry: false,

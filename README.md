@@ -207,6 +207,51 @@ A permitted multi-hour live run and human review of real conflicts remain requir
 See `docs/corroboration-evaluation-v1.md` for the exact evidence boundary and current
 OpenSky operational constraints.
 
+### Secure edge-station telemetry
+
+An ESP32 can report receiver-station compute and connectivity health without an SDR
+attached to the ESP32 itself. The TLS-only Mosquitto path, QoS 1 consumer, immutable
+PostgreSQL events, fleet API, and station dashboard are available with:
+
+```bash
+scripts/provision_edge_mqtt.sh mqtt
+docker compose -f docker-compose.yml -f docker-compose.edge.yml up --build -d
+```
+
+For a hardware-free transport demo, publish correctly labeled simulator heartbeats:
+
+```bash
+STATION_NODE_ID=roof-node-1 \
+STATION_MQTT_PASSWORD_FILE=edge/mosquitto/secrets/roof-node-1.password \
+MQTT_CA_CERT=edge/mosquitto/secrets/ca.crt \
+python3 -m services.edge_telemetry.simulator
+```
+
+Open **STATIONS** in the top status bar. The panel distinguishes healthy, degraded,
+stale, offline, and missing data, but it does not claim to measure ADS-B RF quality.
+The ESP-IDF firmware and flashing instructions are in
+`firmware/esp32-station/README.md`. Run the broker authorization proof with
+`scripts/test_edge_mqtt_security.sh`; it requires Docker.
+
+The checked-in station-health artifact is an offline 7/7 classification regression,
+not physical outage evidence. ESP32 power/Wi-Fi loss and queue recovery still need
+to be measured on hardware before making a resilience claim.
+
+### Explainable trust assessment
+
+Expand **EXPLAINABLE TRUST STATE** for a selected aircraft to inspect pairwise and
+windowed motion checks, cross-source corroboration, station health, and the status of
+the offline-only ML candidate. The API is:
+
+```bash
+curl http://localhost:8000/api/v1/trust/ABC123
+```
+
+It returns `TRUSTED`, `QUESTIONABLE`, `LOW_CONFIDENCE`, or `INSUFFICIENT_DATA` with
+component policy versions, ages, reasons, and evidence identifiers. It intentionally
+returns `numeric_score: null`: a combined score will not be published until it is
+calibrated against reviewed field evidence.
+
 ### Real receiver calibration
 
 The repository now includes an offline workflow for exporting a bounded `LIVE_RF`

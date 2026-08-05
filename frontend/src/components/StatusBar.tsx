@@ -12,6 +12,8 @@ interface StatusBarProps {
   onToggleOverlays: () => void;
   showFilters: boolean;
   onToggleFilters: () => void;
+  stationsOpen: boolean;
+  onToggleStations: () => void;
   connected: boolean;
   stats: Stats | null;
   lastUpdate: Date | null;
@@ -28,6 +30,8 @@ export function StatusBar({
   onToggleOverlays,
   showFilters,
   onToggleFilters,
+  stationsOpen,
+  onToggleStations,
   connected,
   stats,
   lastUpdate,
@@ -178,6 +182,23 @@ export function StatusBar({
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={onToggleStations}
+            aria-pressed={stationsOpen}
+            className={clsx(
+              'flex min-h-11 items-center gap-2 rounded px-3 text-xs font-medium transition-colors',
+              stationsOpen
+                ? 'bg-accent-primary/20 text-accent-primary'
+                : 'bg-surface-3 text-slate-400 hover:text-slate-200'
+            )}
+          >
+            <svg aria-hidden="true" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 18v3m-4 0h8M8.5 15.5a5 5 0 017 0M5.5 12.5a9 9 0 0113 0M12 9h.01" />
+            </svg>
+            <span>STATIONS</span>
+          </button>
 
           {/* Alerts toggle */}
           <button

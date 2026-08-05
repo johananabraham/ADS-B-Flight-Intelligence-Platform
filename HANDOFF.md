@@ -4,7 +4,7 @@ Last updated: 2026-08-04
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/cross-source-corroboration`
+Current branch: `codex/edge-station-telemetry`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -515,11 +515,56 @@ Implemented on `codex/cross-source-corroboration`:
 - CI reproduces `evaluation/results/corroboration_offline_v1.json` with
   `scripts/run_corroboration_evaluation.py --check`.
 
+Implemented on `codex/edge-station-telemetry`:
+
+- Versioned MQTT topics and strict telemetry/presence contracts preserve node,
+  firmware, boot, sequence, timing, queue, reconnect, Wi-Fi, heap, and watchdog
+  evidence. PostgreSQL stores immutable events plus one current node record.
+- The Paho consumer uses verified TLS 1.2+, hostname validation, QoS 1, persistent
+  sessions, manual acknowledgement after database commit, bounded reconnect delay,
+  and file-backed credentials. Poison messages are acknowledged and logged while
+  database failures remain unacknowledged for broker redelivery.
+- Mosquitto is pinned to `2.0.22-openssl`, listens only on TLS port 8883, rejects
+  anonymous clients, and enforces explicit per-node publish and read-only consumer
+  ACLs. `scripts/test_edge_mqtt_security.sh` is the hosted proof for TLS,
+  authentication, cross-node denial, and consumer publish denial.
+- Generic ESP32 ESP-IDF 6.0.2 firmware compiles in hosted CI and implements SNTP,
+  certificate validation, per-node credentials, QoS 1, retained presence and LWT,
+  bounded store-and-forward, exponential Wi-Fi recovery, task watchdog, and honest
+  compute/connectivity telemetry. It does not receive or assess 1090 MHz RF.
+- The station API and React fleet panel expose `HEALTHY`, `DEGRADED`, `STALE`,
+  `OFFLINE`, and `NO_DATA` with exact reasons and evidence IDs. The offline checked-in
+  health artifact classifies 7/7 controlled cases and explicitly records zero
+  physical sessions and zero live MQTT sessions.
+- The hardware-free MQTT simulator is labeled `0.1.0+simulator`. Physical power-loss,
+  Wi-Fi-loss, queue recovery, and measured recovery-time evidence still require the
+  user's ESP32 and network.
+
+Phase 8 foundation on the same branch:
+
+- A versioned, deterministic trust policy combines pair kinematics, window
+  kinematics, corroboration, and station state without hiding components behind an
+  uncalibrated numeric score. Strong contradictions produce `QUESTIONABLE`; missing
+  required evidence produces `INSUFFICIENT_DATA`; weak source/station evidence
+  produces `LOW_CONFIDENCE`; only fully supportive evidence produces `TRUSTED`.
+- `GET /api/v1/trust/{icao_hex}` returns the overall state plus every component's
+  state, policy, evidence age, reasons, and identifiers. The offline ML candidate is
+  shown as `NOT_PROMOTED` and does not affect production state.
+- The aircraft detail UI displays the component timeline and explicitly explains
+  why no numeric score is presented. Seventeen focused policy/API tests and the
+  156-test local backend suite pass.
+- GitHub Actions run `30969158892` passed every job at commit `68bae5c`: backend,
+  all checked-in evaluation baselines, migration validation, frontend lint/build,
+  dependency audits, C++ decoder build/tests, ESP-IDF 6.0.2 firmware compile,
+  delivery-based MQTT TLS/authentication/ACL proof, and the complete Docker
+  demo/recorded-replay/kinematic-attack verification path.
+
 Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
 - Production ML, live multi-hour corroboration evidence, aircraft-type-specific
-  performance envelopes, or fused trust scoring.
+  performance envelopes, persisted operator trust annotations/exports, or a
+  field-calibrated numeric trust score.
 
 ## 3. Known Risks and Technical Debt
 
@@ -1259,9 +1304,11 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
    policy only after the reviewed routine-RF reports support its timing.
 6. With permitted OpenSky access, run the Phase 6 multi-hour live comparison and
    manually review sampled conflicts; preserve `UNAVAILABLE` as source health.
-7. Begin ESP32 heartbeat firmware in a separate `firmware/esp32-sensor-node/`
-   subtree after confirming the board model and available sensors.
-8. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
+7. Flash the generic `firmware/esp32-station/` build after confirming the exact
+   board model, then execute and record the physical outage/recovery matrix.
+8. Complete Phase 8 persistence and operator acknowledge/annotate/filter/export
+   flows, then run a small usability review with another developer.
+9. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
    harness exist.
 
 ## 11. Handoff Rules for the Next Engineer or Agent

@@ -195,6 +195,7 @@ a:focus-visible {
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
   .radar-sweep,
   .pulse-live,
   .scan-line {
