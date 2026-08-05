@@ -4,7 +4,7 @@ Last updated: 2026-08-04
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/edge-station-telemetry`
+Current branch: `codex/operator-trust-workflow`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -540,7 +540,8 @@ Implemented on `codex/edge-station-telemetry`:
   Wi-Fi-loss, queue recovery, and measured recovery-time evidence still require the
   user's ESP32 and network.
 
-Phase 8 foundation on the same branch:
+Phase 8 foundation was introduced on `codex/edge-station-telemetry` and the operator
+workflow is implemented on `codex/operator-trust-workflow`:
 
 - A versioned, deterministic trust policy combines pair kinematics, window
   kinematics, corroboration, and station state without hiding components behind an
@@ -551,8 +552,28 @@ Phase 8 foundation on the same branch:
   state, policy, evidence age, reasons, and identifiers. The offline ML candidate is
   shown as `NOT_PROMOTED` and does not affect production state.
 - The aircraft detail UI displays the component timeline and explicitly explains
-  why no numeric score is presented. Seventeen focused policy/API tests and the
-  156-test local backend suite pass.
+  why no numeric score is presented.
+- Immutable `trust_assessments` and append-only `trust_operator_actions` preserve
+  the evidence snapshot and operator activity. Stable UUIDv5 assessment identities
+  and caller-provided action IDs make retries idempotent.
+- `POST /api/v1/trust/{icao_hex}/assessments` computes evidence on the server;
+  clients cannot submit a fabricated component result. `/api/v1/trust-events/`
+  supports history filtering, detail inspection, acknowledge/annotate actions, and
+  JSON export.
+- The UI persists the expanded assessment, exposes 44-pixel operator controls,
+  filters history by state, and presents explicit loading, empty, and error states.
+  It warns that actor labels are self-asserted until authentication/RBAC exists.
+- A full-application route contract prevents FastAPI router-registration regressions.
+  This was added after live Docker validation found that a stale host Uvicorn process
+  could hide the current container and initially produce misleading 404 results.
+- Local verification at commit `1101c47` passed 170 backend tests, Python lint,
+  frontend lint/build, both declared Python requirements audits, npm audit, tracked
+  secret-pattern scan, and the Docker-backed trust workflow. The live proof produced
+  one stable `QUESTIONABLE` assessment and one idempotent annotation action.
+- GitHub Actions run `30971117992` passed every job at commit `1101c47`, including
+  security audits, C++ decoder tests, ESP-IDF firmware compilation, MQTT transport
+  authorization proof, migrations, recorded replay provenance, exact kinematic
+  evidence, and the persisted trust/operator workflow in a clean Docker environment.
 - GitHub Actions run `30969158892` passed every job at commit `68bae5c`: backend,
   all checked-in evaluation baselines, migration validation, frontend lint/build,
   dependency audits, C++ decoder build/tests, ESP-IDF 6.0.2 firmware compile,
@@ -563,8 +584,10 @@ Not implemented in these checkpoints:
 
 - Replacement of the existing mutable aircraft-state ingestion path.
 - Production ML, live multi-hour corroboration evidence, aircraft-type-specific
-  performance envelopes, persisted operator trust annotations/exports, or a
-  field-calibrated numeric trust score.
+  performance envelopes, authenticated operator identities/RBAC, or a field-calibrated
+  numeric trust score.
+- A second-developer usability review. Automated localhost browser review was blocked
+  by the browser security policy, so no visual-review claim is made for this checkpoint.
 
 ## 3. Known Risks and Technical Debt
 
@@ -583,7 +606,12 @@ Not implemented in these checkpoints:
   smaller transactions before active/active ingestion.
 - Authentication, authorization, and rate limiting remain unimplemented.
 - The local host still has Node 18.12.1, which is too old for the upgraded frontend;
-  use the Node 20.19 container or install Node 20.19+ for host-side frontend work.
+  the build currently completes with a warning, while hosted CI uses a supported
+  Node version. Use the Node 20.19 container or install Node 20.19+ for host-side
+  frontend work.
+- GitHub Actions reports that several `actions/*@v4`/`@v5` releases still target the
+  deprecated Node 20 action runtime and are temporarily forced onto Node 24. Upgrade
+  those actions when their maintainers publish compatible major versions.
 - Recorded replay startup settings still come from environment variables. The
   control API is intentionally internal and unauthenticated; add authorization and
   audit logging before exposing operator controls in a public deployment.
@@ -1306,9 +1334,11 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
    manually review sampled conflicts; preserve `UNAVAILABLE` as source health.
 7. Flash the generic `firmware/esp32-station/` build after confirming the exact
    board model, then execute and record the physical outage/recovery matrix.
-8. Complete Phase 8 persistence and operator acknowledge/annotate/filter/export
-   flows, then run a small usability review with another developer.
-9. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
+8. Ask another developer to complete the Phase 8 usability script in
+   `docs/trust-operator-workflow-v1.md` and record whether they can explain a flagged
+   track without backend logs.
+9. Begin Phase 9 with idempotent NTSB/eCFR ingestion manifests and validation reports.
+10. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
    harness exist.
 
 ## 11. Handoff Rules for the Next Engineer or Agent
