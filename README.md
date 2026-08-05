@@ -252,6 +252,21 @@ component policy versions, ages, reasons, and evidence identifiers. It intention
 returns `numeric_score: null`: a combined score will not be published until it is
 calibrated against reviewed field evidence.
 
+Expanding the panel persists the evidence snapshot as an immutable trust assessment.
+Operators can then acknowledge or annotate it, filter the event history, inspect the
+record, and export a JSON evidence bundle. Assessment and action retries are
+idempotent, so a retried request does not create duplicate evidence. Run the complete
+Docker-backed proof with:
+
+```bash
+python3 scripts/verify_trust_workflow.py
+```
+
+Operator labels are currently **self-asserted**, not authenticated identities. This
+workflow is suitable for local engineering validation, but public deployment remains
+blocked on authentication, authorization, and an audit-retention policy. See
+`docs/trust-operator-workflow-v1.md` for the API and evidence boundaries.
+
 ### Real receiver calibration
 
 The repository now includes an offline workflow for exporting a bounded `LIVE_RF`
