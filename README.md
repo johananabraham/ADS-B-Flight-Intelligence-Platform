@@ -389,6 +389,28 @@ demo, clean replay, and kinematic attack verifiers. Security audits are retained
 a non-blocking job so code-quality failures remain distinguishable from newly
 published dependency advisories.
 
+## Claims and Evidence
+
+| Claim | Evidence | Verification |
+|-------|----------|--------------|
+| 170+ backend tests pass | `pytest backend/tests/` | CI `backend` job |
+| C++ decoder matches dump1090 | `decoder/docs/validation-results.md` | CI `decoder` job |
+| Zero dependency vulnerabilities | pip-audit + npm audit | CI `security` job |
+| Kinematic rules detect 100% abrupt attacks | `evaluation/results/kinematic_rules_baseline_v1.json` | CI baseline gate |
+| Window rule closes gradual-drift gap | `evaluation/results/windowed_trajectory_baseline_v1.json` | CI baseline gate |
+| Cross-source corroboration 6 states verified | `evaluation/results/corroboration_offline_v1.json` | CI baseline gate |
+| Station health 7/7 classifications | `evaluation/results/station_health_offline_v1.json` | CI baseline gate |
+| ML baselines improve F1 to 0.9333 | `evaluation/results/ml_baselines_v1.json` | CI baseline gate |
+| MQTT TLS + ACLs enforced | `scripts/test_edge_mqtt_security.sh` | CI `edge-transport-security` job |
+| ESP32 firmware compiles | ESP-IDF 6.0.2 docker build | CI `esp32-firmware` job |
+| Demo verifier passes | `scripts/verify_demo.py` | CI `demo` job |
+| Trust workflow persists correctly | `scripts/verify_trust_workflow.py` | CI `demo` job |
+
+**Not yet verified:**
+- Real RF capture alert rate (pending private captures)
+- Live OpenSky corroboration (pending multi-hour comparison)
+- Physical ESP32 outage/recovery (pending hardware test)
+
 ## Project Structure
 
 ```

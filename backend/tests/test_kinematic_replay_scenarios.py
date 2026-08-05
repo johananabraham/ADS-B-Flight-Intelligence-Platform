@@ -10,7 +10,8 @@ from services.ingestion.ingest import parse_sbs_message
 from services.replay.recording import Recording
 
 
-RECORDINGS = Path("services/replay/recordings")
+# Find recordings directory relative to this file's location
+RECORDINGS = Path(__file__).resolve().parents[2] / "services" / "replay" / "recordings"
 
 
 def observations_from_recording(filename: str) -> dict[str, list[TrackObservation]]:

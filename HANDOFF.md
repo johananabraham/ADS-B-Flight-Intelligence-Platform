@@ -1,10 +1,12 @@
 # Project Handoff and Expansion Roadmap
 
-Last updated: 2026-08-04
+Last updated: 2026-08-05
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/operator-trust-workflow`
+Current branch: `main`
+
+All feature work consolidated: PRs #1-8 merged to main.
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
