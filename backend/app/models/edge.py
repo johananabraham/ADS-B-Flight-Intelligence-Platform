@@ -16,6 +16,12 @@ class SensorNodeRecord(Base):
     node_id: Mapped[str] = mapped_column(String(63), primary_key=True)
     firmware_version: Mapped[str | None] = mapped_column(String(50))
     boot_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    telemetry_message_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True)
+    )
+    presence_message_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True)
+    )
     last_sequence: Mapped[int | None] = mapped_column(Integer)
     first_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False

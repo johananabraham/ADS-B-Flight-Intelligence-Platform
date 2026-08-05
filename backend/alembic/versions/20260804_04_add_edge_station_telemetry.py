@@ -21,6 +21,8 @@ def upgrade() -> None:
             node_id VARCHAR(63) PRIMARY KEY,
             firmware_version VARCHAR(50),
             boot_id UUID,
+            telemetry_message_id UUID,
+            presence_message_id UUID,
             last_sequence INTEGER,
             first_seen_at TIMESTAMPTZ NOT NULL,
             last_received_at TIMESTAMPTZ NOT NULL,
