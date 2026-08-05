@@ -92,7 +92,9 @@ async def get_corroboration(
     if len(normalized) != 6 or any(
         character not in "0123456789ABCDEF" for character in normalized
     ):
-        raise HTTPException(status_code=422, detail="ICAO address must be six hexadecimal characters")
+        raise HTTPException(
+            status_code=422, detail="ICAO address must be six hexadecimal characters"
+        )
     record = (
         db.query(TrackObservationRecord)
         .filter(
