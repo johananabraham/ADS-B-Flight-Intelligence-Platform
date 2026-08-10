@@ -8,6 +8,7 @@ from typing import Any, Optional
 
 from openai import OpenAI
 
+from .citations import SourceCitation, extract_grounded_citations
 from .prompts import SYSTEM_PROMPT, CITATION_INSTRUCTIONS
 from .schemas import get_tool_definitions
 from .tools import TOOL_REGISTRY
@@ -27,6 +28,7 @@ class ToolCall:
 @dataclass
 class AgentResponse:
     answer: str
+    citations: tuple[SourceCitation, ...] = ()
     tool_calls: list[ToolCall] = field(default_factory=list)
     iterations: int = 0
     total_tokens: int = 0
@@ -100,8 +102,10 @@ async def run_agent(
                         "content": json.dumps(result, default=str),
                     })
             else:
+                answer = message.content or ""
                 return AgentResponse(
-                    answer=message.content or "",
+                    answer=answer,
+                    citations=extract_grounded_citations(answer, tool_calls_made),
                     tool_calls=tool_calls_made,
                     iterations=iteration + 1,
                     total_tokens=total_tokens,

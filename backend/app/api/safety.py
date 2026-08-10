@@ -1,7 +1,7 @@
 """Safety research API endpoints."""
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any, Optional
 
 from ..safety import (
@@ -10,6 +10,7 @@ from ..safety import (
     tool_query_incident_database,
     get_ingestion_status,
 )
+from ..safety.citations import SourceCitation
 
 router = APIRouter(prefix="/safety", tags=["safety"])
 
@@ -20,7 +21,8 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     answer: str
-    tool_calls: list[dict] = []
+    citations: list[SourceCitation] = Field(default_factory=list)
+    tool_calls: list[dict] = Field(default_factory=list)
     iterations: int = 0
     total_tokens: int = 0
     error: Optional[str] = None
@@ -32,6 +34,7 @@ async def safety_query(request: QueryRequest):
     result = await run_agent(request.query)
     return QueryResponse(
         answer=result.answer,
+        citations=list(result.citations),
         tool_calls=[{"name": tc.name, "arguments": tc.arguments, "duration_ms": tc.duration_ms} for tc in result.tool_calls],
         iterations=result.iterations,
         total_tokens=result.total_tokens,

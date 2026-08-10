@@ -133,12 +133,17 @@ def test_cfr_reference_does_not_repeat_part_number():
 async def test_regulation_search_formats_reference_and_perfect_score(monkeypatch):
     async def fake_search(**_kwargs):
         return {
+            "ids": ["14:91:91.103:2026-07-24"],
             "documents": ["Preflight action."],
             "metadatas": [
                 {
                     "cfr_part": 91,
                     "cfr_section": "91.103",
                     "section_title": "Preflight action",
+                    "effective_date": "2026-07-24",
+                    "source_url": "https://www.ecfr.gov/current/title-14/section-91.103",
+                    "source_sha256": "a" * 64,
+                    "source_run_id": "run-1",
                 }
             ],
             "distances": [0.0],
@@ -149,6 +154,9 @@ async def test_regulation_search_formats_reference_and_perfect_score(monkeypatch
     result = await tools.tool_search_faa_regulations("preflight", cfr_part=91)
 
     assert result["results"][0]["cfr_reference"] == "14 CFR 91.103"
+    assert result["results"][0]["document_id"] == "14:91:91.103:2026-07-24"
+    assert result["results"][0]["effective_date"] == "2026-07-24"
+    assert result["results"][0]["char_end"] == len("Preflight action.")
     assert result["results"][0]["relevance_score"] == 1.0
 
 
