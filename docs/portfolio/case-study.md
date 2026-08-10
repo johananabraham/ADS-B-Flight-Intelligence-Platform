@@ -137,12 +137,16 @@ The firmware compiles and the MQTT path is proven:
 
 ### 4. Safety Agent Data
 
-The ingestion pipeline exists but:
-- ✗ No complete NTSB dataset ingested
-- ✗ 30-case evaluation not yet run with real data
-- ✗ No citation verification
+The versioned ingestion and retrieval baseline now provide:
+- ✓ Dated eCFR Part 91 artifact lineage (286 parsed sections)
+- ✓ 15 engineering-reviewed official-source retrieval cases
+- ✓ Recall@3 0.9333, Recall@5 0.9333, MRR 0.8111
+- ✗ No complete authorized NTSB dataset ingestion
+- ✗ No structured-query exact-match or synthesis-quality baseline
+- ✗ No independent aviation-domain review or citation verification
 
-**Next step**: Run `ingest_safety_data.py`, then `run_safety_evaluation.py`, establish baseline.
+**Next step**: ingest an authorized NTSB export, add exact expected incident IDs and
+SQL counts, then conduct independent review before making broader quality claims.
 
 ## Metrics
 

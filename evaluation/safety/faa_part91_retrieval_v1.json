@@ -1,0 +1,149 @@
+{
+  "schema_version": "1.0",
+  "dataset_id": "faa-part91-retrieval-v1",
+  "evidence_class": "OFFICIAL_SOURCE_ENGINEERING_REVIEW",
+  "reviewed_on": "2026-08-10",
+  "source_artifact": {
+    "source_uri": "https://www.ecfr.gov/api/versioner/v1/full/2026-07-24/title-14.xml?part=91",
+    "source_sha256": "97321ffc39020b0e2713b8f0e79b1ce5df8a2a7a0490bc669e741dd9fa367997",
+    "effective_date": "2026-07-24",
+    "parsed_sections": 286
+  },
+  "cases": [
+    {
+      "case_id": "R01",
+      "question": "What preflight information must a pilot in command review before a flight?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.103:2026-07-24"],
+      "expected_citations": ["14 CFR 91.103"],
+      "review_note": "The dated section heading and text address preflight action."
+    },
+    {
+      "case_id": "R02",
+      "question": "What are the rules for safety belts, shoulder harnesses, and briefing passengers?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.107:2026-07-24"],
+      "expected_citations": ["14 CFR 91.107"],
+      "review_note": "The dated section explicitly covers safety belts and passenger notification."
+    },
+    {
+      "case_id": "R03",
+      "question": "Which operating rule defines aircraft right-of-way and see-and-avoid responsibilities?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.113:2026-07-24"],
+      "expected_citations": ["14 CFR 91.113"],
+      "review_note": "The dated section is titled Right-of-way rules."
+    },
+    {
+      "case_id": "R04",
+      "question": "What minimum safe altitudes apply over congested and other areas?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.119:2026-07-24"],
+      "expected_citations": ["14 CFR 91.119"],
+      "review_note": "The dated section defines minimum safe altitudes by operating area."
+    },
+    {
+      "case_id": "R05",
+      "question": "What operating rules apply near an airport in Class G airspace?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.126:2026-07-24"],
+      "expected_citations": ["14 CFR 91.126"],
+      "review_note": "The dated section covers operations on or near Class G airports."
+    },
+    {
+      "case_id": "R06",
+      "question": "How much fuel reserve is required for a VFR flight in an airplane?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.151:2026-07-24"],
+      "expected_citations": ["14 CFR 91.151"],
+      "review_note": "The dated section defines fuel requirements for flight in VFR conditions."
+    },
+    {
+      "case_id": "R07",
+      "question": "What flight visibility and cloud clearance minimums apply under basic VFR?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.155:2026-07-24"],
+      "expected_citations": ["14 CFR 91.155"],
+      "review_note": "The dated section is the basic VFR weather minimums table and rule."
+    },
+    {
+      "case_id": "R08",
+      "question": "What weather minimums and clearance requirements apply to special VFR operations?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.157:2026-07-24"],
+      "expected_citations": ["14 CFR 91.157"],
+      "review_note": "The dated section is titled Special VFR weather minimums."
+    },
+    {
+      "case_id": "R09",
+      "question": "What fuel is required for an aircraft operating under IFR?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.167:2026-07-24"],
+      "expected_citations": ["14 CFR 91.167"],
+      "review_note": "The dated section defines fuel requirements for flight in IFR conditions."
+    },
+    {
+      "case_id": "R10",
+      "question": "What IFR rules apply to takeoff, instrument approaches, and landing?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.175:2026-07-24"],
+      "expected_citations": ["14 CFR 91.175"],
+      "review_note": "The dated section covers takeoff and landing under IFR."
+    },
+    {
+      "case_id": "R11",
+      "question": "Which instruments and equipment are required for VFR and IFR powered civil aircraft?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.205:2026-07-24"],
+      "expected_citations": ["14 CFR 91.205"],
+      "review_note": "The dated section lists powered civil aircraft instruments and equipment."
+    },
+    {
+      "case_id": "R12",
+      "question": "When must flight crew and occupants use supplemental oxygen?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.211:2026-07-24"],
+      "expected_citations": ["14 CFR 91.211"],
+      "review_note": "The dated section specifies supplemental oxygen use by altitude and duration."
+    },
+    {
+      "case_id": "R13",
+      "question": "When may an aircraft operate with inoperative instruments or equipment?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.213:2026-07-24"],
+      "expected_citations": ["14 CFR 91.213"],
+      "review_note": "The dated section governs inoperative instruments and equipment."
+    },
+    {
+      "case_id": "R14",
+      "question": "Where and when is an ATC transponder with altitude reporting required?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.215:2026-07-24"],
+      "expected_citations": ["14 CFR 91.215"],
+      "review_note": "The dated section defines ATC transponder and altitude-reporting requirements."
+    },
+    {
+      "case_id": "R15",
+      "question": "In what airspace and at what altitudes is ADS-B Out equipment required?",
+      "collection": "faa_regulations",
+      "cfr_part": 91,
+      "expected_document_ids": ["14:91:91.225:2026-07-24"],
+      "expected_citations": ["14 CFR 91.225"],
+      "review_note": "The dated section defines ADS-B Out equipment and use requirements."
+    }
+  ]
+}

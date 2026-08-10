@@ -1,0 +1,287 @@
+{
+  "report_schema_version": "1.0",
+  "generated_at": "2026-08-10T19:46:40.410432Z",
+  "dataset_id": "faa-part91-retrieval-v1",
+  "evidence_class": "OFFICIAL_SOURCE_ENGINEERING_REVIEW",
+  "source_artifact": {
+    "source_uri": "https://www.ecfr.gov/api/versioner/v1/full/2026-07-24/title-14.xml?part=91",
+    "source_sha256": "97321ffc39020b0e2713b8f0e79b1ce5df8a2a7a0490bc669e741dd9fa367997",
+    "effective_date": "2026-07-24",
+    "parsed_sections": 286
+  },
+  "case_count": 15,
+  "recall_at_3": 0.9333333333333333,
+  "recall_at_5": 0.9333333333333333,
+  "mean_reciprocal_rank": 0.8111111111111111,
+  "mean_latency_ms": 76.59400009239714,
+  "retrieval_configuration": {
+    "embedding_backend": "chromadb-onnx-all-MiniLM-L6-v2-cpu",
+    "hnsw_space": "cosine",
+    "hnsw_construction_ef": 200,
+    "hnsw_search_ef": 100,
+    "top_k": 5
+  },
+  "limitations": [
+    "This set covers official eCFR Part 91 retrieval, not NTSB narratives.",
+    "It does not measure structured-query exact match or answer synthesis.",
+    "Engineering source review is not an independent domain-expert review.",
+    "Latency is machine-specific and is not a production service-level claim."
+  ],
+  "results": [
+    {
+      "case_id": "R01",
+      "expected_document_ids": [
+        "14:91:91.103:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.103:2026-07-24",
+        "14:91:91.1065:2026-07-24",
+        "14:91:91.503:2026-07-24",
+        "14:91:91.1025:2026-07-24",
+        "14:91:91.1033:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 459.4100839458406
+    },
+    {
+      "case_id": "R02",
+      "expected_document_ids": [
+        "14:91:91.107:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.521:2026-07-24",
+        "14:91:91.108:2026-07-24",
+        "14:91:91.107:2026-07-24",
+        "14:91:91.1035:2026-07-24",
+        "14:91:91.519:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "latency_ms": 46.05020768940449
+    },
+    {
+      "case_id": "R03",
+      "expected_document_ids": [
+        "14:91:91.113:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.115:2026-07-24",
+        "14:91:91.1011:2026-07-24",
+        "14:91:91.1009:2026-07-24",
+        "14:91:91.13:2026-07-24",
+        "14:91:91.3:2026-07-24"
+      ],
+      "recall_at_3": 0.0,
+      "recall_at_5": 0.0,
+      "reciprocal_rank": 0.0,
+      "latency_ms": 81.64008427411318
+    },
+    {
+      "case_id": "R04",
+      "expected_document_ids": [
+        "14:91:91.119:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.119:2026-07-24",
+        "14:91:91.515:2026-07-24",
+        "14:91:91.177:2026-07-24",
+        "14:91:91.159:2026-07-24",
+        "14:91:91.157:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 45.50004191696644
+    },
+    {
+      "case_id": "R05",
+      "expected_document_ids": [
+        "14:91:91.126:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.126:2026-07-24",
+        "14:91:91.905:2026-07-24",
+        "14:91:91.129:2026-07-24",
+        "14:91:91.131:2026-07-24",
+        "14:91:91.130:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 47.03558282926679
+    },
+    {
+      "case_id": "R06",
+      "expected_document_ids": [
+        "14:91:91.151:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.151:2026-07-24",
+        "14:91:91.515:2026-07-24",
+        "14:91:91.157:2026-07-24",
+        "14:91:91.153:2026-07-24",
+        "14:91:91.155:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 53.50283393636346
+    },
+    {
+      "case_id": "R07",
+      "expected_document_ids": [
+        "14:91:91.155:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.157:2026-07-24",
+        "14:91:91.155:2026-07-24",
+        "14:91:91.515:2026-07-24",
+        "14:91:91.507:2026-07-24",
+        "14:91:91.159:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 0.5,
+      "latency_ms": 51.662332843989134
+    },
+    {
+      "case_id": "R08",
+      "expected_document_ids": [
+        "14:91:91.157:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.157:2026-07-24",
+        "14:91:91.515:2026-07-24",
+        "14:91:91.155:2026-07-24",
+        "14:91:91.507:2026-07-24",
+        "14:91:91.205:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 45.98149983212352
+    },
+    {
+      "case_id": "R09",
+      "expected_document_ids": [
+        "14:91:91.167:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.167:2026-07-24",
+        "14:91:91.173:2026-07-24",
+        "14:91:91.1507:2026-07-24",
+        "14:91:91.151:2026-07-24",
+        "14:91:91.1037:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 44.07083289697766
+    },
+    {
+      "case_id": "R10",
+      "expected_document_ids": [
+        "14:91:91.175:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.169:2026-07-24",
+        "14:91:91.185:2026-07-24",
+        "14:91:91.175:2026-07-24",
+        "14:91:91.181:2026-07-24",
+        "14:91:91.179:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "latency_ms": 45.46066606417298
+    },
+    {
+      "case_id": "R11",
+      "expected_document_ids": [
+        "14:91:91.205:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.205:2026-07-24",
+        "14:91:91.507:2026-07-24",
+        "14:91:91.21:2026-07-24",
+        "14:91:91.213:2026-07-24",
+        "14:91:91.1115:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 45.467874966561794
+    },
+    {
+      "case_id": "R12",
+      "expected_document_ids": [
+        "14:91:91.211:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.211:2026-07-24",
+        "14:91:91.1062:2026-07-24",
+        "14:91:91.1083:2026-07-24",
+        "14:91:91.533:2026-07-24",
+        "14:91:91.513:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 44.59554189816117
+    },
+    {
+      "case_id": "R13",
+      "expected_document_ids": [
+        "14:91:91.213:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.213:2026-07-24",
+        "14:91:91.1115:2026-07-24",
+        "14:91:91.505:2026-07-24",
+        "14:91:91.405:2026-07-24",
+        "14:91:91.513:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 45.81333417445421
+    },
+    {
+      "case_id": "R14",
+      "expected_document_ids": [
+        "14:91:91.215:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.215:2026-07-24",
+        "14:91:91.413:2026-07-24",
+        "14:91:91.411:2026-07-24",
+        "14:91:91.217:2026-07-24",
+        "14:91:91.183:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 45.730041805654764
+    },
+    {
+      "case_id": "R15",
+      "expected_document_ids": [
+        "14:91:91.225:2026-07-24"
+      ],
+      "retrieved_document_ids": [
+        "14:91:91.225:2026-07-24",
+        "14:91:91.177:2026-07-24",
+        "14:91:91.217:2026-07-24",
+        "14:91:91.215:2026-07-24",
+        "14:91:91.119:2026-07-24"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 46.989042311906815
+    }
+  ]
+}

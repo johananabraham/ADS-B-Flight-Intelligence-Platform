@@ -1,17 +1,17 @@
 # Project Handoff and Expansion Roadmap
 
-Last updated: 2026-08-05
+Last updated: 2026-08-10
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `main`
+Current feature branch: `codex/safety-pipeline-hardening`
 
 All feature work consolidated: PRs #1-8 merged to main.
 
 Recent additions (2026-08-05):
 - Claims/evidence table in README
 - Safety research ingestion pipeline (NTSB + eCFR)
-- 30-case evaluation harness for safety agent
+- Versioned safety-source lineage and a 15-case FAA Part 91 retrieval baseline
 - Portfolio architecture diagram and case study
 - Production docker-compose and deployment guide
 
@@ -226,13 +226,20 @@ Implemented:
 - Safety query API and React research panel.
 - Structured and semantic retrieval paths.
 
-Not yet production-ready:
+Current evidence and remaining gaps:
 
-- No complete NTSB CAROL/bulk ingestion pipeline is present in this branch.
-- No complete eCFR ingestion pipeline is present.
+- The dated eCFR Part 91 artifact from 2026-07-24 parses into 286 sections with
+  source URI, SHA-256, effective date, and ingestion-manifest lineage.
+- The NTSB JSON adapter, validation, manifest, dead-letter, and idempotent database
+  paths are implemented, but a complete authorized CAROL/bulk dataset has not been
+  ingested.
 - Vector store currently uses ChromaDB's local MiniLM default, not the originally
   proposed OpenAI embedding model.
-- No checked-in 30-case evaluation dataset or evaluation runner.
+- A checked-in 15-case, engineering-reviewed FAA Part 91 set measures exact
+  document Recall@3/5 and MRR. The current baseline is Recall@3 0.9333,
+  Recall@5 0.9333, and MRR 0.8111. It is not independent domain-expert review.
+- Structured-query exact-match and answer-synthesis evaluations remain incomplete
+  until real NTSB data and reviewed expected answers are available.
 - No Langfuse tracing integration.
 - No source-version manifest proving which NTSB/eCFR snapshot produced an answer.
 - No automated citation-grounding or answer-faithfulness checks.
@@ -942,8 +949,9 @@ Purpose: allow operators to investigate historical and regulatory context.
 Build in this order:
 
 1. Idempotent NTSB and eCFR ingestion with source manifests and validation reports.
-2. A reviewed 30-case baseline evaluation set.
-3. SQL exact-match, dense retrieval Recall@3/5, citation precision/recall,
+2. Expand the 15 reviewed FAA retrieval cases with NTSB cases and independent
+   aviation-domain review.
+3. Add SQL exact-match, citation precision/recall,
    faithfulness, latency, and cost metrics.
 4. Clickable citations and exact source spans/effective dates in the UI.
 5. Only then test BM25+dense fusion, reranking, parent/child retrieval, temporal CFR
