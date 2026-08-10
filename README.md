@@ -304,6 +304,38 @@ It uses clearly labeled synthetic fixtures, verifies two source manifests, one
 dead-letter row, one incident, one dated regulation, and zero writes on exact
 retries, then rolls the fixture transaction back.
 
+Build section-aware incident chunks and one dated document per CFR section, then
+verify exact SQL/vector membership and source lineage:
+
+```bash
+cd backend
+PYTHONPATH=. python scripts/sync_safety_vectorstore.py \
+  --report ../data/reports/safety-corpus.json
+PYTHONPATH=. python scripts/sync_safety_vectorstore.py \
+  --report ../data/reports/safety-corpus-check.json --check-only
+```
+
+The command exits nonzero for unversioned SQL rows, missing vector documents,
+orphaned documents, or source-run mismatches. Long incident sections split only at
+sentence boundaries and retain section names and character offsets. The 800-token
+target currently uses a deterministic local estimate so offline CI never downloads
+a tokenizer vocabulary; it is not exact model-token accounting.
+
+The isolated corpus verifier does not download an embedding model:
+
+```bash
+cd backend
+PYTHONPATH=. python scripts/verify_safety_corpus.py
+```
+
+The first full local proof indexed one clearly labeled synthetic NTSB document and
+all 286 sections from the official dated 2026-07-24 Part 91 artifact. A subsequent
+read-only check found no missing, orphaned, unversioned, or wrong-lineage documents.
+The local MiniLM pass took approximately seven minutes for 287 documents, so this is
+a measured baseline concern—not a production throughput claim. A VFR
+cloud-clearance sanity query returned sections 91.157 and 91.155 first; formal
+Recall@3/5 still requires the reviewed evaluation set.
+
 ### Real receiver calibration
 
 The repository now includes an offline workflow for exporting a bounded `LIVE_RF`

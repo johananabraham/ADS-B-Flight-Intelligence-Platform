@@ -219,6 +219,11 @@ Implemented:
 - Automated dated Title 14 eCFR retrieval with bounded retries for transient errors.
 - CLI support for validating/ingesting CAROL exports and eCFR parts, plus a
   Docker-backed idempotency verifier used by CI.
+- Section-aware incident chunking keeps short factual/probable-cause text together
+  and splits longer sections only at sentence boundaries, with source offsets and
+  lineage metadata.
+- One-document-per-section dated CFR indexing and a SQL/Chroma consistency command
+  that fails on missing, orphaned, unversioned, or wrong-lineage documents.
 - Persistent ChromaDB collections for incident narratives and FAA regulations.
 - Four agent tools: narrative search, structured incident query, regulation
   search, and incident detail/context retrieval.
@@ -239,6 +244,24 @@ Checkpoint evidence (`896388f`):
 - Python and production npm dependency audits reported zero known vulnerabilities;
   the repository secret-pattern scan found no matches.
 
+Corpus checkpoint evidence (`5d350ef`, security follow-up `5cadc32`):
+
+- 188 backend tests passed and backend Ruff passed.
+- The isolated Chroma verifier produced 7 section-aware chunks and 1 regulation
+  document with no membership or lineage errors.
+- A real dated 2026-07-24 eCFR Part 91 artifact parsed and persisted 286/286 sections
+  with zero rejected or duplicate sections.
+- The SQL-to-Chroma run indexed 1 clearly labeled synthetic NTSB proof document and
+  all 286 official regulation documents; read-only consistency then reported zero
+  missing, orphaned, unversioned, or wrong-lineage documents.
+- The manual query for VFR cloud-clearance/visibility requirements returned 14 CFR
+  91.157 and 91.155 as the top two results. This is a sanity check, not Recall@K.
+- The first local MiniLM indexing pass took approximately seven minutes for only
+  287 documents, which is a measured performance concern for the baseline phase.
+- Python and full npm audits reported zero known vulnerabilities after pinning the
+  Chroma-compatible PostHog API and updating `js-yaml` to 4.3.1; Node 20 lint and
+  production build passed.
+
 Not yet production-ready:
 
 - NTSB ingestion currently accepts bounded official CAROL JSON exports. Automated
@@ -247,10 +270,10 @@ Not yet production-ready:
 - The 25 MiB artifact bound is appropriate for one eCFR part and bounded CAROL
   exports, but a 10,000-record import still needs streaming/checkpointed artifact
   handling and validation against a real authorized export.
-- eCFR ingestion has been parser-validated against a real dated Part 91 snapshot;
-  Parts 61, 121, and 135 still need retained validation reports and persistence runs.
-- Section-aware NTSB narrative chunking and SQL/vector consistency checks are not
-  implemented yet.
+- Parts 61, 121, and 135 still need retained validation reports and persistence runs.
+- The chunk budget uses a deterministic local token estimate to avoid a hidden
+  tokenizer download. It is not exact model-token accounting and must be calibrated
+  when the production embedding model is selected.
 - Vector store currently uses ChromaDB's local MiniLM default, not the originally
   proposed OpenAI embedding model.
 - No checked-in 30-case evaluation dataset or evaluation runner.
@@ -965,7 +988,8 @@ Build in this order:
 
 1. Idempotent NTSB and eCFR ingestion with source manifests and validation reports.
    Core bounded-artifact support is complete on `codex/safety-data-ingestion`;
-   real authorized bulk coverage and section-aware chunking remain.
+   section-aware chunking and SQL/vector consistency are complete; real authorized
+   bulk coverage and Parts 61/121/135 validation remain.
 2. A reviewed 30-case baseline evaluation set.
 3. SQL exact-match, dense retrieval Recall@3/5, citation precision/recall,
    faithfulness, latency, and cost metrics.
@@ -1371,8 +1395,8 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
    `docs/trust-operator-workflow-v1.md` and record whether they can explain a flagged
    track without backend logs.
 9. Complete Phase 9 ingestion coverage: run retained Parts 61/91/121/135 reports,
-   import a real authorized bounded CAROL export, then add section-aware chunks and
-   SQL/vector consistency checks.
+   import a real authorized bounded CAROL export, and record corpus-scale/runtime
+   evidence.
 10. Build and review the 30-case retrieval/structured/synthesis baseline before
     adopting advanced RAG techniques.
 11. Carry source-run IDs and exact source spans through retrieval results and
