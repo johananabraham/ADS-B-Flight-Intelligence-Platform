@@ -228,8 +228,9 @@ Implemented:
 
 Current evidence and remaining gaps:
 
-- The dated eCFR Part 91 artifact from 2026-07-24 parses into 286 sections with
-  source URI, SHA-256, effective date, and ingestion-manifest lineage.
+- Dated eCFR Parts 61, 91, 121, and 135 from 2026-07-24 parse into 1,025 sections
+  with source URIs, SHA-256 hashes, effective dates, and ingestion-manifest
+  lineage. Executed reruns were idempotent and SQL/vector consistency was exact.
 - The NTSB JSON adapter, validation, manifest, dead-letter, and idempotent database
   paths are implemented, but a complete authorized CAROL/bulk dataset has not been
   ingested.
