@@ -29,6 +29,7 @@ from .persistence import (
     persist_ecfr_source,
     persist_ntsb_source,
 )
+from .status import get_ingestion_status
 
 __all__ = [
     "EcfrSectionRecord",
@@ -54,4 +55,5 @@ __all__ = [
     "ingestion_run_id",
     "persist_ecfr_source",
     "persist_ntsb_source",
+    "get_ingestion_status",
 ]
