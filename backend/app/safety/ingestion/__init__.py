@@ -9,8 +9,14 @@ from .contracts import (
     ValidationIssue,
     ValidationReport,
 )
-from .ecfr import parse_ecfr_part_xml
-from .ntsb import parse_ntsb_carol_json
+from .ecfr import fetch_ecfr_part, parse_ecfr_part_xml
+from .ntsb import load_ntsb_carol_export, parse_ntsb_carol_json
+from .persistence import (
+    IngestionOutcome,
+    ingestion_run_id,
+    persist_ecfr_source,
+    persist_ntsb_source,
+)
 
 __all__ = [
     "EcfrSectionRecord",
@@ -22,4 +28,10 @@ __all__ = [
     "ValidationReport",
     "parse_ecfr_part_xml",
     "parse_ntsb_carol_json",
+    "fetch_ecfr_part",
+    "load_ntsb_carol_export",
+    "IngestionOutcome",
+    "ingestion_run_id",
+    "persist_ecfr_source",
+    "persist_ntsb_source",
 ]

@@ -158,6 +158,8 @@ jobs:
         run: docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build --renew-anon-volumes -d
       - name: Apply database migration
         run: docker compose exec -T backend alembic -c alembic.ini upgrade head
+      - name: Verify idempotent safety-source persistence
+        run: docker compose exec -T backend python scripts/verify_safety_ingestion.py
       - name: Verify the complete data path
         run: python scripts/verify_demo.py --timeout 180
       - name: Start checked-in recorded replay

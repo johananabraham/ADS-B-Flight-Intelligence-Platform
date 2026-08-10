@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import re
+import time
 import xml.etree.ElementTree as ElementTree
+from datetime import date, datetime, timezone
 
+import httpx
 from pydantic import ValidationError
 
 from .contracts import (
@@ -15,6 +18,9 @@ from .contracts import (
     ValidationIssue,
     ValidationReport,
 )
+
+
+ECFR_API_BASE_URL = "https://www.ecfr.gov/api/versioner/v1"
 
 
 def _normalized_text(element: ElementTree.Element) -> str:
@@ -104,6 +110,9 @@ def parse_ecfr_part_xml(
         source_uri=artifact.source_uri,
         source_sha256=artifact.content_sha256,
         source_bytes=len(artifact.content),
+        retrieved_at=artifact.retrieved_at,
+        effective_date=artifact.effective_date,
+        parameters=artifact.parameters,
         source_record_count=len(section_elements),
         parsed_record_count=len(records),
         rejected_record_count=len(section_elements) - len(records) - duplicate_count,
@@ -112,3 +121,54 @@ def parse_ecfr_part_xml(
         issues=tuple(issues),
     )
     return ParsedSource[EcfrSectionRecord](records=tuple(records), report=report)
+
+
+def fetch_ecfr_part(
+    part: int,
+    effective_date: date,
+    *,
+    client: httpx.Client | None = None,
+    max_attempts: int = 3,
+) -> SourceArtifact:
+    """Fetch one reproducible, dated Title 14 part from the official API."""
+    if part <= 0:
+        raise ValueError("part must be positive")
+    if max_attempts < 1 or max_attempts > 5:
+        raise ValueError("max_attempts must be between 1 and 5")
+    url = (
+        f"{ECFR_API_BASE_URL}/full/{effective_date.isoformat()}"
+        f"/title-14.xml?part={part}"
+    )
+    owns_client = client is None
+    http_client = client or httpx.Client(
+        timeout=httpx.Timeout(30.0),
+        follow_redirects=False,
+        headers={"User-Agent": "ADS-B-Flight-Intelligence-Platform/1.0"},
+    )
+    try:
+        for attempt in range(max_attempts):
+            try:
+                response = http_client.get(url)
+            except httpx.RequestError:
+                if attempt + 1 == max_attempts:
+                    raise
+                time.sleep(0.25 * (2**attempt))
+                continue
+            if response.status_code == 429 or response.status_code >= 500:
+                if attempt + 1 == max_attempts:
+                    response.raise_for_status()
+                time.sleep(0.25 * (2**attempt))
+                continue
+            response.raise_for_status()
+            return SourceArtifact(
+                kind=SourceKind.ECFR_PART_XML,
+                source_uri=url,
+                retrieved_at=datetime.now(timezone.utc),
+                effective_date=effective_date,
+                parameters={"part": part},
+                content=response.content,
+            )
+    finally:
+        if owns_client:
+            http_client.close()
+    raise RuntimeError("unreachable eCFR fetch state")
