@@ -115,6 +115,7 @@ docker compose up -d
 ## Notes
 - dump1090 must bind to 0.0.0.0 for Docker containers to connect
 - ChromaDB uses local embeddings (no API dependency)
-- Safety Agent already has evaluation suite with 30 test cases
+- Safety retrieval has 15 reviewed FAA Part 91 cases with a checked-in baseline;
+  NTSB structured-query and answer-synthesis evaluation are not yet complete
 - Route lookup: Free APIs have limited coverage; operator info always available, routes depend on API data
 - Map uses Leaflet Canvas renderer for performance with many aircraft

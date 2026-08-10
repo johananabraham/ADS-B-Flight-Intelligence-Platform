@@ -12,12 +12,13 @@ from .agent import run_agent, AgentResponse
 from .schemas import get_tool_definitions
 from .ingestion import get_ingestion_status
 from .evaluation import (
-    run_evaluation,
-    check_baseline,
-    EvalCase,
-    EvalResult,
-    EvalReport,
-    EVAL_CASES,
+    DEFAULT_RETRIEVAL_CONFIGURATION,
+    RetrievalConfiguration,
+    RetrievalDataset,
+    RetrievalEvaluationReport,
+    compare_retrieval_baseline,
+    evaluate_retrieval_dataset,
+    load_retrieval_dataset,
 )
 
 __all__ = [
@@ -35,10 +36,11 @@ __all__ = [
     # Ingestion
     "get_ingestion_status",
     # Evaluation
-    "run_evaluation",
-    "check_baseline",
-    "EvalCase",
-    "EvalResult",
-    "EvalReport",
-    "EVAL_CASES",
+    "DEFAULT_RETRIEVAL_CONFIGURATION",
+    "RetrievalConfiguration",
+    "RetrievalDataset",
+    "RetrievalEvaluationReport",
+    "compare_retrieval_baseline",
+    "evaluate_retrieval_dataset",
+    "load_retrieval_dataset",
 ]

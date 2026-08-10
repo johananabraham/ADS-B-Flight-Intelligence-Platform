@@ -1,637 +1,245 @@
-"""Safety Agent evaluation harness with 30 baseline test cases.
+"""Deterministic retrieval evaluation over reviewed, versioned safety sources."""
 
-This module provides:
-- 30 curated evaluation cases across retrieval, structured, and synthesis categories
-- Citation precision/recall metrics
-- Faithfulness scoring
-- Latency and cost tracking
-- Versioned evaluation results
+from __future__ import annotations
 
-Evaluation cases cover:
-- 15 retrieval cases (semantic search accuracy)
-- 10 structured query cases (database aggregation accuracy)
-- 5 synthesis cases (multi-tool reasoning)
-"""
-
-import json
-import logging
-import time
-from dataclasses import dataclass, field
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
-from enum import Enum
 from pathlib import Path
-from typing import Any
+from time import perf_counter
+from typing import Any, Literal
 
-from app.safety.agent import AgentResponse, run_agent
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-logger = logging.getLogger(__name__)
-
-EVAL_RESULTS_DIR = Path("evaluation/results")
-EVAL_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-
-
-class EvalCategory(str, Enum):
-    RETRIEVAL = "retrieval"
-    STRUCTURED = "structured"
-    SYNTHESIS = "synthesis"
+from ..core.vectorstore import (
+    EMBEDDING_BACKEND_ID,
+    HNSW_CONSTRUCTION_EF,
+    HNSW_SEARCH_EF,
+    HNSW_SPACE,
+    search_faa_regulations,
+)
 
 
-@dataclass
-class EvalCase:
-    """A single evaluation case."""
-
-    id: str
-    category: EvalCategory
-    query: str
-    expected_tool: str | None  # Primary tool that should be used
-    expected_citations: list[str]  # Expected NTSB IDs or CFR references
-    expected_keywords: list[str]  # Keywords that should appear in answer
-    ground_truth_answer: str  # Reference answer for faithfulness
-    difficulty: str = "medium"  # easy, medium, hard
+SearchFunction = Callable[..., Awaitable[dict[str, Any]]]
 
 
-@dataclass
-class EvalResult:
-    """Result of evaluating a single case."""
+class SourceArtifactIdentity(BaseModel):
+    """Exact authoritative artifact used to review expected documents."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    source_uri: str = Field(min_length=1)
+    source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    effective_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    parsed_sections: int = Field(gt=0)
+
+
+class RetrievalCase(BaseModel):
+    """One reviewed query with exact relevant corpus document identities."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    case_id: str = Field(pattern=r"^R\d{2}$")
+    question: str = Field(min_length=10)
+    collection: Literal["faa_regulations"]
+    cfr_part: int = Field(gt=0)
+    expected_document_ids: tuple[str, ...] = Field(min_length=1)
+    expected_citations: tuple[str, ...] = Field(min_length=1)
+    review_note: str = Field(min_length=10)
+
+
+class RetrievalDataset(BaseModel):
+    """Reviewed retrieval set bound to one exact corpus artifact."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1.0"]
+    dataset_id: str = Field(min_length=1)
+    evidence_class: Literal["OFFICIAL_SOURCE_ENGINEERING_REVIEW"]
+    reviewed_on: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    source_artifact: SourceArtifactIdentity
+    cases: tuple[RetrievalCase, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def require_unique_case_ids(self) -> "RetrievalDataset":
+        case_ids = [case.case_id for case in self.cases]
+        if len(case_ids) != len(set(case_ids)):
+            raise ValueError("retrieval case IDs must be unique")
+        return self
+
+
+class RetrievalCaseResult(BaseModel):
+    """Ranked retrieval evidence for one case."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     case_id: str
-    category: str
-    passed: bool
-    tool_used: str | None
-    tool_correct: bool
-    citation_precision: float
-    citation_recall: float
-    keyword_recall: float
-    latency_ms: float
-    total_tokens: int
-    iterations: int
-    answer: str
-    error: str | None = None
+    expected_document_ids: tuple[str, ...]
+    retrieved_document_ids: tuple[str, ...]
+    recall_at_3: float = Field(ge=0, le=1)
+    recall_at_5: float = Field(ge=0, le=1)
+    reciprocal_rank: float = Field(ge=0, le=1)
+    latency_ms: float = Field(ge=0)
 
 
-@dataclass
-class EvalReport:
-    """Aggregate evaluation report."""
+class RetrievalConfiguration(BaseModel):
+    """Retrieval settings required to reproduce a baseline."""
 
-    timestamp: str
-    version: str
-    total_cases: int
-    passed_cases: int
-    results: list[dict[str, Any]]
-    metrics: dict[str, float] = field(default_factory=dict)
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "timestamp": self.timestamp,
-            "version": self.version,
-            "total_cases": self.total_cases,
-            "passed_cases": self.passed_cases,
-            "pass_rate": self.passed_cases / self.total_cases if self.total_cases > 0 else 0,
-            "metrics": self.metrics,
-            "results": self.results,
-        }
-
-    def save(self, filename: str = "safety_agent_baseline_v1.json") -> Path:
-        path = EVAL_RESULTS_DIR / filename
-        path.write_text(json.dumps(self.to_dict(), indent=2))
-        return path
+    embedding_backend: str = Field(min_length=1)
+    hnsw_space: Literal["cosine"]
+    hnsw_construction_ef: int = Field(gt=0)
+    hnsw_search_ef: int = Field(gt=0)
+    top_k: Literal[5]
 
 
-# ============================================================================
-# 30 Baseline Evaluation Cases
-# ============================================================================
-
-EVAL_CASES: list[EvalCase] = [
-    # --- RETRIEVAL CASES (15) ---
-    EvalCase(
-        id="R01",
-        category=EvalCategory.RETRIEVAL,
-        query="Find incidents involving engine failure during takeoff",
-        expected_tool="search_incident_narratives",
-        expected_citations=[],  # Will match any relevant NTSB IDs
-        expected_keywords=["engine", "failure", "takeoff", "power"],
-        ground_truth_answer="Engine failures during takeoff are critical events...",
-        difficulty="easy",
-    ),
-    EvalCase(
-        id="R02",
-        category=EvalCategory.RETRIEVAL,
-        query="What incidents involved Cessna 172 aircraft in California?",
-        expected_tool="search_incident_narratives",
-        expected_citations=[],
-        expected_keywords=["cessna", "172", "california"],
-        ground_truth_answer="Cessna 172 incidents in California include...",
-        difficulty="easy",
-    ),
-    EvalCase(
-        id="R03",
-        category=EvalCategory.RETRIEVAL,
-        query="Find accidents caused by fuel exhaustion",
-        expected_tool="search_incident_narratives",
-        expected_citations=[],
-        expected_keywords=["fuel", "exhaustion", "depletion"],
-        ground_truth_answer="Fuel exhaustion accidents typically occur when...",
-        difficulty="easy",
-    ),
-    EvalCase(
-        id="R04",
-        category=EvalCategory.RETRIEVAL,
-        query="What regulations govern VFR flight minimums?",
-        expected_tool="search_faa_regulations",
-        expected_citations=["14 CFR 91.155"],
-        expected_keywords=["vfr", "visibility", "ceiling", "cloud"],
-        ground_truth_answer="VFR weather minimums are defined in 14 CFR 91.155...",
-        difficulty="easy",
-    ),
-    EvalCase(
-        id="R05",
-        category=EvalCategory.RETRIEVAL,
-        query="What are the requirements for instrument currency?",
-        expected_tool="search_faa_regulations",
-        expected_citations=["14 CFR 61.57"],
-        expected_keywords=["instrument", "currency", "approaches", "holding"],
-        ground_truth_answer="Instrument currency requirements per 14 CFR 61.57...",
-        difficulty="medium",
-    ),
-    EvalCase(
-        id="R06",
-        category=EvalCategory.RETRIEVAL,
-        query="Find incidents involving spatial disorientation at night",
-        expected_tool="search_incident_narratives",
-        expected_citations=[],
-        expected_keywords=["spatial", "disorientation", "night", "visual"],
-        ground_truth_answer="Spatial disorientation incidents at night...",
-        difficulty="medium",
-    ),
-    EvalCase(
-        id="R07",
-        category=EvalCategory.RETRIEVAL,
-        query="What regulations apply to minimum safe altitudes?",
-        expected_tool="search_faa_regulations",
-        expected_citations=["14 CFR 91.119"],
-        expected_keywords=["altitude", "minimum", "safe", "feet"],
-        ground_truth_answer="Minimum safe altitudes per 14 CFR 91.119...",
-        difficulty="easy",
-    ),
-    EvalCase(
-        id="R08",
-        category=EvalCategory.RETRIEVAL,
-        query="Find accidents involving icing conditions in IMC",
-        expected_tool="search_incident_narratives",
-        expected_citations=[],
-        expected_keywords=["icing", "ice", "imc", "instrument"],
-        ground_truth_answer="Icing-related accidents in IMC conditions...",
-        difficulty="medium",
-    ),
-    EvalCase(
-        id="R09",
-        category=EvalCategory.RETRIEVAL,
-        query="What are the pilot rest requirements for Part 135?",
-        expected_tool="search_faa_regulations",
-        expected_citations=["14 CFR 135.263", "14 CFR 135.267"],
-        expected_keywords=["rest", "duty", "flight time", "135"],
-        ground_truth_answer="Part 135 pilot rest requirements include...",
-        difficulty="hard",
-    ),
-    EvalCase(
-        id="R10",
-        category=EvalCategory.RETRIEVAL,
-        query="Find incidents where pilot medical condition was a factor",
-        expected_tool="search_incident_narratives",
-        expected_citations=[],
-        expected_keywords=["medical", "pilot", "incapacitation", "health"],
-        ground_truth_answer="Pilot medical conditions contributing to incidents...",
-        difficulty="medium",
-    ),
-    EvalCase(
-        id="R11",
-        category=EvalCategory.RETRIEVAL,
-        query="What regulations govern carriage of hazardous materials?",
-        expected_tool="search_faa_regulations",
-        expected_citations=["14 CFR 91.19"],
-        expected_keywords=["hazardous", "materials", "dangerous", "cargo"],
-        ground_truth_answer="Hazardous materials carriage per 14 CFR 91.19...",
-        difficulty="medium",
-    ),
-    EvalCase(
-        id="R12",
-        category=EvalCategory.RETRIEVAL,
-        query="Find CFIT accidents in mountainous terrain",
-        expected_tool="search_incident_narratives",
-        expected_citations=[],
-        expected_keywords=["cfit", "terrain", "mountain", "controlled flight"],
-        ground_truth_answer="CFIT accidents in mountainous terrain...",
-        difficulty="medium",
-    ),
-    EvalCase(
-        id="R13",
-        category=EvalCategory.RETRIEVAL,
-        query="What are the requirements for a commercial pilot certificate?",
-        expected_tool="search_faa_regulations",
-        expected_citations=["14 CFR 61.123", "14 CFR 61.129"],
-        expected_keywords=["commercial", "pilot", "certificate", "hours"],
-        ground_truth_answer="Commercial pilot certificate requirements...",
-        difficulty="medium",
-    ),
-    EvalCase(
-        id="R14",
-        category=EvalCategory.RETRIEVAL,
-        query="Find accidents involving midair collisions",
-        expected_tool="search_incident_narratives",
-        expected_citations=[],
-        expected_keywords=["midair", "collision", "see and avoid"],
-        ground_truth_answer="Midair collision accidents involve...",
-        difficulty="easy",
-    ),
-    EvalCase(
-        id="R15",
-        category=EvalCategory.RETRIEVAL,
-        query="What regulations govern flight crew member oxygen requirements?",
-        expected_tool="search_faa_regulations",
-        expected_citations=["14 CFR 91.211"],
-        expected_keywords=["oxygen", "altitude", "supplemental", "crew"],
-        ground_truth_answer="Oxygen requirements per 14 CFR 91.211...",
-        difficulty="medium",
-    ),
-    # --- STRUCTURED QUERY CASES (10) ---
-    EvalCase(
-        id="S01",
-        category=EvalCategory.STRUCTURED,
-        query="How many fatal accidents occurred in 2022?",
-        expected_tool="query_incident_database",
-        expected_citations=[],
-        expected_keywords=["2022", "fatal", "count"],
-        ground_truth_answer="There were X fatal accidents in 2022...",
-        difficulty="easy",
-    ),
-    EvalCase(
-        id="S02",
-        category=EvalCategory.STRUCTURED,
-        query="What state has the most aviation accidents?",
-        expected_tool="query_incident_database",
-        expected_citations=[],
-        expected_keywords=["state", "most", "highest"],
-        ground_truth_answer="The state with the most accidents is...",
-        difficulty="easy",
-    ),
-    EvalCase(
-        id="S03",
-        category=EvalCategory.STRUCTURED,
-        query="How many Piper accidents involved fatalities?",
-        expected_tool="query_incident_database",
-        expected_citations=[],
-        expected_keywords=["piper", "fatal", "count"],
-        ground_truth_answer="Piper aircraft fatality statistics...",
-        difficulty="easy",
-    ),
-    EvalCase(
-        id="S04",
-        category=EvalCategory.STRUCTURED,
-        query="What phase of flight has the highest accident rate?",
-        expected_tool="query_incident_database",
-        expected_citations=[],
-        expected_keywords=["phase", "flight", "highest", "rate"],
-        ground_truth_answer="The phase of flight with most accidents...",
-        difficulty="medium",
-    ),
-    EvalCase(
-        id="S05",
-        category=EvalCategory.STRUCTURED,
-        query="Show accident trends by year from 2018 to 2023",
-        expected_tool="query_incident_database",
-        expected_citations=[],
-        expected_keywords=["2018", "2019", "2020", "trend"],
-        ground_truth_answer="Annual accident trends show...",
-        difficulty="medium",
-    ),
-    EvalCase(
-        id="S06",
-        category=EvalCategory.STRUCTURED,
-        query="Which aircraft make has the most incidents?",
-        expected_tool="query_incident_database",
-        expected_citations=[],
-        expected_keywords=["make", "manufacturer", "most"],
-        ground_truth_answer="The aircraft manufacturer with most incidents...",
-        difficulty="easy",
-    ),
-    EvalCase(
-        id="S07",
-        category=EvalCategory.STRUCTURED,
-        query="How many accidents occurred in IMC weather?",
-        expected_tool="query_incident_database",
-        expected_citations=[],
-        expected_keywords=["imc", "instrument", "weather", "count"],
-        ground_truth_answer="IMC weather accident statistics...",
-        difficulty="medium",
-    ),
-    EvalCase(
-        id="S08",
-        category=EvalCategory.STRUCTURED,
-        query="What percentage of accidents involve student pilots?",
-        expected_tool="query_incident_database",
-        expected_citations=[],
-        expected_keywords=["student", "pilot", "percentage"],
-        ground_truth_answer="Student pilot accident statistics...",
-        difficulty="hard",
-    ),
-    EvalCase(
-        id="S09",
-        category=EvalCategory.STRUCTURED,
-        query="List recent Boeing 737 incidents",
-        expected_tool="query_incident_database",
-        expected_citations=[],
-        expected_keywords=["boeing", "737", "recent"],
-        ground_truth_answer="Recent Boeing 737 incidents include...",
-        difficulty="easy",
-    ),
-    EvalCase(
-        id="S10",
-        category=EvalCategory.STRUCTURED,
-        query="How many accidents occurred during landing approach?",
-        expected_tool="query_incident_database",
-        expected_citations=[],
-        expected_keywords=["landing", "approach", "count"],
-        ground_truth_answer="Landing approach accident count...",
-        difficulty="easy",
-    ),
-    # --- SYNTHESIS CASES (5) ---
-    EvalCase(
-        id="Y01",
-        category=EvalCategory.SYNTHESIS,
-        query="What are the common causes of Cessna 172 accidents and what regulations should pilots review?",
-        expected_tool=None,  # Multiple tools
-        expected_citations=["14 CFR 91"],
-        expected_keywords=["cessna", "172", "cause", "regulation"],
-        ground_truth_answer="Cessna 172 accident analysis with regulations...",
-        difficulty="hard",
-    ),
-    EvalCase(
-        id="Y02",
-        category=EvalCategory.SYNTHESIS,
-        query="Compare fatal vs non-fatal accident rates and explain contributing factors",
-        expected_tool=None,
-        expected_citations=[],
-        expected_keywords=["fatal", "non-fatal", "rate", "factor"],
-        ground_truth_answer="Fatal accident rate comparison...",
-        difficulty="hard",
-    ),
-    EvalCase(
-        id="Y03",
-        category=EvalCategory.SYNTHESIS,
-        query="What safety improvements could reduce loss of control accidents based on NTSB findings?",
-        expected_tool=None,
-        expected_citations=[],
-        expected_keywords=["loss of control", "safety", "improvement", "ntsb"],
-        ground_truth_answer="Safety recommendations for LOC...",
-        difficulty="hard",
-    ),
-    EvalCase(
-        id="Y04",
-        category=EvalCategory.SYNTHESIS,
-        query="Analyze the relationship between pilot experience and accident severity",
-        expected_tool=None,
-        expected_citations=[],
-        expected_keywords=["pilot", "experience", "hours", "severity"],
-        ground_truth_answer="Pilot experience vs accident severity...",
-        difficulty="hard",
-    ),
-    EvalCase(
-        id="Y05",
-        category=EvalCategory.SYNTHESIS,
-        query="What Part 135 safety concerns emerge from recent accident data?",
-        expected_tool=None,
-        expected_citations=["14 CFR 135"],
-        expected_keywords=["135", "charter", "safety", "concern"],
-        ground_truth_answer="Part 135 safety analysis...",
-        difficulty="hard",
-    ),
-]
+DEFAULT_RETRIEVAL_CONFIGURATION = RetrievalConfiguration(
+    embedding_backend=EMBEDDING_BACKEND_ID,
+    hnsw_space=HNSW_SPACE,
+    hnsw_construction_ef=HNSW_CONSTRUCTION_EF,
+    hnsw_search_ef=HNSW_SEARCH_EF,
+    top_k=5,
+)
 
 
-# ============================================================================
-# Evaluation Logic
-# ============================================================================
+class RetrievalEvaluationReport(BaseModel):
+    """Aggregate deterministic retrieval metrics and itemized rankings."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    report_schema_version: Literal["1.0"] = "1.0"
+    generated_at: datetime
+    dataset_id: str
+    evidence_class: str
+    source_artifact: SourceArtifactIdentity
+    case_count: int = Field(gt=0)
+    recall_at_3: float = Field(ge=0, le=1)
+    recall_at_5: float = Field(ge=0, le=1)
+    mean_reciprocal_rank: float = Field(ge=0, le=1)
+    mean_latency_ms: float = Field(ge=0)
+    retrieval_configuration: RetrievalConfiguration
+    limitations: tuple[str, ...]
+    results: tuple[RetrievalCaseResult, ...]
+
+    @model_validator(mode="after")
+    def require_itemized_result_count(self) -> "RetrievalEvaluationReport":
+        if len(self.results) != self.case_count:
+            raise ValueError("case_count must equal the itemized result count")
+        if self.generated_at.tzinfo is None or self.generated_at.utcoffset() is None:
+            raise ValueError("generated_at must be timezone-aware")
+        return self
 
 
-def extract_citations(answer: str) -> list[str]:
-    """Extract NTSB IDs and CFR references from answer text."""
-    import re
-
-    citations = []
-
-    # NTSB IDs (various formats)
-    ntsb_patterns = [
-        r"[A-Z]{3}\d{2}[A-Z]{2}\d{3}",  # e.g., NYC22FA123
-        r"NTSB/[A-Z]+/\d+-\d+",  # e.g., NTSB/AAR/22-01
-    ]
-    for pattern in ntsb_patterns:
-        citations.extend(re.findall(pattern, answer, re.IGNORECASE))
-
-    # CFR references
-    cfr_pattern = r"14\s*CFR\s*(?:Part\s*)?(\d+)(?:\.(\d+))?"
-    for match in re.finditer(cfr_pattern, answer, re.IGNORECASE):
-        part = match.group(1)
-        section = match.group(2)
-        if section:
-            citations.append(f"14 CFR {part}.{section}")
-        else:
-            citations.append(f"14 CFR {part}")
-
-    return list(set(citations))
+def load_retrieval_dataset(path: Path) -> RetrievalDataset:
+    """Load and strictly validate a checked-in retrieval dataset."""
+    return RetrievalDataset.model_validate_json(path.read_text())
 
 
-def compute_citation_metrics(
-    actual: list[str], expected: list[str]
-) -> tuple[float, float]:
-    """Compute citation precision and recall."""
-    if not expected:
-        # No expected citations - precision/recall not applicable
-        return 1.0, 1.0
-
-    if not actual:
-        return 0.0, 0.0
-
-    # Normalize for comparison
-    actual_normalized = {c.lower().replace(" ", "") for c in actual}
-    expected_normalized = {c.lower().replace(" ", "") for c in expected}
-
-    matches = len(actual_normalized & expected_normalized)
-    precision = matches / len(actual_normalized) if actual_normalized else 0.0
-    recall = matches / len(expected_normalized) if expected_normalized else 0.0
-
-    return precision, recall
+def _recall(expected: set[str], retrieved: tuple[str, ...], k: int) -> float:
+    return len(expected & set(retrieved[:k])) / len(expected)
 
 
-def compute_keyword_recall(answer: str, keywords: list[str]) -> float:
-    """Compute what fraction of expected keywords appear in answer."""
-    if not keywords:
-        return 1.0
-
-    answer_lower = answer.lower()
-    matches = sum(1 for kw in keywords if kw.lower() in answer_lower)
-    return matches / len(keywords)
+def _reciprocal_rank(expected: set[str], retrieved: tuple[str, ...]) -> float:
+    for rank, document_id in enumerate(retrieved, start=1):
+        if document_id in expected:
+            return 1 / rank
+    return 0.0
 
 
-def evaluate_case(case: EvalCase) -> EvalResult:
-    """Evaluate a single test case."""
-    start_time = time.time()
-    error = None
-    answer = ""
-    tool_used = None
-    total_tokens = 0
-    iterations = 0
+async def evaluate_retrieval_dataset(
+    dataset: RetrievalDataset,
+    *,
+    search: SearchFunction = search_faa_regulations,
+    retrieval_configuration: RetrievalConfiguration = DEFAULT_RETRIEVAL_CONFIGURATION,
+) -> RetrievalEvaluationReport:
+    """Run exact ranked-document evaluation without invoking an LLM."""
+    results: list[RetrievalCaseResult] = []
+    for case in dataset.cases:
+        started = perf_counter()
+        response = await search(
+            query_text=case.question,
+            n_results=5,
+            where={"cfr_part": case.cfr_part},
+        )
+        latency_ms = (perf_counter() - started) * 1_000
+        retrieved = tuple(response.get("ids") or ())
+        expected = set(case.expected_document_ids)
+        results.append(
+            RetrievalCaseResult(
+                case_id=case.case_id,
+                expected_document_ids=case.expected_document_ids,
+                retrieved_document_ids=retrieved,
+                recall_at_3=_recall(expected, retrieved, 3),
+                recall_at_5=_recall(expected, retrieved, 5),
+                reciprocal_rank=_reciprocal_rank(expected, retrieved),
+                latency_ms=latency_ms,
+            )
+        )
 
-    try:
-        response: AgentResponse = run_agent(case.query)
-        answer = response.answer
-        total_tokens = response.total_tokens
-        iterations = response.iterations
-
-        # Extract primary tool used
-        if response.tool_calls:
-            tool_used = response.tool_calls[0].get("tool")
-
-    except Exception as e:
-        error = str(e)
-        answer = ""
-
-    latency_ms = (time.time() - start_time) * 1000
-
-    # Compute metrics
-    citations = extract_citations(answer) if answer else []
-    citation_precision, citation_recall = compute_citation_metrics(
-        citations, case.expected_citations
-    )
-    keyword_recall = compute_keyword_recall(answer, case.expected_keywords)
-
-    # Check if correct tool was used
-    tool_correct = True
-    if case.expected_tool and tool_used:
-        tool_correct = case.expected_tool in tool_used
-
-    # Determine pass/fail
-    passed = (
-        error is None
-        and keyword_recall >= 0.5
-        and (not case.expected_citations or citation_recall >= 0.5)
-        and tool_correct
-    )
-
-    return EvalResult(
-        case_id=case.id,
-        category=case.category.value,
-        passed=passed,
-        tool_used=tool_used,
-        tool_correct=tool_correct,
-        citation_precision=citation_precision,
-        citation_recall=citation_recall,
-        keyword_recall=keyword_recall,
-        latency_ms=latency_ms,
-        total_tokens=total_tokens,
-        iterations=iterations,
-        answer=answer,
-        error=error,
+    count = len(results)
+    return RetrievalEvaluationReport(
+        generated_at=datetime.now(timezone.utc),
+        dataset_id=dataset.dataset_id,
+        evidence_class=dataset.evidence_class,
+        source_artifact=dataset.source_artifact,
+        case_count=count,
+        recall_at_3=sum(result.recall_at_3 for result in results) / count,
+        recall_at_5=sum(result.recall_at_5 for result in results) / count,
+        mean_reciprocal_rank=(
+            sum(result.reciprocal_rank for result in results) / count
+        ),
+        mean_latency_ms=sum(result.latency_ms for result in results) / count,
+        retrieval_configuration=retrieval_configuration,
+        limitations=(
+            "This set covers official eCFR Part 91 retrieval, not NTSB narratives.",
+            "It does not measure structured-query exact match or answer synthesis.",
+            "Engineering source review is not an independent domain-expert review.",
+            "Latency is machine-specific and is not a production service-level claim.",
+        ),
+        results=tuple(results),
     )
 
 
-def run_evaluation(
-    cases: list[EvalCase] | None = None,
-    version: str = "1.0",
-) -> EvalReport:
-    """Run full evaluation suite.
-
-    Args:
-        cases: Specific cases to run (default: all EVAL_CASES)
-        version: Version string for the report
-
-    Returns:
-        EvalReport with all results and metrics
-    """
-    if cases is None:
-        cases = EVAL_CASES
-
-    results = []
-    passed = 0
-
-    for case in cases:
-        logger.info(f"Evaluating case {case.id}: {case.query[:50]}...")
-        result = evaluate_case(case)
-        results.append({
-            "case_id": result.case_id,
-            "category": result.category,
-            "passed": result.passed,
-            "tool_used": result.tool_used,
-            "tool_correct": result.tool_correct,
-            "citation_precision": result.citation_precision,
-            "citation_recall": result.citation_recall,
-            "keyword_recall": result.keyword_recall,
-            "latency_ms": result.latency_ms,
-            "total_tokens": result.total_tokens,
-            "iterations": result.iterations,
-            "error": result.error,
-        })
-
-        if result.passed:
-            passed += 1
-
-    # Compute aggregate metrics
-    total = len(results)
-    metrics = {
-        "pass_rate": passed / total if total > 0 else 0,
-        "avg_citation_precision": sum(r["citation_precision"] for r in results) / total if total else 0,
-        "avg_citation_recall": sum(r["citation_recall"] for r in results) / total if total else 0,
-        "avg_keyword_recall": sum(r["keyword_recall"] for r in results) / total if total else 0,
-        "avg_latency_ms": sum(r["latency_ms"] for r in results) / total if total else 0,
-        "avg_tokens": sum(r["total_tokens"] for r in results) / total if total else 0,
-        "tool_accuracy": sum(r["tool_correct"] for r in results) / total if total else 0,
-    }
-
-    # Category-level metrics
-    for category in EvalCategory:
-        cat_results = [r for r in results if r["category"] == category.value]
-        if cat_results:
-            cat_passed = sum(1 for r in cat_results if r["passed"])
-            metrics[f"{category.value}_pass_rate"] = cat_passed / len(cat_results)
-
-    report = EvalReport(
-        timestamp=datetime.now(timezone.utc).isoformat(),
-        version=version,
-        total_cases=total,
-        passed_cases=passed,
-        results=results,
-        metrics=metrics,
-    )
-
-    return report
-
-
-def check_baseline(
-    baseline_path: str = "evaluation/results/safety_agent_baseline_v1.json",
+def compare_retrieval_baseline(
+    current: RetrievalEvaluationReport,
+    baseline: RetrievalEvaluationReport,
 ) -> dict[str, Any]:
-    """Compare current evaluation against baseline.
-
-    Returns dict with comparison results.
-    """
-    baseline_file = Path(baseline_path)
-    if not baseline_file.exists():
-        return {"error": f"Baseline not found: {baseline_path}"}
-
-    baseline = json.loads(baseline_file.read_text())
-    current = run_evaluation()
-
-    comparison = {
-        "baseline_pass_rate": baseline.get("pass_rate", 0),
-        "current_pass_rate": current.metrics.get("pass_rate", 0),
-        "improved": current.metrics.get("pass_rate", 0) >= baseline.get("pass_rate", 0),
-        "regressions": [],
+    """Fail closed on dataset mismatch or Recall@K regression."""
+    same_dataset = (
+        current.dataset_id == baseline.dataset_id
+        and current.source_artifact == baseline.source_artifact
+        and current.case_count == baseline.case_count
+        and current.retrieval_configuration == baseline.retrieval_configuration
+    )
+    regressions = []
+    if current.recall_at_3 < baseline.recall_at_3:
+        regressions.append("recall_at_3")
+    if current.recall_at_5 < baseline.recall_at_5:
+        regressions.append("recall_at_5")
+    return {
+        "same_dataset": same_dataset,
+        "regressions": regressions,
+        "passed": same_dataset and not regressions,
+        "baseline": {
+            "recall_at_3": baseline.recall_at_3,
+            "recall_at_5": baseline.recall_at_5,
+        },
+        "current": {
+            "recall_at_3": current.recall_at_3,
+            "recall_at_5": current.recall_at_5,
+        },
     }
 
-    # Check for regressions
-    baseline_results = {r["case_id"]: r for r in baseline.get("results", [])}
-    for result in current.results:
-        case_id = result["case_id"]
-        if case_id in baseline_results:
-            if baseline_results[case_id].get("passed") and not result.get("passed"):
-                comparison["regressions"].append(case_id)
 
-    return comparison
+def load_retrieval_report(path: Path) -> RetrievalEvaluationReport:
+    """Load one versioned baseline report."""
+    return RetrievalEvaluationReport.model_validate_json(path.read_text())
+
+
+def write_retrieval_report(
+    report: RetrievalEvaluationReport,
+    path: Path,
+) -> None:
+    """Write stable, reviewable evaluation evidence."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(report.model_dump_json(indent=2) + "\n")

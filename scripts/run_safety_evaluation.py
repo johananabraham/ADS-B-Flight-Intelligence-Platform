@@ -1,114 +1,71 @@
 #!/usr/bin/env python3
-"""Run safety agent evaluation and optionally compare against baseline.
+"""Run deterministic safety retrieval evaluation and optional regression checks."""
 
-Usage:
-    PYTHONPATH=backend:. python scripts/run_safety_evaluation.py
-    PYTHONPATH=backend:. python scripts/run_safety_evaluation.py --check
-    PYTHONPATH=backend:. python scripts/run_safety_evaluation.py --baseline path/to/baseline.json
-"""
+from __future__ import annotations
 
 import argparse
+import asyncio
 import json
-import sys
 from pathlib import Path
+
+from app.safety.evaluation import (
+    DEFAULT_RETRIEVAL_CONFIGURATION,
+    compare_retrieval_baseline,
+    evaluate_retrieval_dataset,
+    load_retrieval_dataset,
+    load_retrieval_report,
+    write_retrieval_report,
+)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=Path("evaluation/safety/faa_part91_retrieval_v1.json"),
+    )
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--baseline", type=Path)
+    parser.add_argument(
+        "--embedding-backend",
+        default="chromadb-onnx-all-MiniLM-L6-v2-cpu",
+    )
+    return parser.parse_args()
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run safety agent evaluation")
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help="Check against existing baseline and fail if regression",
+    args = parse_args()
+    dataset = load_retrieval_dataset(args.dataset)
+    report = asyncio.run(
+        evaluate_retrieval_dataset(
+            dataset,
+            retrieval_configuration=DEFAULT_RETRIEVAL_CONFIGURATION.model_copy(
+                update={"embedding_backend": args.embedding_backend}
+            ),
+        )
     )
-    parser.add_argument(
-        "--baseline",
-        type=str,
-        default="evaluation/results/safety_agent_baseline_v1.json",
-        help="Path to baseline file for comparison",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        help="Output path for evaluation results",
-    )
-    parser.add_argument(
-        "--version",
-        type=str,
-        default="1.0",
-        help="Version string for this evaluation",
-    )
-    args = parser.parse_args()
-
-    # Import after argparse to avoid slow startup for --help
-    from app.safety.evaluation import check_baseline, run_evaluation
-
-    if args.check:
-        # Check mode: compare against baseline
-        print(f"Checking against baseline: {args.baseline}")
-        comparison = check_baseline(args.baseline)
-
-        if "error" in comparison:
-            print(f"Error: {comparison['error']}")
-            return 1
-
-        print(f"Baseline pass rate: {comparison['baseline_pass_rate']:.2%}")
-        print(f"Current pass rate:  {comparison['current_pass_rate']:.2%}")
-
-        if comparison["regressions"]:
-            print(f"\nRegressions detected in cases: {comparison['regressions']}")
-            return 1
-
-        if comparison["improved"]:
-            print("\nNo regressions detected.")
-            return 0
-        else:
-            print("\nWARNING: Performance degraded but no specific regressions.")
-            return 1
-
-    # Full evaluation mode
-    print("Running safety agent evaluation...")
-    print("=" * 60)
-
-    report = run_evaluation(version=args.version)
-
-    # Print summary
-    print(f"\nEvaluation Results ({report.version})")
-    print("=" * 60)
-    print(f"Total cases:  {report.total_cases}")
-    print(f"Passed:       {report.passed_cases}")
-    print(f"Pass rate:    {report.metrics['pass_rate']:.2%}")
-    print()
-    print("Category Breakdown:")
-    for category in ["retrieval", "structured", "synthesis"]:
-        rate = report.metrics.get(f"{category}_pass_rate", 0)
-        print(f"  {category:12s}: {rate:.2%}")
-    print()
-    print("Aggregate Metrics:")
-    print(f"  Citation Precision: {report.metrics['avg_citation_precision']:.2%}")
-    print(f"  Citation Recall:    {report.metrics['avg_citation_recall']:.2%}")
-    print(f"  Keyword Recall:     {report.metrics['avg_keyword_recall']:.2%}")
-    print(f"  Tool Accuracy:      {report.metrics['tool_accuracy']:.2%}")
-    print(f"  Avg Latency:        {report.metrics['avg_latency_ms']:.0f} ms")
-    print(f"  Avg Tokens:         {report.metrics['avg_tokens']:.0f}")
-
-    # Save results
-    output_path = args.output
-    if output_path:
-        Path(output_path).write_text(json.dumps(report.to_dict(), indent=2))
-        print(f"\nResults saved to: {output_path}")
-    else:
-        saved_path = report.save()
-        print(f"\nResults saved to: {saved_path}")
-
-    # Print failed cases
-    failed = [r for r in report.results if not r["passed"]]
-    if failed:
-        print(f"\nFailed Cases ({len(failed)}):")
-        for r in failed:
-            print(f"  {r['case_id']}: {r.get('error') or 'metrics below threshold'}")
-
+    write_retrieval_report(report, args.output)
+    summary = {
+        "dataset_id": report.dataset_id,
+        "case_count": report.case_count,
+        "recall_at_3": report.recall_at_3,
+        "recall_at_5": report.recall_at_5,
+        "mean_reciprocal_rank": report.mean_reciprocal_rank,
+        "mean_latency_ms": report.mean_latency_ms,
+        "output": str(args.output),
+    }
+    if args.baseline is not None:
+        comparison = compare_retrieval_baseline(
+            report,
+            load_retrieval_report(args.baseline),
+        )
+        summary["baseline_comparison"] = comparison
+        print(json.dumps(summary, indent=2))
+        return 0 if comparison["passed"] else 1
+    print(json.dumps(summary, indent=2))
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())
