@@ -14,6 +14,7 @@ Real-time aircraft tracking and anomaly detection system using Software Defined 
 | Generated clean FP rate | 0% | 88 control scenarios |
 | ML baseline F1 | 0.9333 | Held-out evaluation |
 | FAA Part 91 retrieval Recall@5 | 0.9333 | 15 reviewed official-source cases |
+| Versioned FAA corpus | 1,025 sections | Parts 61/91/121/135, zero lineage errors |
 | Dependency vulnerabilities | 0 | pip-audit + npm audit |
 
 ## Architecture
@@ -414,6 +415,10 @@ engineering review of an official source, not independent aviation-domain review
 It does not measure NTSB retrieval, SQL answer accuracy, generated-answer
 faithfulness, or production latency. See `docs/safety-retrieval-evaluation-v1.md`.
 
+The ingestion proof also covers dated Parts 61, 91, 121, and 135: 1,025 sections,
+zero parser rejects/duplicates, idempotent reruns, and zero SQL/vector lineage
+errors. See `docs/safety-ingestion-evidence-v1.md` and the checked-in JSON evidence.
+
 ## Continuous Integration
 
 GitHub Actions runs Python lint/tests, pairwise and short-window held-out synthetic
@@ -436,6 +441,7 @@ published dependency advisories.
 | Station health 7/7 classifications | `evaluation/results/station_health_offline_v1.json` | CI baseline gate |
 | ML baselines improve F1 to 0.9333 | `evaluation/results/ml_baselines_v1.json` | CI baseline gate |
 | FAA Part 91 retrieval Recall@5 is 0.9333 | `evaluation/results/faa_part91_retrieval_baseline_v1.json` | Versioned local baseline |
+| Four dated FAA parts produce 1,025 lineage-consistent documents | `evaluation/results/ecfr_four_part_ingestion_proof_v1.json` | Executed isolated proof |
 | Safety citations require retrieved evidence | `backend/tests/test_safety_citations.py` | Backend test contract |
 | MQTT TLS + ACLs enforced | `scripts/test_edge_mqtt_security.sh` | CI `edge-transport-security` job |
 | ESP32 firmware compiles | ESP-IDF 6.0.2 docker build | CI `esp32-firmware` job |
