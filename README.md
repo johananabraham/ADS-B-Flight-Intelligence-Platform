@@ -267,6 +267,43 @@ workflow is suitable for local engineering validation, but public deployment rem
 blocked on authentication, authorization, and an audit-retention policy. See
 `docs/trust-operator-workflow-v1.md` for the API and evidence boundaries.
 
+### Versioned aviation-safety ingestion
+
+The safety-research data path now records where each imported row came from. It
+supports official NTSB CAROL JSON exports and reproducible, dated Title 14 eCFR XML
+snapshots. Each source artifact receives a SHA-256 manifest, validation counts,
+dead-letter metadata for rejected rows, and a stable source-run ID. Re-importing the
+exact same artifact is a no-op.
+
+Apply migrations, then ingest a bounded CAROL export or a dated eCFR part:
+
+```bash
+cd backend
+alembic -c alembic.ini upgrade head
+PYTHONPATH=. python scripts/ingest_safety_sources.py \
+  --report ../data/reports/ntsb-validation.json \
+  ntsb-json --input /path/to/official-carol-export.json
+PYTHONPATH=. python scripts/ingest_safety_sources.py \
+  --report ../data/reports/ecfr-part-91-validation.json \
+  ecfr --part 91 --effective-date 2026-07-24
+```
+
+Use `--validate-only` before writing to PostgreSQL. The NTSB command deliberately
+does not scrape the CAROL website; unattended source downloads require authorized
+NTSB developer access. The current 25 MiB artifact limit is intended for bounded
+exports, not yet a claim that a 10,000-record bulk load has been demonstrated.
+
+The live PostgreSQL proof can be rerun with:
+
+```bash
+cd backend
+PYTHONPATH=. python scripts/verify_safety_ingestion.py
+```
+
+It uses clearly labeled synthetic fixtures, verifies two source manifests, one
+dead-letter row, one incident, one dated regulation, and zero writes on exact
+retries, then rolls the fixture transaction back.
+
 ### Real receiver calibration
 
 The repository now includes an offline workflow for exporting a bounded `LIVE_RF`

@@ -1,10 +1,10 @@
 # Project Handoff and Expansion Roadmap
 
-Last updated: 2026-08-04
+Last updated: 2026-08-10
 
 Repository: `johananabraham/ADS-B-Flight-Intelligence-Platform`
 
-Current branch: `codex/operator-trust-workflow`
+Current branch: `codex/safety-data-ingestion`
 
 Branch point before Phase 0 implementation: `fc21cf1`
 
@@ -210,6 +210,15 @@ IPv6 localhost address.
 Implemented:
 
 - SQLAlchemy `Incident` and `Regulation` models.
+- Versioned source manifests and row-level lineage for official NTSB CAROL JSON
+  exports and dated eCFR XML snapshots.
+- Deterministic validation reports with source hashes, byte/record counts, null
+  rates, duplicate counts, and rejected-row metadata.
+- Transactional PostgreSQL upserts, dead-letter records, and stable source-run IDs;
+  exact artifact retries do not rewrite canonical rows.
+- Automated dated Title 14 eCFR retrieval with bounded retries for transient errors.
+- CLI support for validating/ingesting CAROL exports and eCFR parts, plus a
+  Docker-backed idempotency verifier used by CI.
 - Persistent ChromaDB collections for incident narratives and FAA regulations.
 - Four agent tools: narrative search, structured incident query, regulation
   search, and incident detail/context retrieval.
@@ -217,15 +226,37 @@ Implemented:
 - Safety query API and React research panel.
 - Structured and semantic retrieval paths.
 
+Checkpoint evidence (`896388f`):
+
+- 10 focused parser/persistence tests passed.
+- 180 backend tests passed; the only output was two pre-existing FastAPI lifespan
+  deprecation warnings.
+- Backend Ruff passed.
+- Alembic upgraded an isolated PostgreSQL 15/PostGIS database from an empty schema
+  through revision `20260805_06`.
+- The live verifier observed 2 manifests, 1 dead-letter row, 1 incident, 1 dated
+  regulation, and 0 retry writes, then rolled the fixture transaction back.
+- Python and production npm dependency audits reported zero known vulnerabilities;
+  the repository secret-pattern scan found no matches.
+
 Not yet production-ready:
 
-- No complete NTSB CAROL/bulk ingestion pipeline is present in this branch.
-- No complete eCFR ingestion pipeline is present.
+- NTSB ingestion currently accepts bounded official CAROL JSON exports. Automated
+  bulk retrieval remains credential-gated and must use an approved NTSB developer
+  account rather than scraping the CAROL web session.
+- The 25 MiB artifact bound is appropriate for one eCFR part and bounded CAROL
+  exports, but a 10,000-record import still needs streaming/checkpointed artifact
+  handling and validation against a real authorized export.
+- eCFR ingestion has been parser-validated against a real dated Part 91 snapshot;
+  Parts 61, 121, and 135 still need retained validation reports and persistence runs.
+- Section-aware NTSB narrative chunking and SQL/vector consistency checks are not
+  implemented yet.
 - Vector store currently uses ChromaDB's local MiniLM default, not the originally
   proposed OpenAI embedding model.
 - No checked-in 30-case evaluation dataset or evaluation runner.
 - No Langfuse tracing integration.
-- No source-version manifest proving which NTSB/eCFR snapshot produced an answer.
+- Retrieval responses do not yet carry the new source-run lineage through to each
+  cited answer.
 - No automated citation-grounding or answer-faithfulness checks.
 - The synchronous OpenAI client and synchronous SQL session are called from async
   endpoints and should be isolated or converted before load testing.
@@ -933,6 +964,8 @@ Purpose: allow operators to investigate historical and regulatory context.
 Build in this order:
 
 1. Idempotent NTSB and eCFR ingestion with source manifests and validation reports.
+   Core bounded-artifact support is complete on `codex/safety-data-ingestion`;
+   real authorized bulk coverage and section-aware chunking remain.
 2. A reviewed 30-case baseline evaluation set.
 3. SQL exact-match, dense retrieval Recall@3/5, citation precision/recall,
    faithfulness, latency, and cost metrics.
@@ -1337,9 +1370,14 @@ Numbers should come from checked-in evaluation artifacts, not estimates.
 8. Ask another developer to complete the Phase 8 usability script in
    `docs/trust-operator-workflow-v1.md` and record whether they can explain a flagged
    track without backend logs.
-9. Begin Phase 9 with idempotent NTSB/eCFR ingestion manifests and validation reports.
-10. Do not expand advanced RAG until NTSB/eCFR ingestion and the baseline evaluation
-   harness exist.
+9. Complete Phase 9 ingestion coverage: run retained Parts 61/91/121/135 reports,
+   import a real authorized bounded CAROL export, then add section-aware chunks and
+   SQL/vector consistency checks.
+10. Build and review the 30-case retrieval/structured/synthesis baseline before
+    adopting advanced RAG techniques.
+11. Carry source-run IDs and exact source spans through retrieval results and
+    clickable UI citations.
+12. Do not expand advanced RAG until the baseline evaluation harness exists.
 
 ## 11. Handoff Rules for the Next Engineer or Agent
 
