@@ -76,6 +76,9 @@ class ValidationReport(BaseModel):
     source_uri: str
     source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     source_bytes: int = Field(gt=0)
+    retrieved_at: datetime
+    effective_date: date | None = None
+    parameters: dict[str, str | int] = Field(default_factory=dict)
     source_record_count: int = Field(ge=0)
     parsed_record_count: int = Field(ge=0)
     rejected_record_count: int = Field(ge=0)
@@ -83,13 +86,20 @@ class ValidationReport(BaseModel):
     null_rates: dict[str, float] = Field(default_factory=dict)
     issues: tuple[ValidationIssue, ...] = ()
 
+    @field_validator("retrieved_at")
+    @classmethod
+    def require_report_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("retrieved_at must be timezone-aware")
+        return value
+
 
 class NtsbIncidentRecord(BaseModel):
     """Canonical subset used by the structured incident store."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    ntsb_id: str = Field(min_length=3, max_length=30)
+    ntsb_id: str = Field(min_length=3, max_length=20)
     event_date: date | None = None
     event_city: str | None = Field(default=None, max_length=100)
     event_state: str | None = Field(default=None, max_length=50)
@@ -119,7 +129,7 @@ class EcfrSectionRecord(BaseModel):
     section_title: str = Field(min_length=1, max_length=500)
     section_text: str = Field(min_length=1)
     effective_date: date
-    source_url: str = Field(min_length=1, max_length=2_000)
+    source_url: str = Field(min_length=1, max_length=500)
 
 
 RecordT = TypeVar("RecordT", bound=BaseModel)

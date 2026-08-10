@@ -3,12 +3,14 @@
 import json
 from datetime import date, datetime, timezone
 
+import httpx
 import pytest
 from pydantic import ValidationError
 
 from app.safety.ingestion import (
     SourceArtifact,
     SourceKind,
+    fetch_ecfr_part,
     parse_ecfr_part_xml,
     parse_ntsb_carol_json,
 )
@@ -134,3 +136,53 @@ def test_ecfr_parser_rejects_wrong_kind_and_missing_effective_date():
             content=b"<DIV5 />",
             parameters={"part": 91},
         )
+
+
+def test_ecfr_fetcher_uses_dated_official_endpoint_and_retries():
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        assert str(request.url).endswith(
+            "/full/2026-07-24/title-14.xml?part=91"
+        )
+        if calls == 1:
+            return httpx.Response(503, request=request)
+        return httpx.Response(
+            200,
+            content=b'<DIV5 N="91" TYPE="PART" />',
+            request=request,
+        )
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        artifact = fetch_ecfr_part(
+            91,
+            date(2026, 7, 24),
+            client=client,
+            max_attempts=2,
+        )
+
+    assert calls == 2
+    assert artifact.parameters == {"part": 91}
+    assert artifact.effective_date == date(2026, 7, 24)
+
+
+def test_ecfr_fetcher_does_not_retry_permanent_client_errors():
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(404, request=request)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(httpx.HTTPStatusError):
+            fetch_ecfr_part(
+                91,
+                date(1900, 1, 1),
+                client=client,
+                max_attempts=3,
+            )
+
+    assert calls == 1

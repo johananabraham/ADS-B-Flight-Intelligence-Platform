@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError
@@ -197,6 +198,9 @@ def parse_ntsb_carol_json(
         source_uri=artifact.source_uri,
         source_sha256=artifact.content_sha256,
         source_bytes=len(artifact.content),
+        retrieved_at=artifact.retrieved_at,
+        effective_date=artifact.effective_date,
+        parameters=artifact.parameters,
         source_record_count=len(source_records),
         parsed_record_count=len(records),
         rejected_record_count=len(source_records) - len(records) - duplicate_count,
@@ -205,3 +209,19 @@ def parse_ntsb_carol_json(
         issues=tuple(issues),
     )
     return ParsedSource[NtsbIncidentRecord](records=tuple(records), report=report)
+
+
+def load_ntsb_carol_export(
+    path: Path,
+    *,
+    source_uri: str | None = None,
+    retrieved_at: datetime | None = None,
+) -> SourceArtifact:
+    """Load a bounded official CAROL JSON export without scraping a web session."""
+    resolved_path = path.expanduser().resolve(strict=True)
+    return SourceArtifact(
+        kind=SourceKind.NTSB_CAROL_JSON,
+        source_uri=source_uri or resolved_path.as_uri(),
+        retrieved_at=retrieved_at or datetime.now(timezone.utc),
+        content=resolved_path.read_bytes(),
+    )
