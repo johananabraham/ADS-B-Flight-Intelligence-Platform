@@ -242,10 +242,14 @@ Current evidence and remaining gaps:
   until real NTSB data and reviewed expected answers are available.
 - No Langfuse tracing integration.
 - No source-version manifest proving which NTSB/eCFR snapshot produced an answer.
-- No automated citation-grounding or answer-faithfulness checks.
+- Deterministic citation grounding only exposes a source when it was retrieved and
+  its exact NTSB/CFR identifier appears in the final answer. Citation precision and
+  answer-faithfulness scoring remain incomplete.
 - The synchronous OpenAI client and synchronous SQL session are called from async
   endpoints and should be isolated or converted before load testing.
-- The UI does not expose citations as first-class clickable source objects.
+- The safety UI exposes clickable citation cards with document identity, effective
+  date, source hash, and the retrieved source span; unmatched answers show an
+  explicit unverified warning.
 
 ### Integrity roadmap Phase 0 checkpoint
 
@@ -953,7 +957,8 @@ Build in this order:
    aviation-domain review.
 3. Add SQL exact-match, citation precision/recall,
    faithfulness, latency, and cost metrics.
-4. Clickable citations and exact source spans/effective dates in the UI.
+4. Extend the implemented clickable source-span cards with measured citation
+   precision/recall and answer-faithfulness gates.
 5. Only then test BM25+dense fusion, reranking, parent/child retrieval, temporal CFR
    lookup, citation verification, or a causal knowledge graph.
 

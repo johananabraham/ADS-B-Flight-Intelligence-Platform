@@ -6,10 +6,26 @@ interface SafetyPanelProps {
 
 interface SafetyResult {
   answer: string;
+  citations: SafetyCitation[];
   tool_calls: { name: string; arguments: Record<string, unknown>; duration_ms: number }[];
   iterations: number;
   total_tokens: number;
   error?: string;
+}
+
+interface SafetyCitation {
+  source_type: 'NTSB_INCIDENT' | 'ECFR_REGULATION';
+  label: string;
+  document_id?: string;
+  source_url?: string;
+  effective_date?: string;
+  source_sha256?: string;
+  span: {
+    section?: string;
+    char_start?: number;
+    char_end?: number;
+    text: string;
+  };
 }
 
 export function SafetyPanel({ onClose }: SafetyPanelProps) {
@@ -90,6 +106,53 @@ export function SafetyPanel({ onClose }: SafetyPanelProps) {
                 {result.answer}
               </div>
             </div>
+
+            {result.citations.length > 0 && (
+              <section aria-label="Grounded sources" className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+                  Grounded sources
+                </h3>
+                {result.citations.map((citation) => (
+                  <details
+                    key={`${citation.source_type}:${citation.label}`}
+                    className="rounded border border-cyan-500/20 bg-gray-800/70 p-2 text-xs"
+                  >
+                    <summary className="cursor-pointer text-gray-200">
+                      {citation.source_url ? (
+                        <a
+                          href={citation.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-cyan-400 hover:underline"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          {citation.label}
+                        </a>
+                      ) : (
+                        <span className="font-mono text-cyan-400">{citation.label}</span>
+                      )}
+                      {citation.effective_date && (
+                        <span className="ml-2 text-gray-500">effective {citation.effective_date}</span>
+                      )}
+                    </summary>
+                    <p className="mt-2 whitespace-pre-wrap text-gray-400">{citation.span.text}</p>
+                    <div className="mt-2 space-y-0.5 text-[10px] text-gray-600">
+                      {citation.document_id && <div>Document: {citation.document_id}</div>}
+                      {citation.span.section && <div>Section: {citation.span.section}</div>}
+                      {citation.source_sha256 && (
+                        <div className="break-all">SHA-256: {citation.source_sha256}</div>
+                      )}
+                    </div>
+                  </details>
+                ))}
+              </section>
+            )}
+
+            {result.answer && result.citations.length === 0 && (
+              <p className="rounded border border-amber-500/20 bg-amber-950/30 p-2 text-xs text-amber-300">
+                No retrieved source was matched to a citation in this answer. Treat it as unverified.
+              </p>
+            )}
 
             {/* Tool calls (collapsed by default) */}
             {result.tool_calls.length > 0 && (

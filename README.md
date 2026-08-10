@@ -44,6 +44,8 @@ Real-time aircraft tracking and anomaly detection system using Software Defined 
 - **Short-window trajectory residuals** for subtle cumulative drift evidence
 - **AI-generated intelligence summaries** via Claude API
 - **Historical data analysis** with time-series queries
+- **Grounded safety citations** with clickable NTSB/eCFR sources, dated document
+  identity, hashes, and retrieved source spans
 
 ## Tech Stack
 
@@ -434,6 +436,7 @@ published dependency advisories.
 | Station health 7/7 classifications | `evaluation/results/station_health_offline_v1.json` | CI baseline gate |
 | ML baselines improve F1 to 0.9333 | `evaluation/results/ml_baselines_v1.json` | CI baseline gate |
 | FAA Part 91 retrieval Recall@5 is 0.9333 | `evaluation/results/faa_part91_retrieval_baseline_v1.json` | Versioned local baseline |
+| Safety citations require retrieved evidence | `backend/tests/test_safety_citations.py` | Backend test contract |
 | MQTT TLS + ACLs enforced | `scripts/test_edge_mqtt_security.sh` | CI `edge-transport-security` job |
 | ESP32 firmware compiles | ESP-IDF 6.0.2 docker build | CI `esp32-firmware` job |
 | Demo verifier passes | `scripts/verify_demo.py` | CI `demo` job |
