@@ -168,6 +168,12 @@ def add_incident_narratives(
     logger.debug(f"Added {len(ids)} incident narrative chunks to ChromaDB")
 
 
+def delete_incident_narratives(ntsb_id: str) -> None:
+    """Remove every prior chunk for one incident before replacing its document set."""
+    collection = get_incident_narratives_collection()
+    collection.delete(where={"ntsb_id": ntsb_id})
+
+
 def add_faa_regulations(
     ids: list[str],
     documents: list[str],

@@ -23,6 +23,7 @@ hypothesis==6.157.1
 
 # Safety Research Agent dependencies
 chromadb==0.4.22
+posthog==5.4.0  # Chroma 0.4.x telemetry adapter uses the pre-6 capture signature
 tiktoken==0.5.2
 openai==1.12.0
 

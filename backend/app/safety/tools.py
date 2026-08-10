@@ -6,6 +6,7 @@ from typing import Any, Callable
 from sqlalchemy import extract, func, select
 
 from ..models import Incident
+from ..models.safety import format_cfr_reference
 from ..core.database import SessionLocal
 from ..core.vectorstore import search_faa_regulations, search_incident_narratives
 
@@ -71,7 +72,7 @@ async def tool_search_incident_narratives(
                 "weather": metadata.get("weather_condition", ""),
                 "phase_of_flight": metadata.get("phase_of_flight", ""),
                 "fatal_injuries": metadata.get("fatal_injuries", 0),
-                "relevance_score": 1 - distance if distance else None,
+                "relevance_score": 1 - distance if distance is not None else None,
             })
 
         return {
@@ -296,13 +297,17 @@ async def tool_search_faa_regulations(
             metadata = results.get("metadatas", [])[i] if results.get("metadatas") else {}
             distance = results.get("distances", [])[i] if results.get("distances") else None
 
-            cfr_ref = f"14 CFR {metadata.get('cfr_part', '')}.{metadata.get('cfr_section', '')}"
+            cfr_ref = format_cfr_reference(
+                14,
+                int(metadata.get("cfr_part", 0)),
+                str(metadata.get("cfr_section", "")),
+            )
 
             formatted_results.append({
                 "cfr_reference": cfr_ref,
                 "section_title": metadata.get("section_title", ""),
                 "text_excerpt": doc[:800] + "..." if len(doc) > 800 else doc,
-                "relevance_score": 1 - distance if distance else None,
+                "relevance_score": 1 - distance if distance is not None else None,
             })
 
         return {

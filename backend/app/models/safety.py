@@ -11,6 +11,14 @@ from sqlalchemy.orm import Mapped, mapped_column
 from ..core.database import Base
 
 
+def format_cfr_reference(cfr_title: int, cfr_part: int, cfr_section: str) -> str:
+    """Format canonical or legacy section values without repeating the part."""
+    section = str(cfr_section)
+    if not section.startswith(f"{cfr_part}."):
+        section = f"{cfr_part}.{section}"
+    return f"{cfr_title} CFR {section}"
+
+
 class Incident(Base):
     """NTSB aviation incident/accident record."""
 
@@ -134,7 +142,11 @@ class Regulation(Base):
     @property
     def cfr_reference(self) -> str:
         """Return formatted CFR reference (e.g., '14 CFR 91.103')."""
-        return f"{self.cfr_title} CFR {self.cfr_part}.{self.cfr_section}"
+        return format_cfr_reference(
+            self.cfr_title,
+            self.cfr_part,
+            self.cfr_section,
+        )
 
     def __repr__(self) -> str:
         return f"<Regulation({self.cfr_reference}: {self.section_title[:50]}...)>"
