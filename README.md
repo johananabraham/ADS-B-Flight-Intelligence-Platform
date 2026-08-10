@@ -418,6 +418,15 @@ The ingestion proof also covers dated Parts 61, 91, 121, and 135: 1,025 sections
 zero parser rejects/duplicates, idempotent reruns, and zero SQL/vector lineage
 errors. See `docs/safety-ingestion-evidence-v1.md` and the checked-in JSON evidence.
 
+### Optional safety-agent tracing
+
+Every safety query returns a local trace ID. With optional Langfuse credentials,
+the direct function-calling loop exports nested agent, generation, and tool
+observations with token usage, latency, and error state. Prompt, answer, tool, and
+retrieved-document content remain redacted unless
+`LANGFUSE_CAPTURE_CONTENT=true` is explicitly set. See
+`docs/safety-agent-observability-v1.md`.
+
 ## Continuous Integration
 
 GitHub Actions runs Python lint/tests, pairwise and short-window held-out synthetic
@@ -442,6 +451,7 @@ published dependency advisories.
 | FAA Part 91 retrieval Recall@5 is 0.9333 | `evaluation/results/faa_part91_retrieval_baseline_v1.json` | Versioned local baseline |
 | Four dated FAA parts produce 1,025 lineage-consistent documents | `evaluation/results/ecfr_four_part_ingestion_proof_v1.json` | Executed isolated proof |
 | Safety citations require retrieved evidence | `backend/tests/test_safety_citations.py` | Backend test contract |
+| Safety query traces preserve privacy by default | `backend/tests/test_safety_observability.py` | Backend test contract |
 | MQTT TLS + ACLs enforced | `scripts/test_edge_mqtt_security.sh` | CI `edge-transport-security` job |
 | ESP32 firmware compiles | ESP-IDF 6.0.2 docker build | CI `esp32-firmware` job |
 | Demo verifier passes | `scripts/verify_demo.py` | CI `demo` job |

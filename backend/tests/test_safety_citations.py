@@ -93,14 +93,24 @@ async def test_query_api_returns_typed_citations(monkeypatch):
         span=SourceSpan(section="91.103", char_start=0, char_end=16, text="Preflight action"),
     )
 
-    async def fake_run_agent(_query: str):
-        return AgentResponse(answer="See 14 CFR 91.103.", citations=(citation,))
+    async def fake_run_agent(_query: str, *, session_id: str | None):
+        assert session_id == "investigation-1"
+        return AgentResponse(
+            answer="See 14 CFR 91.103.",
+            trace_id="a" * 32,
+            citations=(citation,),
+        )
 
     monkeypatch.setattr(safety_api, "run_agent", fake_run_agent)
 
     response = await safety_api.safety_query(
-        safety_api.QueryRequest(query="What preflight rule applies?")
+        safety_api.QueryRequest(
+            query="What preflight rule applies?",
+            session_id="investigation-1",
+        )
     )
 
+    assert response.trace_id == "a" * 32
+    assert response.trace_url is None
     assert response.citations == [citation]
     assert response.citations[0].span.text == "Preflight action"
