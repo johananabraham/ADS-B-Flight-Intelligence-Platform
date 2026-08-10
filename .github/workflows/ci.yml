@@ -159,9 +159,13 @@ jobs:
       - name: Apply database migration
         run: docker compose exec -T backend alembic -c alembic.ini upgrade head
       - name: Verify idempotent safety-source persistence
-        run: docker compose exec -T backend python scripts/verify_safety_ingestion.py
+        run: >-
+          docker compose exec -T -e PYTHONPATH=/app backend
+          python scripts/verify_safety_ingestion.py
       - name: Verify section-aware safety corpus lineage
-        run: docker compose exec -T backend python scripts/verify_safety_corpus.py
+        run: >-
+          docker compose exec -T -e PYTHONPATH=/app backend
+          python scripts/verify_safety_corpus.py
       - name: Verify the complete data path
         run: python scripts/verify_demo.py --timeout 180
       - name: Start checked-in recorded replay
