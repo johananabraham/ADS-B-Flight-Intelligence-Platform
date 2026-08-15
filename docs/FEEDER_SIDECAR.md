@@ -37,6 +37,7 @@ The policy file uses JSON (which is also valid YAML 1.2), rejects unknown fields
 - `GET /api/v1/integrity/events`
 - `WS /api/v1/integrity/stream`
 - `GET /metrics`
+- `GET /api/v1/pilot/summary`
 
 WebSocket clients should fetch REST state after reconnecting. Event JSONL is bounded evidence history, not an authoritative raw-aircraft archive. Raw SBS lines, callsigns, coordinates, squawks, and receiver labels are not written to the event store or metric labels.
 
@@ -57,3 +58,17 @@ The checked-in paced soak result in
 seconds at 100 messages/second with zero drops, 1.699 ms p95 processing latency,
 and 95.781 MB process memory. This is a local synthetic transport benchmark, not a
 field traffic or detection-quality measurement.
+
+## Independent pilot readiness
+
+With live SBS traffic flowing, verify installation and generate a privacy-safe
+aggregate:
+
+```bash
+python scripts/check_pilot_readiness.py --sample-seconds 10
+curl --fail --silent http://127.0.0.1:8090/api/v1/pilot/summary
+```
+
+The readiness command fails unless the source is connected, messages and
+evaluations advance, the queue remains within capacity, and drops remain zero. See
+`docs/PILOT_PROGRAM.md` before inviting another operator or sharing an aggregate.

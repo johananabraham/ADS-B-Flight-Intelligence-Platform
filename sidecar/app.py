@@ -119,6 +119,10 @@ def create_app(config: SidecarConfig | None = None, *, start_ingestion: bool = T
             media_type="text/plain; version=0.0.4; charset=utf-8",
         )
 
+    @app.get("/api/v1/pilot/summary")
+    async def pilot_summary():
+        return runtime.pilot_summary()
+
     static = Path(__file__).parent / "static"
 
     @app.get("/")

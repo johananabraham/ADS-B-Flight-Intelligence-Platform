@@ -1,0 +1,50 @@
+name: Sanitized feeder pilot feedback
+description: Share installation or usability feedback without operational identifiers.
+title: "[Pilot feedback] "
+labels: ["pilot-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include receiver locations, aircraft identifiers, callsigns, coordinates,
+        raw SBS messages, feeder credentials, screenshots of live traffic, or secrets.
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Pilot stage
+      options:
+        - Installation
+        - Readiness check
+        - Multi-day run
+        - Final interview
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What happened?
+      description: Describe behavior and impact without identifying operational data.
+    validations:
+      required: true
+  - type: textarea
+    id: aggregate
+    attributes:
+      label: Relevant aggregate measurements
+      description: Paste only reviewed fields from /api/v1/pilot/summary if useful.
+  - type: dropdown
+    id: keep
+    attributes:
+      label: Would you keep the sidecar installed?
+      options:
+        - "Yes"
+        - "No"
+        - "Unsure"
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy review
+      options:
+        - label: I reviewed this report and removed operational identifiers and credentials.
+          required: true

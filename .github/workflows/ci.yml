@@ -156,7 +156,7 @@ jobs:
         run: docker rm --force feeder-integrity-smoke || true
 
       - name: Scan sidecar image for critical vulnerabilities
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: feeder-integrity:test
           format: table
@@ -205,7 +205,7 @@ jobs:
         working-directory: frontend
         run: npm audit --audit-level=high
       - name: Scan source and deployment configuration
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           scan-type: fs
           scan-ref: .
