@@ -8,8 +8,6 @@ from functools import lru_cache
 from typing import Any
 from uuid import uuid4
 
-from langfuse import Langfuse, propagate_attributes
-
 from ..core.config import Settings, get_settings
 
 
@@ -34,7 +32,7 @@ class SafetyTrace:
         self,
         *,
         trace_id: str,
-        client: Langfuse | None,
+        client: Any | None,
         capture_content: bool,
     ) -> None:
         self.trace_id = trace_id
@@ -73,8 +71,13 @@ class SafetyTrace:
             }
             if session_id:
                 propagated["session_id"] = session_id
-            with propagate_attributes(**propagated):
+            try:
+                from langfuse import propagate_attributes
+            except ImportError:
                 yield self
+            else:
+                with propagate_attributes(**propagated):
+                    yield self
 
     @contextmanager
     def generation(
@@ -143,7 +146,15 @@ def _langfuse_client(
     secret_key: str,
     base_url: str,
     environment: str,
-) -> Langfuse:
+) -> Any | None:
+    try:
+        from langfuse import Langfuse
+    except ImportError:
+        logger.warning(
+            "Langfuse tracing requested but the optional package is unavailable; "
+            "using local trace IDs only"
+        )
+        return None
     return Langfuse(
         public_key=public_key,
         secret_key=secret_key,
@@ -153,11 +164,14 @@ def _langfuse_client(
     )
 
 
-def _configured_client(settings: Settings) -> Langfuse | None:
+def _configured_client(settings: Settings) -> Any | None:
     if not settings.langfuse_enabled:
         return None
     if not settings.langfuse_public_key or not settings.langfuse_secret_key:
-        logger.warning("Langfuse tracing enabled without both credentials; using local trace IDs only")
+        logger.warning(
+            "Langfuse tracing enabled without both credentials; "
+            "using local trace IDs only"
+        )
         return None
     return _langfuse_client(
         settings.langfuse_public_key,
