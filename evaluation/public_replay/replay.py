@@ -9,7 +9,7 @@ from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
 from app.schemas.observation import ObservationProvenance, ObservationSourceType, TrackObservation
-from integrity_core import EvidenceKind, IntegrityEngine, load_policy
+from integrity_core import EvidenceKind, IntegrityEngine, IntegrityEvent, load_policy
 
 from .selection import CandidateSelection, _time
 
@@ -45,7 +45,7 @@ def replay_candidate(
         return blocked_result("Source licensing has not been approved for processing.", policy_path)
     policy = load_policy(policy_path)
     engine = IntegrityEngine(policy)
-    relevant = []
+    relevant: list[IntegrityEvent] = []
     usable = 0
     for index, item in enumerate(selection.trace):
         try:

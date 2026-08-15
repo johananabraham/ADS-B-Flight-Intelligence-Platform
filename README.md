@@ -8,14 +8,15 @@ An open, self-hosted integrity monitor for untrusted real-time ADS-B telemetry. 
 
 | Metric | Value | Evidence |
 |--------|-------|----------|
-| Backend regression suite | 249 tests passing | CI `backend` job |
+| Backend regression suite | 266 tests passing | CI `backend` job |
+| Feeder sidecar paced soak | 100 msg/s for 30 min, 0 drops, 1.699 ms p95 | Checked-in soak result |
 | Kinematic detection (abrupt) | 100% | Held-out 22 sessions |
 | Kinematic detection (gradual) | 100% with window | Held-out 22 sessions |
 | Generated clean FP rate | 0% | 88 control scenarios |
 | ML baseline F1 | 0.9333 | Held-out evaluation |
 | FAA Part 91 retrieval Recall@5 | 0.9333 | 15 reviewed official-source cases |
 | Versioned FAA corpus | 1,025 sections | Parts 61/91/121/135, zero lineage errors |
-| Dependency vulnerabilities | 0 | pip-audit + npm audit |
+| Known dependency vulnerabilities | 0 | pip-audit 2.10.1 + npm audit, checked 2026-08-15 |
 
 ## Architecture
 
@@ -73,6 +74,12 @@ docker compose -f docker-compose.feeder.yml up -d
 ```
 
 Open <http://127.0.0.1:8090>. No PostgreSQL, Redis, ChromaDB, LLM key, or cloud account is required. See [the feeder sidecar guide](docs/FEEDER_SIDECAR.md) for its read-only API, evidence semantics, privacy boundary, and configuration.
+
+The v2 architecture, benchmark boundaries, data/model card, responsible-use
+policy, reproducibility steps, and honest release blockers are indexed in
+[the v2 release checklist](docs/RELEASE_CHECKLIST_V2.md). This software reports
+integrity evidence; it does not authenticate aircraft, prove spoofing, or provide
+safety-of-life guidance.
 
 ### Demo mode (no SDR hardware required)
 

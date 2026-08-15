@@ -1,0 +1,14 @@
+{
+  "accelerated": false,
+  "achieved_rate_messages_per_second": 100.0,
+  "dropped_messages_total": 0,
+  "duration_seconds": 1800,
+  "messages": 180000,
+  "p50_processing_ms": 0.683,
+  "p95_processing_ms": 1.699,
+  "passed": true,
+  "process_memory_mb": 95.781,
+  "schema_version": "1.0",
+  "target_rate_messages_per_second": 100,
+  "wall_seconds": 1799.991789
+}
