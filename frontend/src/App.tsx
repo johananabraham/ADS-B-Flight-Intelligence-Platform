@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import 'leaflet/dist/leaflet.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FlightMap } from '@/components/FlightMap';
 import { AircraftPanel } from '@/components/AircraftPanel';

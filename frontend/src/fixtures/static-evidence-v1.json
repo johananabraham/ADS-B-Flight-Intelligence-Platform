@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "policy_version": "1.0-development",
+  "scenarios": [
+    {
+      "id": "routine-nominal",
+      "title": "Routine synthetic control",
+      "family": "SYNTHETIC_CONTROL",
+      "summary": "A deterministic constant-velocity trajectory remains nominal after minimum data is available.",
+      "frames": [
+        {"elapsed_seconds": 0, "state": "INSUFFICIENT_DATA", "evidence": []},
+        {"elapsed_seconds": 1, "state": "NOMINAL", "evidence": []},
+        {"elapsed_seconds": 2, "state": "NOMINAL", "evidence": []},
+        {"elapsed_seconds": 3, "state": "NOMINAL", "evidence": []}
+      ]
+    },
+    {
+      "id": "synthetic-abrupt",
+      "title": "Synthetic abrupt jump",
+      "family": "SYNTHETIC_ABRUPT",
+      "summary": "A fictional one-second position jump crosses the pairwise implied-speed threshold.",
+      "frames": [
+        {"elapsed_seconds": 0, "state": "INSUFFICIENT_DATA", "evidence": []},
+        {"elapsed_seconds": 1, "state": "QUESTIONABLE", "evidence": [{"kind": "PAIR_KINEMATIC", "severity": "CRITICAL", "summary": "Implied ground speed exceeds the frozen policy limit.", "measured": 4323.0, "threshold": 750.0, "unit": "knots"}]},
+        {"elapsed_seconds": 2, "state": "QUESTIONABLE", "evidence": [{"kind": "PAIR_KINEMATIC", "severity": "CRITICAL", "summary": "Pairwise evidence remains active until policy expiry.", "measured": 4323.0, "threshold": 750.0, "unit": "knots"}]}
+      ]
+    },
+    {
+      "id": "synthetic-gradual",
+      "title": "Synthetic gradual drift",
+      "family": "SYNTHETIC_GRADUAL",
+      "summary": "A fictional lateral drift accumulates across six reports and crosses the window residual threshold.",
+      "frames": [
+        {"elapsed_seconds": 0, "state": "INSUFFICIENT_DATA", "evidence": []},
+        {"elapsed_seconds": 1, "state": "NOMINAL", "evidence": []},
+        {"elapsed_seconds": 2, "state": "NOMINAL", "evidence": []},
+        {"elapsed_seconds": 3, "state": "NOMINAL", "evidence": []},
+        {"elapsed_seconds": 4, "state": "NOMINAL", "evidence": []},
+        {"elapsed_seconds": 5, "state": "QUESTIONABLE", "evidence": [{"kind": "WINDOW_KINEMATIC", "severity": "CRITICAL", "summary": "Cumulative position residual exceeds the frozen window threshold.", "measured": 0.006, "threshold": 0.002, "unit": "nautical miles"}]}
+      ]
+    }
+  ],
+  "benchmark": {
+    "status": "BLOCKED_CAPTURE_PENDING",
+    "metric_name": "reviewed routine-traffic integrity-alert rate",
+    "value": null,
+    "detail": "Seven usable physical receiver-days and an untouched day-7 holdout have not yet been captured. No zero or passing rate is implied.",
+    "synthetic_abrupt_targeted_recall": 1.0,
+    "synthetic_gradual_targeted_recall": 1.0,
+    "cases_per_family": 20
+  },
+  "public_candidate": {
+    "outcome": "BLOCKED_REPLICATION",
+    "detail": "The pinned source license needs review and no compliant surrounding trace has been acquired. No synthetic substitute is presented as real evidence.",
+    "claim_boundary": "This is not evidence of confirmed spoofing or malicious activity."
+  }
+}
