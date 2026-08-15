@@ -51,6 +51,13 @@ jobs:
         run: >-
           python scripts/run_windowed_kinematic_evaluation.py --check
           --baseline evaluation/results/windowed_trajectory_baseline_v1.json
+      - name: Enforce frozen-policy targeted-family recall
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/evaluate_frozen_synthetic.py
+          --policy backend/integrity_core/policies/feeder-v1.json
+          --cases 20 --output /tmp/frozen-policy-synthetic-v1.json
       - name: Enforce extended synthetic scenario baseline
         env:
           PYTHONPATH: backend:.

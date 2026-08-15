@@ -1,0 +1,9 @@
+{
+  "abrupt_detected": 20,
+  "abrupt_targeted_recall": 1.0,
+  "cases_per_family": 20,
+  "gradual_detected": 20,
+  "gradual_targeted_recall": 1.0,
+  "policy_sha256": "b1ea0ec365b757e3077d24609835ba98466221b9d55ec38a047d98378f47f52d",
+  "schema_version": "1.0"
+}
