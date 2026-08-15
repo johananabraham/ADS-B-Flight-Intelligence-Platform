@@ -29,7 +29,7 @@ openai==1.12.0
 langfuse==4.14.3
 
 # Authentication dependencies
-python-jose[cryptography]==3.3.0
+PyJWT==2.13.0
 passlib==1.7.4
 bcrypt==4.1.2
 email-validator==2.2.0

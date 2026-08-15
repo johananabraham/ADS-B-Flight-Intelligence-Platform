@@ -7,7 +7,7 @@ import os
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, TextIO
 
 
 class RotatingEventStore:
@@ -25,7 +25,7 @@ class RotatingEventStore:
         self.segment_bytes = segment_bytes or min(8 * 1024 * 1024, max(64 * 1024, max_bytes // 8))
         self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         self._sequence = self._next_sequence()
-        self._handle = None
+        self._handle: TextIO | None = None
         self._path: Path | None = None
         self.recovered_events: deque[dict[str, Any]] = deque(
             self._recover(), maxlen=10_000

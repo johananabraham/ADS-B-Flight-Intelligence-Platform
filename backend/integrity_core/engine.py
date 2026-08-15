@@ -183,17 +183,17 @@ class IntegrityEngine:
             if earliest_window_time <= item.observed_at <= observation.observed_at
         )[-self.policy.window.maximum_observations :]
         if len(window_items) >= self.policy.window.minimum_observations:
-            window = evaluate_window(window_items, policy=self.policy.window)
-            if window.status is EvaluationStatus.FLAGGED:
-                for result in window.failed_rules:
+            window_evaluation = evaluate_window(window_items, policy=self.policy.window)
+            if window_evaluation.status is EvaluationStatus.FLAGGED:
+                for window_rule in window_evaluation.failed_rules:
                     candidates.append(
                         (
                             EvidenceKind.WINDOW_KINEMATIC,
-                            result.rule.value,
-                            result.explanation,
-                            {result.rule.value.lower(): result.value},
-                            {result.rule.value.lower(): result.threshold},
-                            self._severity(result.value, result.threshold),
+                            window_rule.rule.value,
+                            window_rule.explanation,
+                            {window_rule.rule.value.lower(): window_rule.value},
+                            {window_rule.rule.value.lower(): window_rule.threshold},
+                            self._severity(window_rule.value, window_rule.threshold),
                         )
                     )
 

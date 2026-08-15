@@ -3,7 +3,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import uuid4
 
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 
 from ..core.config import get_settings
@@ -112,5 +113,5 @@ def decode_token(token: str) -> Optional[TokenData]:
             role=UserRole(role),
             session_id=session_id,
         )
-    except (JWTError, TypeError, ValueError):
+    except (InvalidTokenError, TypeError, ValueError):
         return None

@@ -34,6 +34,12 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _number(value: object) -> int | float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError("normalized SBS numeric field has an invalid type")
+    return value
+
+
 def sanitize_capture(
     manifest_path: str | Path,
     policy_path: str | Path,
@@ -99,18 +105,24 @@ def sanitize_capture(
             longitude = merged.get("lon")
             altitude = merged.get("altitude")
             if key not in origins and latitude is not None and longitude is not None:
-                origins[key] = (float(latitude), float(longitude), int(altitude) if altitude is not None else None)
+                origins[key] = (
+                    float(_number(latitude)),
+                    float(_number(longitude)),
+                    int(_number(altitude)) if altitude is not None else None,
+                )
             origin = origins.get(key)
             delta_north = delta_east = None
             relative_altitude = None
             if origin and latitude is not None and longitude is not None:
-                delta_north = round((float(latitude) - origin[0]) * 60, 6)
+                delta_north = round((float(_number(latitude)) - origin[0]) * 60, 6)
                 delta_east = round(
-                    (float(longitude) - origin[1]) * 60 * math.cos(math.radians(origin[0])),
+                    (float(_number(longitude)) - origin[1])
+                    * 60
+                    * math.cos(math.radians(origin[0])),
                     6,
                 )
             if origin and origin[2] is not None and altitude is not None:
-                relative_altitude = int(altitude) - origin[2]
+                relative_altitude = int(_number(altitude)) - origin[2]
             track_labels.setdefault(key, _label("track"))
             measured = {
                 metric: value

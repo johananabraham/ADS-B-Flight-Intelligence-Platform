@@ -145,13 +145,15 @@ class SidecarRuntime:
             )
             del self._states[oldest]
         received = received_at or datetime.now(timezone.utc)
+        observed = parsed.data["_observed_at"]
+        assert isinstance(observed, datetime)
         observation = sbs_state_to_observation(
             merged,
             source_type=source_type,
             source_id="local-sbs",
             receiver_id=self.config.receiver_id if source_type is ObservationSourceType.LIVE_RF else None,
             recording_id=recording_id if source_type is ObservationSourceType.RECORDED_REPLAY else None,
-            observed_at=parsed.data["_observed_at"],
+            observed_at=observed,
             received_at=received,
             raw_message_id=str(parsed.data["_raw_message_id"]),
         )

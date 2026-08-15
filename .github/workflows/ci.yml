@@ -32,9 +32,15 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
       - name: Install backend and quality dependencies
-        run: pip install -r backend/requirements.txt ruff==0.5.7
+        run: pip install -r backend/requirements.txt ruff==0.5.7 mypy==2.3.0
       - name: Lint Python
-        run: ruff check backend services scripts
+        run: ruff check backend services scripts sidecar evaluation
+      - name: Type-check feeder integrity v2 packages
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          mypy --ignore-missing-imports
+          backend/integrity_core sidecar evaluation/field evaluation/public_replay
       - name: Run backend tests
         env:
           PYTHONPATH: backend:.
@@ -133,7 +139,9 @@ jobs:
       - name: Verify container starts without external services
         run: >-
           docker run --rm --detach --name feeder-integrity-smoke
-          --read-only --tmpfs /tmp --cap-drop ALL
+          --read-only --tmpfs /tmp
+          --tmpfs /data/events:uid=10001,gid=10001,mode=0700
+          --cap-drop ALL --security-opt no-new-privileges:true
           -e RECEIVER_ID=ci-feeder -e ADSB_INPUT_HOST=127.0.0.1
           -p 127.0.0.1:8090:8090 feeder-integrity:test
       - name: Wait for the read-only health endpoint
@@ -146,6 +154,15 @@ jobs:
       - name: Stop smoke container
         if: always()
         run: docker rm --force feeder-integrity-smoke || true
+
+      - name: Scan sidecar image for critical vulnerabilities
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: feeder-integrity:test
+          format: table
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
 
   decoder:
     runs-on: ubuntu-latest
@@ -160,22 +177,42 @@ jobs:
 
   security:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan complete reachable history for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scan complete reachable history for restricted artifacts
+        run: python scripts/audit_release_history.py
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Audit Python dependencies
-        run: pip install pip-audit==2.7.3 && pip-audit -r backend/requirements.txt
+      - name: Audit backend Python dependencies
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          inputs: backend/requirements.txt
+      - name: Audit sidecar Python dependencies
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          inputs: sidecar/requirements.txt
       - uses: actions/setup-node@v4
-        if: always()
         with:
           node-version: "20"
       - name: Audit frontend dependencies
-        if: always()
         working-directory: frontend
         run: npm audit --audit-level=high
+      - name: Scan source and deployment configuration
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig,secret
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
 
   edge-transport-security:
     runs-on: ubuntu-latest

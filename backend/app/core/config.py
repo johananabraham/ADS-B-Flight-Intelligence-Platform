@@ -1,5 +1,6 @@
 from functools import lru_cache
 import secrets
+from typing import Literal
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -75,7 +76,7 @@ class Settings(BaseSettings):
 
     # Authentication Settings
     jwt_secret_key: str = Field(default_factory=lambda: secrets.token_urlsafe(48))
-    jwt_algorithm: str = "HS256"
+    jwt_algorithm: Literal["HS256"] = "HS256"
     access_token_expire_minutes: int = 480  # 8 hours
     session_cookie_name: str = "adsb_session"
 
