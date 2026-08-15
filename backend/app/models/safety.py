@@ -2,11 +2,21 @@
 
 from datetime import date, datetime
 from typing import Optional
+from uuid import UUID
 
-from sqlalchemy import Date, DateTime, Index, Integer, String, Text, func
+from sqlalchemy import Date, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..core.database import Base
+
+
+def format_cfr_reference(cfr_title: int, cfr_part: int, cfr_section: str) -> str:
+    """Format canonical or legacy section values without repeating the part."""
+    section = str(cfr_section)
+    if not section.startswith(f"{cfr_part}."):
+        section = f"{cfr_part}.{section}"
+    return f"{cfr_title} CFR {section}"
 
 
 class Incident(Base):
@@ -45,6 +55,16 @@ class Incident(Base):
     investigation_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     probable_cause: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     narrative: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source_run_id: Mapped[Optional[UUID]] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(
+            "safety_ingestion_runs.run_id",
+            ondelete="RESTRICT",
+            name="fk_incidents_source_run",
+        ),
+        nullable=True,
+    )
 
     # Pilot information
     pilot_certificate: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
@@ -90,6 +110,15 @@ class Regulation(Base):
     # Metadata
     effective_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     source_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    source_run_id: Mapped[Optional[UUID]] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(
+            "safety_ingestion_runs.run_id",
+            ondelete="RESTRICT",
+            name="fk_regulations_source_run",
+        ),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
@@ -99,14 +128,25 @@ class Regulation(Base):
 
     # Indexes
     __table_args__ = (
-        Index("ix_regulations_cfr_ref", "cfr_title", "cfr_part", "cfr_section", unique=True),
+        Index(
+            "ix_regulations_cfr_ref_date",
+            "cfr_title",
+            "cfr_part",
+            "cfr_section",
+            "effective_date",
+            unique=True,
+        ),
         Index("ix_regulations_part", "cfr_part"),
     )
 
     @property
     def cfr_reference(self) -> str:
         """Return formatted CFR reference (e.g., '14 CFR 91.103')."""
-        return f"{self.cfr_title} CFR {self.cfr_part}.{self.cfr_section}"
+        return format_cfr_reference(
+            self.cfr_title,
+            self.cfr_part,
+            self.cfr_section,
+        )
 
     def __repr__(self) -> str:
         return f"<Regulation({self.cfr_reference}: {self.section_title[:50]}...)>"

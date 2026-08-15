@@ -61,6 +61,14 @@ class Settings(BaseSettings):
     agent_max_iterations: int = 10
     agent_temperature: float = 0.1
 
+    # Optional Langfuse export. Local trace IDs remain available when disabled.
+    langfuse_enabled: bool = False
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_base_url: str = "https://cloud.langfuse.com"
+    langfuse_environment: str = "development"
+    langfuse_capture_content: bool = False
+
     # Data Ingestion URLs
     ntsb_data_url: str = "https://data.ntsb.gov/avdata/FileDirectory/DownloadFile?fileID=C%3A%5Cavdata%5Cavall.zip"
     ecfr_api_base_url: str = "https://www.ecfr.gov/api/versioner/v1"

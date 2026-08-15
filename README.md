@@ -13,6 +13,8 @@ Real-time aircraft tracking and anomaly detection system using Software Defined 
 | Kinematic detection (gradual) | 100% with window | Held-out 22 sessions |
 | Generated clean FP rate | 0% | 88 control scenarios |
 | ML baseline F1 | 0.9333 | Held-out evaluation |
+| FAA Part 91 retrieval Recall@5 | 0.9333 | 15 reviewed official-source cases |
+| Versioned FAA corpus | 1,025 sections | Parts 61/91/121/135, zero lineage errors |
 | Dependency vulnerabilities | 0 | pip-audit + npm audit |
 
 ## Architecture
@@ -43,6 +45,8 @@ Real-time aircraft tracking and anomaly detection system using Software Defined 
 - **Short-window trajectory residuals** for subtle cumulative drift evidence
 - **AI-generated intelligence summaries** via Claude API
 - **Historical data analysis** with time-series queries
+- **Grounded safety citations** with clickable NTSB/eCFR sources, dated document
+  identity, hashes, and retrieved source spans
 
 ## Tech Stack
 
@@ -394,6 +398,36 @@ The demo Compose override labels its generated traffic as `SIMULATION`. For a
 recorded file, use `RECORDED_REPLAY` and set `OBSERVATION_RECORDING_ID`; do not
 label replayed traffic as live RF.
 
+### Versioned safety retrieval evaluation
+
+The safety ingestion path records source URI, SHA-256, effective date, manifests,
+and dead letters. A checked-in evaluation set binds 15 reviewed questions to exact
+section IDs from the official 2026-07-24 eCFR Part 91 artifact:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/run_safety_evaluation.py \
+  --output /tmp/faa-part91-current.json \
+  --baseline evaluation/results/faa_part91_retrieval_baseline_v1.json
+```
+
+The baseline measures Recall@3 0.9333, Recall@5 0.9333, and MRR 0.8111. It uses
+engineering review of an official source, not independent aviation-domain review.
+It does not measure NTSB retrieval, SQL answer accuracy, generated-answer
+faithfulness, or production latency. See `docs/safety-retrieval-evaluation-v1.md`.
+
+The ingestion proof also covers dated Parts 61, 91, 121, and 135: 1,025 sections,
+zero parser rejects/duplicates, idempotent reruns, and zero SQL/vector lineage
+errors. See `docs/safety-ingestion-evidence-v1.md` and the checked-in JSON evidence.
+
+### Optional safety-agent tracing
+
+Every safety query returns a local trace ID. With optional Langfuse credentials,
+the direct function-calling loop exports nested agent, generation, and tool
+observations with token usage, latency, and error state. Prompt, answer, tool, and
+retrieved-document content remain redacted unless
+`LANGFUSE_CAPTURE_CONTENT=true` is explicitly set. See
+`docs/safety-agent-observability-v1.md`.
+
 ## Continuous Integration
 
 GitHub Actions runs Python lint/tests, pairwise and short-window held-out synthetic
@@ -415,6 +449,10 @@ published dependency advisories.
 | Cross-source corroboration 6 states verified | `evaluation/results/corroboration_offline_v1.json` | CI baseline gate |
 | Station health 7/7 classifications | `evaluation/results/station_health_offline_v1.json` | CI baseline gate |
 | ML baselines improve F1 to 0.9333 | `evaluation/results/ml_baselines_v1.json` | CI baseline gate |
+| FAA Part 91 retrieval Recall@5 is 0.9333 | `evaluation/results/faa_part91_retrieval_baseline_v1.json` | Versioned local baseline |
+| Four dated FAA parts produce 1,025 lineage-consistent documents | `evaluation/results/ecfr_four_part_ingestion_proof_v1.json` | Executed isolated proof |
+| Safety citations require retrieved evidence | `backend/tests/test_safety_citations.py` | Backend test contract |
+| Safety query traces preserve privacy by default | `backend/tests/test_safety_observability.py` | Backend test contract |
 | MQTT TLS + ACLs enforced | `scripts/test_edge_mqtt_security.sh` | CI `edge-transport-security` job |
 | ESP32 firmware compiles | ESP-IDF 6.0.2 docker build | CI `esp32-firmware` job |
 | Demo verifier passes | `scripts/verify_demo.py` | CI `demo` job |
@@ -424,6 +462,7 @@ published dependency advisories.
 - Real RF capture alert rate (pending private captures)
 - Live OpenSky corroboration (pending multi-hour comparison)
 - Physical ESP32 outage/recovery (pending hardware test)
+- Complete NTSB retrieval, SQL exact-match, and answer-synthesis evaluation
 
 ## Project Structure
 
