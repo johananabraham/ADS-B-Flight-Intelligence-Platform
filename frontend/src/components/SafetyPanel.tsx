@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 interface SafetyPanelProps {
   onClose: () => void;
@@ -6,6 +6,8 @@ interface SafetyPanelProps {
 
 interface SafetyResult {
   answer: string;
+  trace_id: string;
+  trace_url?: string;
   citations: SafetyCitation[];
   tool_calls: { name: string; arguments: Record<string, unknown>; duration_ms: number }[];
   iterations: number;
@@ -29,6 +31,7 @@ interface SafetyCitation {
 }
 
 export function SafetyPanel({ onClose }: SafetyPanelProps) {
+  const sessionId = useRef(crypto.randomUUID());
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<SafetyResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,7 +48,7 @@ export function SafetyPanel({ onClose }: SafetyPanelProps) {
       const response = await fetch('/api/v1/safety/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, session_id: sessionId.current }),
       });
 
       if (!response.ok) throw new Error('Query failed');
@@ -170,6 +173,16 @@ export function SafetyPanel({ onClose }: SafetyPanelProps) {
                 </div>
               </details>
             )}
+
+            <p className="select-all break-all font-mono text-[10px] text-gray-600">
+              {result.trace_url ? (
+                <a href={result.trace_url} target="_blank" rel="noreferrer" className="hover:text-cyan-500">
+                  Trace {result.trace_id}
+                </a>
+              ) : (
+                <>Trace {result.trace_id}</>
+              )}
+            </p>
           </>
         )}
 

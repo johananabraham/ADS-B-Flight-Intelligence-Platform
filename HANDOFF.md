@@ -241,7 +241,10 @@ Current evidence and remaining gaps:
   Recall@5 0.9333, and MRR 0.8111. It is not independent domain-expert review.
 - Structured-query exact-match and answer-synthesis evaluations remain incomplete
   until real NTSB data and reviewed expected answers are available.
-- No Langfuse tracing integration.
+- Optional Langfuse v4 tracing records nested agent, generation, and tool
+  observations; every API response gets a local trace ID. Content export is
+  disabled by default. A real hosted trace still requires project credentials and
+  manual dashboard inspection.
 - No source-version manifest proving which NTSB/eCFR snapshot produced an answer.
 - Deterministic citation grounding only exposes a source when it was retrieved and
   its exact NTSB/CFR identifier appears in the final answer. Citation precision and
