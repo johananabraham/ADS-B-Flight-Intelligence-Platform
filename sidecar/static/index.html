@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Local ADS-B feeder telemetry integrity evidence">
+    <title>Feeder Integrity</title>
+    <link rel="stylesheet" href="/assets/app.css">
+    <script type="module" src="/assets/app.js"></script>
+  </head>
+  <body>
+    <header>
+      <div><p class="eyebrow">LOCAL FEEDER SIDECAR</p><h1>Telemetry integrity</h1></div>
+      <p id="policy">Policy loading…</p>
+    </header>
+    <main>
+      <section id="health" class="health disconnected" aria-live="polite">
+        <strong id="health-state">DISCONNECTED</strong><span id="health-detail">Loading receiver health…</span>
+      </section>
+      <section class="cards" aria-label="Track state counts">
+        <article><span>Nominal</span><strong id="count-nominal">0</strong></article>
+        <article><span>Questionable</span><strong id="count-questionable">0</strong></article>
+        <article><span>Insufficient data</span><strong id="count-insufficient">0</strong></article>
+      </section>
+      <section class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">CURRENT SNAPSHOTS</p><h2>Recent tracks</h2></div><button id="sort" type="button">Newest first</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Track</th><th>State</th><th>Observations</th><th>Window</th><th>Evidence</th></tr></thead><tbody id="tracks"><tr><td colspan="5">Waiting for observations…</td></tr></tbody></table></div>
+      </section>
+      <section class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">APPEND-ONLY HISTORY</p><h2>Recent evidence events</h2></div>
+          <label>Kind <select id="kind-filter"><option value="">All</option><option>PAIR_KINEMATIC</option><option>WINDOW_KINEMATIC</option><option>TIMING_DUPLICATE</option><option>TIMING_NON_INCREASING</option><option>TIMING_OUT_OF_ORDER</option><option>TIMING_EXCESSIVE_LATENCY</option><option>TIMING_GAP</option></select></label>
+        </div>
+        <ol id="events" class="timeline"><li>No integrity events recorded.</li></ol>
+      </section>
+    </main>
+    <dialog id="track-dialog"><form method="dialog"><button class="close" aria-label="Close track details">×</button></form><div id="track-detail"></div></dialog>
+    <footer>Research integrity evidence—not verified position, intent, spoofing, or safety-of-life guidance.</footer>
+  </body>
+</html>

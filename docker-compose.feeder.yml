@@ -1,0 +1,37 @@
+services:
+  feeder-integrity:
+    image: ghcr.io/${GITHUB_REPOSITORY:-local/adsb-flight-intelligence-platform}/feeder-integrity:${SIDECAR_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.feeder
+    restart: unless-stopped
+    environment:
+      ADSB_INPUT_HOST: ${ADSB_INPUT_HOST:-host.docker.internal}
+      ADSB_INPUT_PORT: ${ADSB_INPUT_PORT:-30003}
+      RECEIVER_ID: ${RECEIVER_ID:?Set RECEIVER_ID to a stable local label}
+      SIDECAR_BIND_HOST: 0.0.0.0
+      SIDECAR_PORT: 8090
+      INTEGRITY_POLICY_PATH: ${INTEGRITY_POLICY_PATH:-/app/backend/integrity_core/policies/feeder-v1.json}
+      EVENT_RETENTION_HOURS: ${EVENT_RETENTION_HOURS:-168}
+      EVENT_STORE_MAX_MB: ${EVENT_STORE_MAX_MB:-128}
+      EVENT_STORE_PATH: /data/events
+    ports:
+      - "127.0.0.1:${SIDECAR_PORT:-8090}:8090"
+    volumes:
+      - feeder_events:/data/events
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+volumes:
+  feeder_events:

@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "policy_version": "1.0-development",
+  "timing": {
+    "maximum_reordering_seconds": 2.0,
+    "maximum_latency_seconds": 10.0,
+    "gap_seconds": 30.0,
+    "evidence_ttl_seconds": 60.0
+  },
+  "pair": {
+    "version": "1.0-development",
+    "minimum_interval_seconds": 0.5,
+    "maximum_interval_seconds": 30.0,
+    "maximum_implied_speed_knots": 750.0,
+    "maximum_acceleration_knots_per_second": 20.0,
+    "maximum_turn_rate_degrees_per_second": 12.0,
+    "maximum_vertical_rate_fpm": 10000.0,
+    "minimum_speed_for_turn_check_knots": 40.0,
+    "minimum_speed_disagreement_knots": 200.0,
+    "speed_disagreement_fraction": 0.5
+  },
+  "window": {
+    "version": "1.0-development",
+    "minimum_observations": 6,
+    "maximum_observations": 31,
+    "minimum_duration_seconds": 5.0,
+    "maximum_duration_seconds": 30.0,
+    "maximum_position_residual_nm": 0.002
+  },
+  "runtime": {
+    "minimum_observations": 2,
+    "maximum_tracks": 2048,
+    "maximum_observations_per_track": 64,
+    "inactive_track_seconds": 600.0
+  }
+}
