@@ -1,0 +1,8 @@
+{
+  "claim_boundary": "This is not evidence of confirmed spoofing or malicious activity.",
+  "description": "Public research GPS-anomaly candidate replication",
+  "outcome": "BLOCKED_REPLICATION",
+  "policy_sha256": "b1ea0ec365b757e3077d24609835ba98466221b9d55ec38a047d98378f47f52d",
+  "reason": "The pinned Zenodo record does not expose a precise license identifier in the reviewed primary metadata, and no compliant surrounding trace has been acquired locally.",
+  "schema_version": "1.0"
+}
