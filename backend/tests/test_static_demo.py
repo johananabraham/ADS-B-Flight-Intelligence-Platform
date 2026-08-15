@@ -44,7 +44,9 @@ def test_fixture_has_required_scenarios_and_honest_blocked_results() -> None:
 def test_document_links_target_existing_repository_files() -> None:
     for path in (
         ROOT / "docs/FEEDER_SIDECAR.md",
-        ROOT / "docs/BENIGN_FIELD_EVALUATION.md",
+        ROOT / "docs/BENCHMARK_METHODOLOGY.md",
+        ROOT / "docs/DATA_MODEL_CARD.md",
         ROOT / "docs/PUBLIC_ANOMALY_REPLAY.md",
+        ROOT / "evaluation/manifests/public-anomaly-sources-v1.json",
     ):
         assert path.is_file()

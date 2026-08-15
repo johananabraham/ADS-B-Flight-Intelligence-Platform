@@ -49,3 +49,11 @@ Stop without deleting the retained event volume:
 ```bash
 docker compose -f docker-compose.feeder.yml down
 ```
+
+## Performance evidence
+
+The checked-in paced soak result in
+`evaluation/results/feeder-soak-v1.json` processed 180,000 messages over 1,800
+seconds at 100 messages/second with zero drops, 1.699 ms p95 processing latency,
+and 95.781 MB process memory. This is a local synthetic transport benchmark, not a
+field traffic or detection-quality measurement.
