@@ -103,6 +103,10 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+      - run: npm run build:static
+      - name: Verify static build has no live-network capabilities
+        working-directory: .
+        run: python scripts/verify_static_demo.py
 
   feeder-sidecar:
     runs-on: ubuntu-latest
