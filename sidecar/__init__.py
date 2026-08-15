@@ -1,0 +1,1 @@
+"""Lightweight feeder integrity sidecar."""

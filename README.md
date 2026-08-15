@@ -1,6 +1,6 @@
 # ADS-B Flight Intelligence Platform
 
-Real-time aircraft tracking and anomaly detection system using Software Defined Radio (SDR).
+An open, self-hosted integrity monitor for untrusted real-time ADS-B telemetry. It helps feeder operators distinguish receiver/pipeline health, operational events, and reproducible integrity evidence without claiming verified position or malicious intent.
 
 [![CI](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/workflows/ci.yml)
 
@@ -8,7 +8,7 @@ Real-time aircraft tracking and anomaly detection system using Software Defined 
 
 | Metric | Value | Evidence |
 |--------|-------|----------|
-| Backend test coverage | 170 tests passing | CI `backend` job |
+| Backend regression suite | 249 tests passing | CI `backend` job |
 | Kinematic detection (abrupt) | 100% | Held-out 22 sessions |
 | Kinematic detection (gradual) | 100% with window | Held-out 22 sessions |
 | Generated clean FP rate | 0% | 88 control scenarios |
@@ -62,6 +62,17 @@ Real-time aircraft tracking and anomaly detection system using Software Defined 
 | Deployment | Docker + AWS EC2 / Raspberry Pi |
 
 ## Quick Start
+
+### Lightweight feeder integrity sidecar
+
+If dump1090/readsb already exposes SBS TCP port 30003, the database-free local sidecar is the shortest path:
+
+```bash
+export RECEIVER_ID=my-local-feeder
+docker compose -f docker-compose.feeder.yml up -d
+```
+
+Open <http://127.0.0.1:8090>. No PostgreSQL, Redis, ChromaDB, LLM key, or cloud account is required. See [the feeder sidecar guide](docs/FEEDER_SIDECAR.md) for its read-only API, evidence semantics, privacy boundary, and configuration.
 
 ### Demo mode (no SDR hardware required)
 
