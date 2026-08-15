@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
 import logging
 import random
+import secrets
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -50,6 +52,10 @@ class SidecarRuntime:
         self._subscribers: set[asyncio.Queue[dict[str, Any]]] = set()
         self._tasks: list[asyncio.Task] = []
         self._stopping = asyncio.Event()
+        self._pilot_session_id = secrets.token_urlsafe(12)
+        self._started_monotonic = time.monotonic()
+        self._connected_started_monotonic: float | None = None
+        self._connected_seconds = 0.0
 
     async def start(self) -> None:
         self._tasks = [
@@ -75,6 +81,7 @@ class SidecarRuntime:
                     limit=MAX_SBS_LINE_BYTES + 1,
                 )
                 self.metrics.connection_state = 1
+                self._connected_started_monotonic = time.monotonic()
                 self.health = ReceiverHealth(
                     connection="CONNECTED",
                     detail="SBS source connected and awaiting telemetry.",
@@ -100,6 +107,11 @@ class SidecarRuntime:
                 if writer is not None:
                     writer.close()
                     await writer.wait_closed()
+                if self._connected_started_monotonic is not None:
+                    self._connected_seconds += max(
+                        0.0, time.monotonic() - self._connected_started_monotonic
+                    )
+                    self._connected_started_monotonic = None
                 self.metrics.connection_state = 0
                 self.health.connection = "DISCONNECTED"
                 self.health.detail = "SBS source disconnected; reconnect is automatic."
@@ -195,6 +207,63 @@ class SidecarRuntime:
             "queue_capacity": self.config.queue_maxsize,
             "dropped_messages_total": self.metrics.dropped,
             "reconnects_total": self.metrics.reconnects,
+        }
+
+    def pilot_summary(self) -> dict[str, Any]:
+        """Return a shareable aggregate with no aircraft or receiver identifiers."""
+        uptime_seconds = max(0.0, time.monotonic() - self._started_monotonic)
+        connected_seconds = self._connected_seconds
+        if self._connected_started_monotonic is not None:
+            connected_seconds += max(
+                0.0, time.monotonic() - self._connected_started_monotonic
+            )
+        snapshots = self.engine.snapshots()
+        state_counts = Counter(snapshot.state.value for snapshot in snapshots)
+        active_evidence = Counter(
+            evidence.kind.value
+            for snapshot in snapshots
+            for evidence in snapshot.active_evidence
+        )
+        event_types: Counter[str] = Counter()
+        event_evidence: Counter[str] = Counter()
+        for record in self.store.recovered_events:
+            event_type = record.get("event_type")
+            if isinstance(event_type, str):
+                event_types[event_type] += 1
+            evidence = record.get("evidence")
+            kind = evidence.get("kind") if isinstance(evidence, dict) else None
+            if isinstance(kind, str):
+                event_evidence[kind] += 1
+        return {
+            "schema_version": "1.0",
+            "pilot_session_id": self._pilot_session_id,
+            "uptime_seconds": int(uptime_seconds),
+            "source_connected_seconds": int(connected_seconds),
+            "source_connected_ratio": round(
+                connected_seconds / uptime_seconds if uptime_seconds else 0.0, 6
+            ),
+            "connection": self.health.connection,
+            "policy_version": self.engine.policy.policy_version,
+            "parsed_messages_total": self.metrics.parsed,
+            "parse_failures_total": sum(self.metrics.failures.values()),
+            "parse_failures_by_reason": dict(sorted(self.metrics.failures.items())),
+            "observations_evaluated_total": self.metrics.evaluated,
+            "dropped_messages_total": self.metrics.dropped,
+            "reconnects_total": self.metrics.reconnects,
+            "queue_depth": self.metrics.queue_depth,
+            "process_memory_mb": round(self.metrics.memory_bytes() / 1024 / 1024, 3),
+            "current_track_state_counts": {
+                state: state_counts[state]
+                for state in ("NOMINAL", "QUESTIONABLE", "INSUFFICIENT_DATA")
+            },
+            "current_active_evidence_counts": dict(sorted(active_evidence.items())),
+            "stored_event_count": len(self.store.recovered_events),
+            "stored_event_type_counts": dict(sorted(event_types.items())),
+            "stored_evidence_kind_counts": dict(sorted(event_evidence.items())),
+            "privacy_boundary": (
+                "Aggregate operational evidence only; no aircraft identifiers, "
+                "receiver label, coordinates, callsigns, or wall-clock timestamps."
+            ),
         }
 
     @staticmethod

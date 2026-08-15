@@ -20,6 +20,11 @@ strict SBS parser -> bounded queue -> normalized observation
                               read-only local UI
 ```
 
+The read-only pilot-summary route derives aggregate operational counters from the
+runtime and bounded event store. It is a one-way privacy boundary: it counts track
+states and evidence kinds but never serializes the underlying track, receiver,
+position, callsign, or wall-clock observation fields.
+
 The sidecar has no database, Redis, vector store, cloud, or LLM dependency. The
 full platform adapts its observations into the same shared core. A policy document
 defines units, windows, thresholds, expiry, and compatible schema version.

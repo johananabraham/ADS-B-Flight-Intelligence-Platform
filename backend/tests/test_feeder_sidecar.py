@@ -14,6 +14,7 @@ from sidecar.app import create_app
 from sidecar.config import SidecarConfig
 from sidecar.sbs import ParseFailure, parse_sbs_line
 from sidecar.store import RotatingEventStore
+from scripts.check_pilot_readiness import assess
 
 
 SBS_LINE = (
@@ -178,7 +179,7 @@ def test_accelerated_soak_has_no_hidden_drops_and_meets_latency_memory_targets()
             sys.executable,
             "scripts/run_feeder_soak.py",
             "--duration",
-            "2",
+            "10",
             "--rate",
             "100",
             "--accelerated",
@@ -188,12 +189,51 @@ def test_accelerated_soak_has_no_hidden_drops_and_meets_latency_memory_targets()
         capture_output=True,
         text=True,
         timeout=30,
-        check=True,
+        check=False,
     )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
     result = json.loads(completed.stdout)
 
-    assert result["messages"] == 200
+    assert result["messages"] == 1000
     assert result["dropped_messages_total"] == 0
     assert result["p95_processing_ms"] < 100
     assert result["process_memory_mb"] <= 256
     assert result["passed"] is True
+
+
+def test_pilot_summary_is_aggregate_and_readiness_requires_live_progress(
+    tmp_path: Path,
+) -> None:
+    app = create_app(config(tmp_path), start_ingestion=False)
+    runtime = app.state.runtime
+    before = runtime.pilot_summary()
+    with TestClient(app) as client:
+        accepted = asyncio.run(
+            runtime.process_line(
+                SBS_LINE,
+                received_at=datetime(2026, 8, 15, 12, 0, 1, tzinfo=timezone.utc),
+            )
+        )
+        assert accepted is True
+        after = client.get("/api/v1/pilot/summary").json()
+        serialized = json.dumps(after)
+        assert "private-receiver-label" not in serialized
+        assert "A1B2C3" not in serialized
+        assert "40.6413" not in serialized
+        assert "2026-08-15" not in serialized
+        assert after["parsed_messages_total"] == 1
+        assert after["observations_evaluated_total"] == 1
+        runtime.health.connection = "CONNECTED"
+        readiness = assess(before, after, runtime.health_dict())
+        assert readiness["status"] == "READY"
+        assert all(readiness["checks"].values())
+
+
+def test_pilot_readiness_fails_closed_without_traffic_progress(tmp_path: Path) -> None:
+    app = create_app(config(tmp_path), start_ingestion=False)
+    summary = app.state.runtime.pilot_summary()
+    result = assess(summary, summary, app.state.runtime.health_dict())
+
+    assert result["status"] == "NOT_READY"
+    assert result["checks"]["source_connected"] is False
+    assert result["checks"]["messages_advancing"] is False

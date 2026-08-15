@@ -8,7 +8,7 @@ An open, self-hosted integrity monitor for untrusted real-time ADS-B telemetry. 
 
 | Metric | Value | Evidence |
 |--------|-------|----------|
-| Backend regression suite | 266 tests passing | CI `backend` job |
+| Backend regression suite | 268 tests passing | CI `backend` job |
 | Feeder sidecar paced soak | 100 msg/s for 30 min, 0 drops, 1.699 ms p95 | Checked-in soak result |
 | Kinematic detection (abrupt) | 100% | Held-out 22 sessions |
 | Kinematic detection (gradual) | 100% with window | Held-out 22 sessions |
@@ -80,6 +80,14 @@ policy, reproducibility steps, and honest release blockers are indexed in
 [the v2 release checklist](docs/RELEASE_CHECKLIST_V2.md). This software reports
 integrity evidence; it does not authenticate aircraft, prove spoofing, or provide
 safety-of-life guidance.
+
+Independent feeder evaluation follows the privacy-safe
+[pilot program](docs/PILOT_PROGRAM.md). Once live traffic is connected, operators
+can verify useful progress without sharing aircraft or receiver identifiers:
+
+```bash
+python scripts/check_pilot_readiness.py --sample-seconds 10
+```
 
 ### Demo mode (no SDR hardware required)
 

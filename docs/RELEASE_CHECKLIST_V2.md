@@ -16,7 +16,7 @@ gate remains.
 | 100 msg/s for 30 minutes, p95 <250 ms, no unbounded growth | PASS | 180,000 messages, 0 drops, p95 1.699 ms, 95.781 MB; `evaluation/results/feeder-soak-v1.json` |
 | Non-root/read-only container and Compose contract | UNVERIFIED | Compose config passes; local Docker daemon unavailable, so build/smoke/image scan require CI or Docker Desktop |
 | AMD64/ARM64 image workflow with SBOM/provenance | PASS (workflow) | `.github/workflows/feeder-image.yml`; publication intentionally tag-gated |
-| Python lint/type/tests and migrations | PASS | Ruff clean; mypy clean across 21 v2 sources; 266 backend tests; one Alembic head and offline upgrade pass |
+| Python lint/type/tests and migrations | PASS | Ruff clean; mypy clean across 22 v2 sources; 268 backend tests; one Alembic head and offline upgrade pass |
 | TypeScript lint/type/live/static builds | PASS | ESLint, `tsc`, Vite live build, Vite static build, and static verifier pass |
 | C++ decoder build/tests | UNVERIFIED | CMake/CTest are unavailable locally; blocking CI job is configured |
 | Seven-day chronological benign benchmark | BLOCKED | Physical authorized capture not collected; see `acceptance/phase2-benign-field-status.md` |
@@ -27,6 +27,7 @@ gate remains.
 | Browser-only static evidence build | PASS | Static build verifier and desktop/mobile interaction review; no live network capabilities |
 | Static public deployment | BLOCKED | Publication awaits privacy, license, security, and repository-license decisions |
 | Hardware demo video | BLOCKED | Requires physical dongle/capture and manual privacy review |
+| Independent feeder pilot | READY TO RECRUIT | Privacy-safe summary/readiness tooling and protocol complete; requires 3–5 external operators |
 | Reachable-history restricted-artifact scan | PASS | `scripts/audit_release_history.py`; dedicated Gitleaks CI scans secrets |
 | Python and npm dependency scans | PASS | pip-audit 2.10.1 reports no known backend/sidecar findings; npm reports zero vulnerabilities after the nanoid fix |
 | Static/configuration and container scans | UNVERIFIED | Blocking Trivy CI is configured; local Trivy/Docker unavailable and remote CI has not run on this commit |
