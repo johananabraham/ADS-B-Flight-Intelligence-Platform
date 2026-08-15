@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compatibility entry point for versioned safety-source ingestion."""
+"""Validate and ingest official NTSB CAROL exports or dated eCFR parts."""
 
 from app.safety.ingestion.cli import main
 

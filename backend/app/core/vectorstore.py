@@ -19,8 +19,17 @@ _chroma_client: Optional[chromadb.ClientAPI] = None
 INCIDENT_NARRATIVES_COLLECTION = "incident_narratives"
 FAA_REGULATIONS_COLLECTION = "faa_regulations"
 
-# Use ChromaDB's default embedding function (all-MiniLM-L6-v2)
-_default_ef = embedding_functions.DefaultEmbeddingFunction()
+EMBEDDING_BACKEND_ID = "chromadb-onnx-all-MiniLM-L6-v2-cpu"
+EMBEDDING_PROVIDERS = ["CPUExecutionProvider"]
+HNSW_SPACE = "cosine"
+HNSW_CONSTRUCTION_EF = 200
+HNSW_SEARCH_EF = 100
+
+# Pin ONNX to CPU so indexing and query embeddings are reproducible across hosts.
+# Chroma's default provider selection can mix CoreML/Azure/CPU on macOS.
+_default_ef = embedding_functions.ONNXMiniLM_L6_V2(
+    preferred_providers=EMBEDDING_PROVIDERS
+)
 
 
 def get_chroma_client() -> chromadb.ClientAPI:
@@ -50,7 +59,9 @@ def get_incident_narratives_collection() -> chromadb.Collection:
         embedding_function=_default_ef,
         metadata={
             "description": "NTSB incident narrative text for semantic search",
-            "hnsw:space": "cosine",
+            "hnsw:space": HNSW_SPACE,
+            "hnsw:construction_ef": HNSW_CONSTRUCTION_EF,
+            "hnsw:search_ef": HNSW_SEARCH_EF,
         },
     )
 
@@ -63,7 +74,9 @@ def get_faa_regulations_collection() -> chromadb.Collection:
         embedding_function=_default_ef,
         metadata={
             "description": "FAA 14 CFR regulation sections for semantic search",
-            "hnsw:space": "cosine",
+            "hnsw:space": HNSW_SPACE,
+            "hnsw:construction_ef": HNSW_CONSTRUCTION_EF,
+            "hnsw:search_ef": HNSW_SEARCH_EF,
         },
     )
 
@@ -166,6 +179,12 @@ def add_incident_narratives(
         metadatas=metadatas,
     )
     logger.debug(f"Added {len(ids)} incident narrative chunks to ChromaDB")
+
+
+def delete_incident_narratives(ntsb_id: str) -> None:
+    """Remove every prior chunk for one incident before replacing its document set."""
+    collection = get_incident_narratives_collection()
+    collection.delete(where={"ntsb_id": ntsb_id})
 
 
 def add_faa_regulations(

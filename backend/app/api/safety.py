@@ -1,8 +1,9 @@
 """Safety research API endpoints."""
 
-from fastapi import APIRouter
-from pydantic import BaseModel
 from typing import Any, Optional
+
+from fastapi import APIRouter
+from pydantic import AnyHttpUrl, BaseModel, Field
 
 from ..safety import (
     run_agent,
@@ -10,17 +11,22 @@ from ..safety import (
     tool_query_incident_database,
     get_ingestion_status,
 )
+from ..safety.citations import SourceCitation
 
 router = APIRouter(prefix="/safety", tags=["safety"])
 
 
 class QueryRequest(BaseModel):
-    query: str
+    query: str = Field(min_length=1, max_length=4_000)
+    session_id: str | None = Field(default=None, min_length=1, max_length=200)
 
 
 class QueryResponse(BaseModel):
     answer: str
-    tool_calls: list[dict] = []
+    trace_id: str = Field(pattern=r"^[0-9a-f]{32}$")
+    trace_url: AnyHttpUrl | None = None
+    citations: list[SourceCitation] = Field(default_factory=list)
+    tool_calls: list[dict] = Field(default_factory=list)
     iterations: int = 0
     total_tokens: int = 0
     error: Optional[str] = None
@@ -29,9 +35,12 @@ class QueryResponse(BaseModel):
 @router.post("/query", response_model=QueryResponse)
 async def safety_query(request: QueryRequest):
     """Natural language query over NTSB incidents and FAA regulations."""
-    result = await run_agent(request.query)
+    result = await run_agent(request.query, session_id=request.session_id)
     return QueryResponse(
         answer=result.answer,
+        trace_id=result.trace_id,
+        trace_url=result.trace_url,
+        citations=list(result.citations),
         tool_calls=[{"name": tc.name, "arguments": tc.arguments, "duration_ms": tc.duration_ms} for tc in result.tool_calls],
         iterations=result.iterations,
         total_tokens=result.total_tokens,

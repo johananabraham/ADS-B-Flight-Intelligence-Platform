@@ -5,7 +5,8 @@ from typing import Any, Callable
 
 from sqlalchemy import extract, func, select
 
-from ..models import Incident
+from ..models import Incident, SafetyIngestionRunRecord
+from ..models.safety import format_cfr_reference
 from ..core.database import SessionLocal
 from ..core.vectorstore import search_faa_regulations, search_incident_narratives
 
@@ -59,19 +60,27 @@ async def tool_search_incident_narratives(
         # Format results
         formatted_results = []
         for i, doc in enumerate(results.get("documents", [])):
+            document_id = results.get("ids", [])[i] if results.get("ids") else None
             metadata = results.get("metadatas", [])[i] if results.get("metadatas") else {}
             distance = results.get("distances", [])[i] if results.get("distances") else None
 
             formatted_results.append({
                 "ntsb_id": metadata.get("ntsb_id", ""),
-                "excerpt": doc[:500] + "..." if len(doc) > 500 else doc,
+                "document_id": document_id,
+                "excerpt": doc,
+                "section": metadata.get("section"),
+                "char_start": metadata.get("char_start"),
+                "char_end": metadata.get("char_end"),
+                "source_url": metadata.get("source_url"),
+                "source_sha256": metadata.get("source_sha256"),
+                "source_run_id": metadata.get("source_run_id"),
                 "event_date": metadata.get("event_date", ""),
                 "event_state": metadata.get("event_state", ""),
                 "aircraft": f"{metadata.get('aircraft_make', '')} {metadata.get('aircraft_model', '')}".strip(),
                 "weather": metadata.get("weather_condition", ""),
                 "phase_of_flight": metadata.get("phase_of_flight", ""),
                 "fatal_injuries": metadata.get("fatal_injuries", 0),
-                "relevance_score": 1 - distance if distance else None,
+                "relevance_score": 1 - distance if distance is not None else None,
             })
 
         return {
@@ -293,16 +302,29 @@ async def tool_search_faa_regulations(
         # Format results
         formatted_results = []
         for i, doc in enumerate(results.get("documents", [])):
+            document_id = results.get("ids", [])[i] if results.get("ids") else None
             metadata = results.get("metadatas", [])[i] if results.get("metadatas") else {}
             distance = results.get("distances", [])[i] if results.get("distances") else None
 
-            cfr_ref = f"14 CFR {metadata.get('cfr_part', '')}.{metadata.get('cfr_section', '')}"
+            cfr_ref = format_cfr_reference(
+                14,
+                int(metadata.get("cfr_part", 0)),
+                str(metadata.get("cfr_section", "")),
+            )
 
             formatted_results.append({
                 "cfr_reference": cfr_ref,
+                "document_id": document_id,
                 "section_title": metadata.get("section_title", ""),
-                "text_excerpt": doc[:800] + "..." if len(doc) > 800 else doc,
-                "relevance_score": 1 - distance if distance else None,
+                "text_excerpt": doc,
+                "section": metadata.get("cfr_section"),
+                "char_start": 0,
+                "char_end": len(doc),
+                "effective_date": metadata.get("effective_date"),
+                "source_url": metadata.get("source_url"),
+                "source_sha256": metadata.get("source_sha256"),
+                "source_run_id": metadata.get("source_run_id"),
+                "relevance_score": 1 - distance if distance is not None else None,
             })
 
         return {
@@ -327,6 +349,12 @@ async def tool_get_incident_detail(ntsb_id: str) -> dict[str, Any]:
 
         if not incident:
             return {"error": f"Incident {ntsb_id} not found"}
+
+        source_run = (
+            session.get(SafetyIngestionRunRecord, incident.source_run_id)
+            if incident.source_run_id
+            else None
+        )
 
         return {
             "ntsb_id": incident.ntsb_id,
@@ -363,6 +391,18 @@ async def tool_get_incident_detail(ntsb_id: str) -> dict[str, Any]:
                 "probable_cause": incident.probable_cause,
             },
             "narrative": incident.narrative,
+            "document_id": f"{incident.ntsb_id}:detail",
+            "section": "full_report",
+            "char_start": 0,
+            "char_end": len(incident.narrative or incident.probable_cause or ""),
+            "source_url": incident.source_url,
+            "source_run_id": str(incident.source_run_id) if incident.source_run_id else None,
+            "source_sha256": source_run.source_sha256 if source_run else None,
+            "effective_date": (
+                source_run.effective_date.isoformat()
+                if source_run and source_run.effective_date
+                else None
+            ),
         }
 
     except Exception as e:
