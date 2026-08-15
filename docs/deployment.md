@@ -27,7 +27,7 @@ Create a `.env` file with production settings:
 ```bash
 # Required
 POSTGRES_PASSWORD=$(openssl rand -hex 32)
-SECRET_KEY=$(openssl rand -hex 32)
+JWT_SECRET_KEY=$(openssl rand -hex 32)
 LLM_API_KEY=your_llm_api_key
 
 # Optional
@@ -104,7 +104,7 @@ your-domain.com {
 ### Before Deployment
 
 - [ ] Strong POSTGRES_PASSWORD set (not "password")
-- [ ] SECRET_KEY generated with `openssl rand -hex 32`
+- [ ] JWT_SECRET_KEY generated with `openssl rand -hex 32`
 - [ ] PostgreSQL port (5432) not exposed to internet
 - [ ] All API keys stored in environment variables, not code
 - [ ] HTTPS enabled for all public traffic
@@ -208,7 +208,7 @@ docker compose exec backend python -c "from app.core.database import engine; eng
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `POSTGRES_PASSWORD` | Yes | - | Database password |
-| `SECRET_KEY` | Yes | - | FastAPI session secret |
+| `JWT_SECRET_KEY` | Yes | - | Browser-session signing key |
 | `LLM_API_KEY` | Yes | - | LLM provider API key |
 | `DATABASE_URL` | No | Auto | PostgreSQL connection URL |
 | `ANTHROPIC_API_KEY` | No | - | Claude API key for summaries |

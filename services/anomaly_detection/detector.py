@@ -248,10 +248,10 @@ class AnomalyDetector:
 
         return None
 
-    def detect_ghost_flights(self) -> list[Anomaly]:
-        """Find aircraft that disappeared mid-flight."""
+    def detect_track_losses(self) -> list[Anomaly]:
+        """Report track continuity loss without inferring a fabricated aircraft."""
         anomalies = []
-        cutoff = datetime.utcnow() - timedelta(seconds=settings.ghost_flight_timeout)
+        cutoff = datetime.utcnow() - timedelta(seconds=settings.track_loss_timeout)
 
         # Find aircraft last seen between 5-15 minutes ago
         # (too recent = might come back, too old = already stale)
@@ -270,7 +270,7 @@ class AnomalyDetector:
         )
 
         for aircraft in stale_aircraft:
-            key = f"{aircraft.icao_hex}_GHOST"
+            key = f"{aircraft.icao_hex}_TRACK_LOSS"
             if key in self.recent_anomalies:
                 continue
 
@@ -280,7 +280,7 @@ class AnomalyDetector:
                 Anomaly(
                     icao_hex=aircraft.icao_hex,
                     callsign=aircraft.callsign,
-                    anomaly_type=AnomalyType.GHOST_FLIGHT,
+                    anomaly_type=AnomalyType.TRACK_LOSS,
                     severity=AnomalySeverity.MEDIUM,
                     latitude=aircraft.latitude,
                     longitude=aircraft.longitude,
@@ -339,9 +339,9 @@ async def detection_loop():
                 anomalies = detector.analyze_aircraft(aircraft)
                 anomalies_found.extend(anomalies)
 
-            # Check for ghost flights
-            ghost_anomalies = detector.detect_ghost_flights()
-            anomalies_found.extend(ghost_anomalies)
+            # Report continuity loss as an operational event, not attack evidence.
+            track_loss_events = detector.detect_track_losses()
+            anomalies_found.extend(track_loss_events)
 
             # Save anomalies
             for anomaly in anomalies_found:

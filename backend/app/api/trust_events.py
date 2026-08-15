@@ -11,11 +11,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy.orm import Session
 
+from ..auth.audit import record_audit_event
+from ..auth.dependencies import require_operator
 from ..core.database import get_db
 from ..models.trust import TrustAssessmentRecord, TrustOperatorActionRecord
 from ..models.user import User
 from ..services.trust_persistence import OperatorAction, insert_action
-from ..auth.dependencies import require_operator
 
 
 router = APIRouter(prefix="/trust-events", tags=["trust"])
@@ -63,7 +64,7 @@ class OperatorActionResponse(BaseModel):
     actor: str
     note: str | None
     created_at: datetime
-    identity_assurance: Literal["SELF_ASSERTED"] = "SELF_ASSERTED"
+    identity_assurance: Literal["AUTHENTICATED"] = "AUTHENTICATED"
 
 
 class ActionCreatedResponse(BaseModel):
@@ -136,7 +137,7 @@ def create_operator_action(
         .first()
     )
     if existing:
-        if not _same_action(existing, assessment_id, request):
+        if not _same_action(existing, assessment_id, request, current_user.username):
             raise HTTPException(
                 status_code=409, detail="action_id already exists with different content"
             )
@@ -146,11 +147,21 @@ def create_operator_action(
         action_id=request.action_id,
         assessment_id=assessment_id,
         action_type=request.action_type,
-        actor=request.actor,
+        actor=current_user.username,
         note=request.note,
         created_at=datetime.now(timezone.utc),
     )
     inserted = insert_action(db, action)
+    if inserted:
+        record_audit_event(
+            db,
+            event_type="trust.action",
+            success=True,
+            actor_user_id=current_user.id,
+            target_type="trust_assessment",
+            target_id=str(assessment_id),
+            details={"action_type": request.action_type},
+        )
     db.commit()
     if not inserted:
         concurrent = (
@@ -158,7 +169,9 @@ def create_operator_action(
             .filter(TrustOperatorActionRecord.action_id == request.action_id)
             .first()
         )
-        if concurrent is None or not _same_action(concurrent, assessment_id, request):
+        if concurrent is None or not _same_action(
+            concurrent, assessment_id, request, current_user.username
+        ):
             raise HTTPException(
                 status_code=409, detail="action_id was concurrently reused"
             )
@@ -184,7 +197,7 @@ def export_trust_event(
     payload = detail.model_dump(mode="json")
     payload["exported_at"] = datetime.now(timezone.utc).isoformat()
     payload["identity_warning"] = (
-        "Operator labels are self-asserted until authentication is implemented."
+        "Operator identity is derived from the authenticated session."
     )
     return Response(
         content=json.dumps(payload, indent=2, sort_keys=True),
@@ -210,10 +223,11 @@ def _same_action(
     existing: TrustOperatorActionRecord,
     assessment_id: UUID,
     request: OperatorActionRequest,
+    authenticated_actor: str,
 ) -> bool:
     return (
         existing.assessment_id == assessment_id
         and existing.action_type == request.action_type
-        and existing.actor == request.actor.strip()
+        and existing.actor == authenticated_actor
         and existing.note == (request.note.strip() if request.note else None)
     )

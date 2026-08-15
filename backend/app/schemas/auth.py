@@ -33,10 +33,9 @@ class UserResponse(UserBase):
     last_login: Optional[datetime] = None
 
 
-class TokenResponse(BaseModel):
-    """Schema for JWT token response."""
-    access_token: str
-    token_type: str = "bearer"
+class SessionResponse(BaseModel):
+    """Successful browser session response; the token stays HttpOnly."""
+
     user: UserResponse
 
 
@@ -45,3 +44,4 @@ class TokenData(BaseModel):
     user_id: int
     username: str
     role: UserRole
+    session_id: str

@@ -1,5 +1,12 @@
 # Phase 2 Implementation - Handoff Document
 
+> **Archived historical handoff:** The authentication behavior and commands in
+> this document describe the branch before the feeder-integrity v2 hardening.
+> Do not use its bearer-token, `localStorage`, default-credential, or merge
+> instructions. Current implementation guidance lives in
+> `docs/AUTHENTICATION_IMPLEMENTATION.md` and
+> `docs/specs/feeder-integrity-v2.md`.
+
 **Date:** 2026-08-05
 **Branch:** `codex/authentication-rbac`
 **Implementer:** Claude Code
@@ -55,7 +62,7 @@ backend/tests/test_auth.py # 21 test cases
 - `/api/v1/trust-events/{id}/actions` → Operator+ only
 
 **Security Features:**
-- JWT tokens (24-hour expiration, configurable)
+- Revocable cookie sessions (8-hour expiration, configurable)
 - Bcrypt password hashing
 - Rate limiting (60/min general, 5/min login)
 - Role-based access control
@@ -84,7 +91,7 @@ frontend/src/types/auth.ts            # TypeScript types
 
 **Features:**
 - Login form with validation
-- Token persistence (localStorage)
+- HttpOnly cookie session restoration through `/auth/me`
 - Automatic re-authentication on reload
 - User info display (username, role badge)
 - Logout button + keyboard shortcut (L)
@@ -105,11 +112,8 @@ frontend/src/types/auth.ts            # TypeScript types
 PYTHONPATH=backend python scripts/create_admin_user.py
 ```
 
-**Default Credentials (Development):**
-- Username: `admin`
-- Password: `adminpass123`
-- Email: `admin@example.com`
-- Role: `admin`
+**Initial credentials:** Enter an explicit username, email, and password through
+the interactive bootstrap script. No defaults are provided.
 
 ### 4. Documentation
 
@@ -160,10 +164,8 @@ open http://localhost:5173
 ### Login
 
 1. Open http://localhost:5173
-2. You'll see the login form
-3. Enter credentials:
-   - Username: `admin`
-   - Password: `adminpass123`
+2. Anonymous read-only data remains visible; choose **Operator login**
+3. Enter the credentials created by the bootstrap script
 4. Click "Log In"
 
 ### Create Additional Users
@@ -171,15 +173,16 @@ open http://localhost:5173
 Only admins can create users:
 
 ```bash
-# Login to get token
-TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
+# Login and save the HttpOnly cookie
+curl -c /tmp/adsb-cookie -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Origin: http://localhost:5173" \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"adminpass123"}' \
-  | jq -r .access_token)
+  -d '{"username":"<admin>","password":"<password>"}'
 
 # Create operator user
 curl -X POST http://localhost:8000/api/v1/auth/register \
-  -H "Authorization: Bearer $TOKEN" \
+  -b /tmp/adsb-cookie \
+  -H "Origin: http://localhost:5173" \
   -H "Content-Type: application/json" \
   -d '{
     "username": "operator1",

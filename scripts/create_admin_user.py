@@ -5,24 +5,23 @@ This script should be run once during initial setup.
 """
 
 import sys
-import os
 from pathlib import Path
 
 # Add backend to path
 backend_path = Path(__file__).parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from app.core.config import get_settings
-from app.models.user import User, UserRole
-from app.auth.utils import get_password_hash
-
-settings = get_settings()
-
-
 def create_admin(username: str, email: str, password: str):
     """Create an admin user."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from app.auth.audit import record_audit_event
+    from app.auth.utils import get_password_hash
+    from app.core.config import get_settings
+    from app.models.user import User, UserRole
+
+    settings = get_settings()
     engine = create_engine(settings.database_url)
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
@@ -47,10 +46,20 @@ def create_admin(username: str, email: str, password: str):
         )
 
         db.add(admin)
+        db.flush()
+        record_audit_event(
+            db,
+            event_type="user.bootstrap_admin",
+            success=True,
+            actor_user_id=admin.id,
+            target_type="user",
+            target_id=str(admin.id),
+            details={"role": UserRole.ADMIN.value},
+        )
         db.commit()
         db.refresh(admin)
 
-        print(f"✅ Admin user created successfully!")
+        print("✅ Admin user created successfully!")
         print(f"   Username: {admin.username}")
         print(f"   Email: {admin.email}")
         print(f"   Role: {admin.role.value}")
@@ -73,15 +82,18 @@ def main():
     print()
 
     # Get admin credentials
-    username = input("Enter admin username [admin]: ").strip() or "admin"
-    email = input("Enter admin email [admin@example.com]: ").strip() or "admin@example.com"
+    username = input("Enter admin username: ").strip()
+    email = input("Enter admin email: ").strip()
+    if not username or not email:
+        print("❌ Username and email are required.")
+        return 1
 
     # Get password with confirmation
     import getpass
     while True:
         password = getpass.getpass("Enter admin password: ")
-        if len(password) < 8:
-            print("❌ Password must be at least 8 characters long.")
+        if len(password) < 12:
+            print("❌ Admin password must be at least 12 characters long.")
             continue
 
         password_confirm = getpass.getpass("Confirm password: ")
@@ -93,7 +105,7 @@ def main():
 
     print()
     print("Creating admin user...")
-    print(f"  Database: {settings.database_url}")
+    print("  Database: configured DATABASE_URL")
     print()
 
     success = create_admin(username, email, password)

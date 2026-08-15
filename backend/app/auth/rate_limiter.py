@@ -1,6 +1,6 @@
 """Rate limiting middleware for API endpoints."""
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Tuple
 from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -49,7 +49,7 @@ class RateLimiter:
             Tuple of (is_allowed, remaining_requests)
         """
         async with self.lock:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             minute_ago = now - timedelta(minutes=1)
 
             # Clean old requests

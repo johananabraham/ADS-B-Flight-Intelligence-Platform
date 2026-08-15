@@ -210,7 +210,7 @@ curl http://localhost:8000/api/v1/replay/status
    - [ ] Test via curl:
      ```bash
      curl -X POST http://localhost:8000/api/v1/safety/query \
-       -H "Authorization: Bearer <token>" \
+       -H "Origin: http://localhost:5173" \
        -H "Content-Type: application/json" \
        -d '{"query": "test query"}'
      ```
@@ -286,7 +286,7 @@ When NTSB/eCFR data is available:
 
 2. **Login Flow**
    - [ ] Enter username: `admin`
-   - [ ] Enter password: `adminpass123`
+   - [ ] Enter the password created through the interactive bootstrap script
    - [ ] Click Login
    - [ ] Verify redirect to platform
    - [ ] Verify user info shown (top-right)

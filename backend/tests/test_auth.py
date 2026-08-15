@@ -1,33 +1,48 @@
-"""Tests for authentication and authorization."""
+"""Tests for cookie sessions, revocation, CSRF defense, and RBAC."""
+from datetime import datetime, timedelta, timezone
+from uuid import uuid4
+
 import pytest
-from datetime import timedelta
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from app.auth.rate_limiter import rate_limiter
+from app.auth.utils import (
+    create_access_token,
+    decode_token,
+    get_password_hash,
+    verify_password,
+)
+from app.core.config import Settings
+from app.core.database import get_db
 from app.main import app
-from app.core.database import Base, get_db
-from app.models.user import User, UserRole
-from app.auth.utils import get_password_hash, create_access_token, decode_token, verify_password
-from app.schemas.auth import TokenData
+from app.models.user import AuditEvent, AuthSession, User, UserRole
 
-# Test database setup
-TEST_DATABASE_URL = "sqlite:///./test_auth.db"
-engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
+ORIGIN = "http://localhost:5173"
+ORIGIN_HEADERS = {"Origin": ORIGIN}
+engine = create_engine(
+    "sqlite://",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 @pytest.fixture(scope="function")
 def db_session():
     """Create a fresh database for each test."""
-    # Only create the users table for auth tests to avoid GeoAlchemy2/SQLite issues
-    User.__table__.create(bind=engine, checkfirst=True)
+    for table in (User.__table__, AuthSession.__table__, AuditEvent.__table__):
+        table.create(bind=engine, checkfirst=True)
     session = TestingSessionLocal()
     try:
         yield session
     finally:
         session.close()
-        User.__table__.drop(bind=engine, checkfirst=True)
+        for table in (AuditEvent.__table__, AuthSession.__table__, User.__table__):
+            table.drop(bind=engine, checkfirst=True)
 
 
 @pytest.fixture(scope="function")
@@ -40,10 +55,34 @@ def client(db_session):
         finally:
             pass
 
+    rate_limiter.request_history.clear()
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+def _session_token(db_session, user: User, **session_overrides) -> str:
+    session_id = str(uuid4())
+    expires_at = session_overrides.pop(
+        "expires_at", datetime.now(timezone.utc) + timedelta(hours=1)
+    )
+    db_session.add(
+        AuthSession(
+            id=session_id,
+            user_id=user.id,
+            expires_at=expires_at,
+            **session_overrides,
+        )
+    )
+    db_session.commit()
+    return create_access_token(
+        user_id=user.id,
+        username=user.username,
+        role=user.role,
+        session_id=session_id,
+        expires_delta=expires_at - datetime.now(timezone.utc),
+    )
 
 
 @pytest.fixture
@@ -95,33 +134,21 @@ def viewer_user(db_session):
 
 
 @pytest.fixture
-def admin_token(admin_user):
+def admin_token(admin_user, db_session):
     """Create a valid admin token."""
-    return create_access_token(
-        user_id=admin_user.id,
-        username=admin_user.username,
-        role=admin_user.role,
-    )
+    return _session_token(db_session, admin_user)
 
 
 @pytest.fixture
-def operator_token(operator_user):
+def operator_token(operator_user, db_session):
     """Create a valid operator token."""
-    return create_access_token(
-        user_id=operator_user.id,
-        username=operator_user.username,
-        role=operator_user.role,
-    )
+    return _session_token(db_session, operator_user)
 
 
 @pytest.fixture
-def viewer_token(viewer_user):
+def viewer_token(viewer_user, db_session):
     """Create a valid viewer token."""
-    return create_access_token(
-        user_id=viewer_user.id,
-        username=viewer_user.username,
-        role=viewer_user.role,
-    )
+    return _session_token(db_session, viewer_user)
 
 
 # ==================== Utility Tests ====================
@@ -135,6 +162,13 @@ def test_password_hashing():
     assert hashed != password
     assert verify_password(password, hashed) is True
     assert verify_password("wrongpassword", hashed) is False
+
+
+def test_password_hashing_accepts_more_than_bcrypts_72_byte_limit():
+    password = "long-password-" * 8
+    hashed = get_password_hash(password)
+    assert hashed.startswith("$bcrypt-sha256$")
+    assert verify_password(password, hashed) is True
 
 
 def test_create_and_decode_token(admin_user):
@@ -152,6 +186,7 @@ def test_create_and_decode_token(admin_user):
     assert decoded.user_id == admin_user.id
     assert decoded.username == admin_user.username
     assert decoded.role == UserRole.ADMIN
+    assert decoded.session_id
 
 
 def test_decode_invalid_token():
@@ -173,6 +208,28 @@ def test_token_expiration():
     assert decoded is None  # Expired tokens should not decode
 
 
+def test_production_requires_explicit_strong_secret():
+    with pytest.raises(ValidationError, match="JWT_SECRET_KEY"):
+        Settings(_env_file=None, environment="production")
+    with pytest.raises(ValidationError, match="JWT_SECRET_KEY"):
+        Settings(
+            _env_file=None,
+            environment="production",
+            jwt_secret_key="too-short",
+            cors_allowed_origins="https://example.test",
+        )
+
+
+def test_production_rejects_wildcard_origin():
+    with pytest.raises(ValidationError, match="CORS_ALLOWED_ORIGINS"):
+        Settings(
+            _env_file=None,
+            environment="production",
+            jwt_secret_key="a" * 32,
+            cors_allowed_origins="*",
+        )
+
+
 # ==================== Login Tests ====================
 
 
@@ -181,14 +238,19 @@ def test_login_success(client, admin_user):
     response = client.post(
         "/api/v1/auth/login",
         json={"username": "admin", "password": "adminpass123"},
+        headers=ORIGIN_HEADERS,
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
+    assert "access_token" not in data
     assert data["user"]["username"] == "admin"
     assert data["user"]["role"] == "admin"
+    cookie = response.headers["set-cookie"]
+    assert "adsb_session=" in cookie
+    assert "HttpOnly" in cookie
+    assert "SameSite=strict" in cookie
+    assert "Max-Age=28800" in cookie
 
 
 def test_login_wrong_password(client, admin_user):
@@ -196,6 +258,7 @@ def test_login_wrong_password(client, admin_user):
     response = client.post(
         "/api/v1/auth/login",
         json={"username": "admin", "password": "wrongpassword"},
+        headers=ORIGIN_HEADERS,
     )
 
     assert response.status_code == 401
@@ -207,9 +270,26 @@ def test_login_nonexistent_user(client):
     response = client.post(
         "/api/v1/auth/login",
         json={"username": "nonexistent", "password": "password"},
+        headers=ORIGIN_HEADERS,
     )
 
     assert response.status_code == 401
+
+
+def test_login_audit_does_not_store_password_or_token(client, db_session):
+    secret = "never-store-this-password"
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": "missing", "password": secret},
+        headers=ORIGIN_HEADERS,
+    )
+    assert response.status_code == 401
+    event = db_session.query(AuditEvent).one()
+    serialized = f"{event.target_id}{event.details}"
+    assert event.event_type == "auth.login"
+    assert event.success is False
+    assert secret not in serialized
+    assert "token" not in serialized.lower()
 
 
 def test_login_inactive_user(client, db_session):
@@ -227,6 +307,7 @@ def test_login_inactive_user(client, db_session):
     response = client.post(
         "/api/v1/auth/login",
         json={"username": "inactive", "password": "password123"},
+        headers=ORIGIN_HEADERS,
     )
 
     assert response.status_code == 403
@@ -246,7 +327,7 @@ def test_register_requires_admin(client, operator_token):
             "password": "password123",
             "role": "viewer",
         },
-        headers={"Authorization": f"Bearer {operator_token}"},
+        headers={**ORIGIN_HEADERS, "Authorization": f"Bearer {operator_token}"},
     )
 
     assert response.status_code == 403
@@ -262,7 +343,7 @@ def test_register_success(client, admin_token):
             "password": "password123",
             "role": "viewer",
         },
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={**ORIGIN_HEADERS, "Authorization": f"Bearer {admin_token}"},
     )
 
     assert response.status_code == 201
@@ -282,7 +363,7 @@ def test_register_duplicate_username(client, admin_token, admin_user):
             "password": "password123",
             "role": "viewer",
         },
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={**ORIGIN_HEADERS, "Authorization": f"Bearer {admin_token}"},
     )
 
     assert response.status_code == 400
@@ -299,7 +380,7 @@ def test_register_duplicate_email(client, admin_token, admin_user):
             "password": "password123",
             "role": "viewer",
         },
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={**ORIGIN_HEADERS, "Authorization": f"Bearer {admin_token}"},
     )
 
     assert response.status_code == 400
@@ -337,6 +418,42 @@ def test_get_current_user_invalid_token(client):
     assert response.status_code == 401
 
 
+def test_login_cookie_authenticates_me(client, admin_user):
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"username": "admin", "password": "adminpass123"},
+        headers=ORIGIN_HEADERS,
+    )
+    assert login.status_code == 200
+    response = client.get("/api/v1/auth/me")
+    assert response.status_code == 200
+    assert response.json()["id"] == admin_user.id
+
+
+def test_revoked_session_is_rejected(client, admin_user, db_session):
+    token = _session_token(
+        db_session,
+        admin_user,
+        revoked_at=datetime.now(timezone.utc),
+    )
+    response = client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 401
+
+
+def test_expired_session_is_rejected(client, admin_user, db_session):
+    token = _session_token(
+        db_session,
+        admin_user,
+        expires_at=datetime.now(timezone.utc) - timedelta(seconds=1),
+    )
+    response = client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 401
+
+
 # ==================== Protected Endpoint Tests ====================
 
 
@@ -345,8 +462,20 @@ def test_replay_command_requires_auth(client):
     response = client.post(
         "/api/v1/replay/commands",
         json={"action": "pause"},
+        headers=ORIGIN_HEADERS,
     )
     assert response.status_code == 401  # No credentials
+
+
+def test_state_change_rejects_missing_or_unapproved_origin(client):
+    missing = client.post("/api/v1/replay/commands", json={"action": "pause"})
+    unapproved = client.post(
+        "/api/v1/replay/commands",
+        json={"action": "pause"},
+        headers={"Origin": "https://attacker.example"},
+    )
+    assert missing.status_code == 403
+    assert unapproved.status_code == 403
 
 
 def test_replay_command_requires_operator_role(client, viewer_token):
@@ -354,7 +483,7 @@ def test_replay_command_requires_operator_role(client, viewer_token):
     response = client.post(
         "/api/v1/replay/commands",
         json={"action": "pause"},
-        headers={"Authorization": f"Bearer {viewer_token}"},
+        headers={**ORIGIN_HEADERS, "Authorization": f"Bearer {viewer_token}"},
     )
     assert response.status_code == 403
 
@@ -372,7 +501,7 @@ def test_admin_can_register_users(client, admin_token):
             "password": "password123",
             "role": "viewer",
         },
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={**ORIGIN_HEADERS, "Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 201
 
@@ -387,7 +516,7 @@ def test_operator_cannot_register_users(client, operator_token):
             "password": "password123",
             "role": "viewer",
         },
-        headers={"Authorization": f"Bearer {operator_token}"},
+        headers={**ORIGIN_HEADERS, "Authorization": f"Bearer {operator_token}"},
     )
     assert response.status_code == 403
 
@@ -402,7 +531,7 @@ def test_viewer_cannot_register_users(client, viewer_token):
             "password": "password123",
             "role": "viewer",
         },
-        headers={"Authorization": f"Bearer {viewer_token}"},
+        headers={**ORIGIN_HEADERS, "Authorization": f"Bearer {viewer_token}"},
     )
     assert response.status_code == 403
 
@@ -410,11 +539,21 @@ def test_viewer_cannot_register_users(client, viewer_token):
 # ==================== Logout Tests ====================
 
 
-def test_logout(client, admin_token):
+def test_logout_revokes_session_and_clears_cookie(client, admin_token, db_session):
     """Test logout endpoint."""
     response = client.post(
         "/api/v1/auth/logout",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={**ORIGIN_HEADERS, "Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
     assert "Successfully logged out" in response.json()["message"]
+    assert "Max-Age=0" in response.headers["set-cookie"]
+    decoded = decode_token(admin_token)
+    assert decoded is not None
+    session = db_session.get(AuthSession, decoded.session_id)
+    assert session is not None and session.revoked_at is not None
+    assert db_session.query(AuditEvent).filter_by(event_type="auth.logout").count() == 1
+    denied = client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert denied.status_code == 401

@@ -6,7 +6,11 @@ import React, { useState, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import type { LoginCredentials } from '../types/auth';
 
-export const LoginForm: React.FC = () => {
+interface LoginFormProps {
+  onClose: () => void;
+}
+
+export const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
   const { login, error, isLoading } = useAuth();
   const [credentials, setCredentials] = useState<LoginCredentials>({
     username: '',
@@ -26,11 +30,10 @@ export const LoginForm: React.FC = () => {
 
     try {
       await login(credentials);
-      // Clear form on success
       setCredentials({ username: '', password: '' });
-    } catch (err) {
-      // Error is handled by AuthContext
-      console.error('Login error:', err);
+      onClose();
+    } catch {
+      // AuthContext exposes a user-safe error message.
     }
   };
 
@@ -48,7 +51,15 @@ export const LoginForm: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md">
+      <div className="relative bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 text-slate-400 hover:text-white"
+          aria-label="Close login dialog"
+        >
+          ×
+        </button>
         <h2 className="text-2xl font-bold text-white mb-6">
           Aviation Intelligence Platform
         </h2>
@@ -101,7 +112,7 @@ export const LoginForm: React.FC = () => {
         </form>
 
         <div className="mt-6 text-sm text-gray-400 text-center">
-          <p>For demo purposes, contact admin for credentials.</p>
+          <p>Anonymous read-only access remains available.</p>
         </div>
       </div>
     </div>

@@ -23,17 +23,14 @@ export interface LoginCredentials {
   password: string;
 }
 
-export interface TokenResponse {
-  access_token: string;
-  token_type: string;
+export interface SessionResponse {
   user: User;
 }
 
 export interface AuthContextType {
   user: User | null;
-  token: string | null;
   login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;

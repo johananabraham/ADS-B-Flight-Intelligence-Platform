@@ -275,9 +275,10 @@ Docker-backed proof with:
 python3 scripts/verify_trust_workflow.py
 ```
 
-Operator labels are currently **self-asserted**, not authenticated identities. This
+Operator identity is derived from the authenticated session. This
 workflow is suitable for local engineering validation, but public deployment remains
-blocked on authentication, authorization, and an audit-retention policy. See
+blocked on a hardened reverse proxy, distributed rate limiting, and a documented
+audit-retention policy. See
 `docs/trust-operator-workflow-v1.md` for the API and evidence boundaries.
 
 ### Real receiver calibration
@@ -462,9 +463,15 @@ The system flags these anomaly types:
 | SQUAWK_7500 | Hijack code | CRITICAL |
 | SQUAWK_7600 | Radio failure | HIGH |
 | SQUAWK_7700 | General emergency | CRITICAL |
-| GHOST_FLIGHT | Aircraft disappeared mid-flight | MEDIUM |
+| TRACK_LOSS | Track continuity was lost; no cause or intent is inferred | MEDIUM |
 | RESTRICTED_AIRSPACE | Entered no-fly zone | HIGH |
 | KINEMATIC_PLAUSIBILITY | Two observations exceed one or more versioned motion limits | MEDIUM/HIGH |
+
+Operational events (emergency squawks, rapid motion, restricted-airspace entry,
+and track loss) are presented separately from integrity evidence. Integrity
+evidence reports inconsistent or inadequate telemetry; it does not prove
+spoofing, malicious intent, or aircraft danger. `GHOST_FLIGHT` remains readable
+only as a legacy stored value and is not emitted by live detection.
 
 Kinematic evidence currently checks implied ground speed, reported acceleration,
 turn rate, derived vertical rate, and disagreement between reported and implied

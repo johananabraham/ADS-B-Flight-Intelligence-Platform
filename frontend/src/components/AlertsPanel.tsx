@@ -30,9 +30,11 @@ const anomalyLabels: Record<string, string> = {
   SQUAWK_7500: 'SQUAWK 7500 — HIJACK',
   SQUAWK_7600: 'SQUAWK 7600 — RADIO FAIL',
   SQUAWK_7700: 'SQUAWK 7700 — EMERGENCY',
-  GHOST_FLIGHT: 'SIGNAL LOST',
+  TRACK_LOSS: 'TRACK LOSS',
+  GHOST_FLIGHT: 'TRACK LOSS (LEGACY)',
   RESTRICTED_AIRSPACE: 'RESTRICTED ZONE',
   ALTITUDE_DEVIATION: 'ALT DEVIATION',
+  KINEMATIC_PLAUSIBILITY: 'KINEMATIC INCONSISTENCY',
 };
 
 function AlertCard({ anomaly }: { anomaly: Anomaly }) {
@@ -54,6 +56,7 @@ function AlertCard({ anomaly }: { anomaly: Anomaly }) {
       SQUAWK_7500: 'hijacking security incident',
       SQUAWK_7600: 'radio communication failure',
       SQUAWK_7700: 'emergency declaration mayday',
+      TRACK_LOSS: 'lost contact radar signal lost',
       GHOST_FLIGHT: 'lost contact radar signal lost',
       RESTRICTED_AIRSPACE: 'airspace violation restricted area',
       ALTITUDE_DEVIATION: 'altitude deviation TCAS',
@@ -98,6 +101,9 @@ function AlertCard({ anomaly }: { anomaly: Anomaly }) {
             </span>
             <span className="text-2xs text-slate-500">
               {formatDistanceToNow(new Date(anomaly.detected_at))} ago
+            </span>
+            <span className="rounded border border-slate-700 px-1.5 py-0.5 text-2xs text-slate-400">
+              {anomaly.category === 'INTEGRITY_EVIDENCE' ? 'INTEGRITY' : 'OPERATIONAL'}
             </span>
           </div>
 

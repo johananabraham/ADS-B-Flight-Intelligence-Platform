@@ -49,7 +49,8 @@ const SOURCE_MODE = import.meta.env.VITE_DATA_SOURCE_MODE;
 const IS_RECORDED_REPLAY = SOURCE_MODE === 'RECORDED REPLAY';
 
 function AppContent() {
-  const { isAuthenticated, isLoading: authLoading, user, logout } = useAuth();
+  const { isLoading: authLoading, user, logout } = useAuth();
+  const [showLogin, setShowLogin] = useState(false);
   const [selectedAircraft, setSelectedAircraft] = useState<string | null>(null);
   const [showAlerts, setShowAlerts] = useState(false);
   const [showOverlays, setShowOverlays] = useState(true);
@@ -64,6 +65,7 @@ function AppContent() {
 
   // Use WebSocket for real-time updates
   const { aircraft: rawAircraft, stats, connected, lastUpdate } = useWebSocket();
+  const canOperate = user?.role === 'admin' || user?.role === 'operator';
 
   // Apply filters to aircraft
   const aircraft = useMemo(() => {
@@ -137,7 +139,7 @@ function AppContent() {
       }
       if (e.key === 'l' && !e.metaKey && !e.ctrlKey && user) {
         if (confirm('Are you sure you want to logout?')) {
-          logout();
+          void logout();
         }
       }
     };
@@ -262,9 +264,15 @@ function AppContent() {
         </div>
       )}
 
-      {IS_RECORDED_REPLAY && (
+      {IS_RECORDED_REPLAY && canOperate && (
         <div className="absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2">
           <ReplayControls />
+        </div>
+      )}
+
+      {IS_RECORDED_REPLAY && !canOperate && (
+        <div className="absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2 rounded border border-slate-700 bg-slate-950/90 px-4 py-2 text-xs text-slate-300">
+          Recorded replay is read-only. Operator login is required for controls.
         </div>
       )}
 
@@ -277,7 +285,7 @@ function AppContent() {
           <button
             onClick={() => {
               if (confirm('Are you sure you want to logout?')) {
-                logout();
+                void logout();
               }
             }}
             className="ml-2 text-xs text-red-400 hover:text-red-300"
@@ -287,6 +295,19 @@ function AppContent() {
           </button>
         </div>
       )}
+
+      {!user && (
+        <button
+          type="button"
+          onClick={() => setShowLogin(true)}
+          disabled={authLoading}
+          className="absolute top-4 right-4 z-[1002] rounded bg-gray-800 px-3 py-1.5 text-sm text-slate-300 hover:bg-gray-700 disabled:opacity-60"
+        >
+          {authLoading ? 'Checking session…' : 'Operator login'}
+        </button>
+      )}
+
+      {showLogin && <LoginForm onClose={() => setShowLogin(false)} />}
 
       {/* Connection status indicator */}
       <div className={`absolute top-16 right-4 z-[999] flex items-center gap-2 px-2 py-1 rounded text-2xs ${

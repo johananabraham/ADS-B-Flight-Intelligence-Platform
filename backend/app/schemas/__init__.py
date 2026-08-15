@@ -21,7 +21,7 @@ from .auth import (
     UserCreate,
     UserLogin,
     UserResponse,
-    TokenResponse,
+    SessionResponse,
     TokenData,
 )
 
@@ -44,6 +44,6 @@ __all__ = [
     "UserCreate",
     "UserLogin",
     "UserResponse",
-    "TokenResponse",
+    "SessionResponse",
     "TokenData",
 ]

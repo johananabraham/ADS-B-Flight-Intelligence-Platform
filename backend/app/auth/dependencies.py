@@ -1,26 +1,34 @@
 """FastAPI dependencies for authentication and authorization."""
+from datetime import datetime, timezone
 from typing import Optional
-from fastapi import Depends, HTTPException, status
+
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from ..core.database import get_db
-from ..models.user import User, UserRole
+from ..core.config import get_settings
+from ..models.user import AuthSession, User, UserRole
 from ..schemas.auth import TokenData
 from .utils import decode_token
 
 # HTTP Bearer token scheme
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
+
+
+def _utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
-    """Get the current authenticated user from JWT token.
+    """Resolve a live server session from cookie or API bearer compatibility.
 
     Args:
-        credentials: HTTP Bearer credentials containing the JWT token
+        credentials: Optional bearer credentials for non-browser API clients
         db: Database session
 
     Returns:
@@ -35,9 +43,29 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    # Decode the token
-    token_data: Optional[TokenData] = decode_token(credentials.credentials)
+    settings = get_settings()
+    token = request.cookies.get(settings.session_cookie_name)
+    if token is None and credentials is not None:
+        token = credentials.credentials
+    if token is None:
+        raise credentials_exception
+
+    token_data: Optional[TokenData] = decode_token(token)
     if token_data is None:
+        raise credentials_exception
+
+    session = (
+        db.query(AuthSession)
+        .filter(AuthSession.id == token_data.session_id)
+        .first()
+    )
+    now = datetime.now(timezone.utc)
+    if (
+        session is None
+        or session.user_id != token_data.user_id
+        or session.revoked_at is not None
+        or _utc(session.expires_at) <= now
+    ):
         raise credentials_exception
 
     # Get the user from database
@@ -52,6 +80,7 @@ async def get_current_user(
             detail="User account is inactive",
         )
 
+    request.state.auth_session_id = session.id
     return user
 
 

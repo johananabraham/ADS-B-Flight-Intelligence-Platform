@@ -1,5 +1,14 @@
 # Authentication & RBAC Implementation Summary
 
+> **Current v2 behavior (2026-08-15):** This document retains the original
+> branch history below, but browser authentication has since been hardened.
+> The server now sets an eight-hour `HttpOnly`, `SameSite=Strict` session cookie,
+> sessions are revocable in `auth_sessions`, unsafe requests require an approved
+> `Origin`, and security actions are written to `audit_events`. The frontend does
+> not store credentials in `localStorage`. Alembic migration `20260815_06` is the
+> schema authority. There are no default credentials. Use the cookie-jar examples
+> below and the acceptance criteria in `docs/specs/feeder-integrity-v2.md`.
+
 **Date:** 2026-08-05
 **Branch:** `codex/authentication-rbac`
 **Status:** ✅ Complete
@@ -25,10 +34,10 @@ Implemented comprehensive JWT-based authentication and role-based access control
 - SQLAlchemy ORM with PostgreSQL
 
 **JWT Token System** (`backend/app/auth/utils.py`)
-- Access tokens with 24-hour expiration (configurable)
+- Signed session tokens with 8-hour expiration (configurable)
 - HS256 algorithm with secret key
-- Token includes: user_id, username, role, expiration
-- Password hashing with bcrypt (4.1.2)
+- Token includes: user_id, username, role, session ID, expiration
+- New password hashes use bcrypt-SHA256; existing bcrypt hashes remain verifiable
 
 **Authentication Middleware** (`backend/app/auth/dependencies.py`)
 - `get_current_user`: Extract and validate JWT token
@@ -47,10 +56,10 @@ Implemented comprehensive JWT-based authentication and role-based access control
 
 | Endpoint | Method | Access | Description |
 |----------|--------|--------|-------------|
-| `/auth/login` | POST | Public | Login with username/password, returns JWT |
+| `/auth/login` | POST | Public | Login and set an HttpOnly session cookie |
 | `/auth/register` | POST | Admin only | Create new users |
 | `/auth/me` | GET | Authenticated | Get current user info |
-| `/auth/logout` | POST | Authenticated | Logout (client cleanup) |
+| `/auth/logout` | POST | Authenticated | Revoke the server session and clear cookie |
 
 **Protected Endpoints**
 
@@ -85,7 +94,7 @@ Implemented comprehensive JWT-based authentication and role-based access control
 ```bash
 JWT_SECRET_KEY=<secret-key-for-production>
 JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=1440  # 24 hours
+ACCESS_TOKEN_EXPIRE_MINUTES=480  # 8 hours
 ```
 
 ## Frontend Implementation
@@ -94,8 +103,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES=1440  # 24 hours
 
 **AuthContext** (`frontend/src/context/AuthContext.tsx`)
 - React Context for global auth state
-- Token and user persistence in localStorage
-- Automatic token restoration on page load
+- Session state loaded from `/auth/me`; the browser cannot read the cookie
+- Automatic session restoration on page load
 - Login/logout methods with error handling
 
 **LoginForm** (`frontend/src/components/LoginForm.tsx`)
@@ -118,7 +127,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=1440  # 24 hours
 enum UserRole { ADMIN, OPERATOR, VIEWER }
 interface User { id, username, email, role, ... }
 interface LoginCredentials { username, password }
-interface TokenResponse { access_token, token_type, user }
+interface SessionResponse { user }
 ```
 
 ## Admin User Creation
@@ -131,20 +140,17 @@ Interactive script to create initial admin user:
 PYTHONPATH=backend python scripts/create_admin_user.py
 ```
 
-**Default Development Credentials:**
-- Username: `admin`
-- Password: `adminpass123`
-- Email: `admin@example.com`
-- Role: `admin`
+The script requires an explicit username, email, and password of at least 12
+characters. It never creates or documents default credentials.
 
 ## Security Features
 
-✅ JWT token-based authentication
-✅ Password hashing with bcrypt
+✅ Revocable JWT-backed HttpOnly sessions
+✅ Password hashing with bcrypt-SHA256 and legacy bcrypt verification
 ✅ Role-based access control (RBAC)
 ✅ Rate limiting on sensitive endpoints
 ✅ Account activation status checking
-✅ Secure token storage (httpOnly recommended for production)
+✅ HttpOnly, SameSite=Strict session cookie
 ✅ Token expiration and validation
 ✅ Protection of sensitive operations
 
@@ -155,9 +161,14 @@ PYTHONPATH=backend python scripts/create_admin_user.py
 Only admins can create new users:
 
 ```bash
-# Via API
-curl -X POST http://localhost:8000/api/v1/auth/register \
-  -H "Authorization: Bearer <admin-token>" \
+# Login once and retain the HttpOnly cookie
+curl -c /tmp/adsb-cookie -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Origin: http://localhost:5173" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"<password>"}'
+
+curl -b /tmp/adsb-cookie -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Origin: http://localhost:5173" \
   -H "Content-Type: application/json" \
   -d '{
     "username": "operator1",
@@ -171,18 +182,18 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
+  -c /tmp/adsb-cookie \
+  -H "Origin: http://localhost:5173" \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
-    "password": "adminpass123"
+    "password": "<password>"
   }'
 ```
 
 Response:
 ```json
 {
-  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "token_type": "bearer",
   "user": {
     "id": 1,
     "username": "admin",
@@ -197,7 +208,8 @@ Response:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/replay/commands \
-  -H "Authorization: Bearer <token>" \
+  -b /tmp/adsb-cookie \
+  -H "Origin: http://localhost:5173" \
   -H "Content-Type: application/json" \
   -d '{"action": "pause"}'
 ```
@@ -209,15 +221,13 @@ curl -X POST http://localhost:8000/api/v1/replay/commands \
 1. **Rate Limiting:** Current implementation uses in-memory storage
    - **Recommendation:** Use Redis for distributed rate limiting in production
 
-2. **Token Storage:** Frontend uses localStorage
-   - **Recommendation:** Consider httpOnly cookies for enhanced security
+2. **Session Storage:** Server-tracked JWT sessions use HttpOnly cookies
+   - Logout revokes the session record before clearing the cookie
 
-3. **Secret Key:** Default secret in config
-   - **Recommendation:** Use strong, randomly generated secret in production
-   - Set via environment variable: `JWT_SECRET_KEY`
+3. **Secret Key:** Production startup requires an explicit 32-byte-or-longer key
+   - Set it via `JWT_SECRET_KEY`; known placeholders are rejected
 
-4. **Token Blacklisting:** No token revocation mechanism
-   - **Recommendation:** Implement token blacklist for logout/security events
+4. **Session Revocation:** Implemented through `auth_sessions.revoked_at`
 
 5. **User Management:** No UI for user management
    - **Recommendation:** Add admin panel for user CRUD operations

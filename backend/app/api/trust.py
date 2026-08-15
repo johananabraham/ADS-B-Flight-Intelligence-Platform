@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ..auth.audit import record_audit_event
 from ..core.config import get_settings
 from ..core.database import get_db
 from ..models.edge import SensorNodeRecord
@@ -90,6 +91,15 @@ async def create_trust_assessment(
         tuple(component.model_dump(mode="json") for component in response.components),
     )
     inserted = insert_snapshot(db, snapshot)
+    record_audit_event(
+        db,
+        event_type="trust.assessment_created",
+        success=True,
+        actor_user_id=current_user.id,
+        target_type="trust_assessment",
+        target_id=str(snapshot.assessment_id),
+        details={"inserted": inserted, "state": response.state},
+    )
     db.commit()
     return PersistedTrustAssessmentResponse(
         assessment_id=snapshot.assessment_id,

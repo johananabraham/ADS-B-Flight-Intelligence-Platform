@@ -3,7 +3,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { User, LoginCredentials, TokenResponse, AuthContextType } from '../types/auth';
+import type { User, LoginCredentials, SessionResponse, AuthContextType } from '../types/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -15,26 +15,32 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load token and user from localStorage on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('auth_user');
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
+    const controller = new AbortController();
+    const loadSession = async () => {
       try {
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem('auth_user');
-        localStorage.removeItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/me`, {
+          credentials: 'include',
+          signal: controller.signal,
+        });
+        if (response.ok) {
+          setUser(await response.json() as User);
+        } else if (response.status !== 401) {
+          setError('Unable to check the current session');
+        }
+      } catch (err) {
+        if (!(err instanceof DOMException && err.name === 'AbortError')) {
+          setError('Unable to reach the authentication service');
+        }
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
       }
-    }
-
-    setIsLoading(false);
+    };
+    void loadSession();
+    return () => controller.abort();
   }, []);
 
   const login = async (credentials: LoginCredentials): Promise<void> => {
@@ -47,6 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(credentials),
       });
 
@@ -55,13 +62,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(errorData.detail || 'Login failed');
       }
 
-      const data: TokenResponse = await response.json();
-
-      // Save to state and localStorage
-      setToken(data.access_token);
+      const data: SessionResponse = await response.json();
       setUser(data.user);
-      localStorage.setItem('auth_token', data.access_token);
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
@@ -71,20 +73,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
+  const logout = async (): Promise<void> => {
     setError(null);
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      setError('Logout failed; your server session may still be active');
+      throw new Error('Logout failed');
+    }
+    setUser(null);
   };
 
   const value: AuthContextType = {
     user,
-    token,
     login,
     logout,
-    isAuthenticated: !!user && !!token,
+    isAuthenticated: !!user,
     isLoading,
     error,
   };
@@ -101,12 +107,4 @@ export const useAuth = (): AuthContextType => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
-
-/**
- * Get authorization header for API requests
- */
-export const getAuthHeader = (token: string | null): Record<string, string> => {
-  if (!token) return {};
-  return { Authorization: `Bearer ${token}` };
 };

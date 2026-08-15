@@ -1,6 +1,8 @@
 """Authentication utilities for JWT and password handling."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import uuid4
+
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
@@ -10,8 +12,9 @@ from ..models.user import UserRole
 
 settings = get_settings()
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# New hashes avoid bcrypt's 72-byte input limit; existing bcrypt hashes still verify.
+pwd_context = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated="auto")
+DUMMY_PASSWORD_HASH = pwd_context.hash("invalid-credential-timing-placeholder")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -43,6 +46,7 @@ def create_access_token(
     user_id: int,
     username: str,
     role: UserRole,
+    session_id: str | None = None,
     expires_delta: Optional[timedelta] = None,
 ) -> str:
     """Create a JWT access token.
@@ -56,10 +60,10 @@ def create_access_token(
     Returns:
         The encoded JWT token
     """
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+    if expires_delta is not None:
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
+        expire = datetime.now(timezone.utc) + timedelta(
             minutes=settings.access_token_expire_minutes
         )
 
@@ -67,6 +71,7 @@ def create_access_token(
         "sub": str(user_id),
         "username": username,
         "role": role.value,
+        "jti": session_id or str(uuid4()),
         "exp": expire,
     }
 
@@ -96,14 +101,16 @@ def decode_token(token: str) -> Optional[TokenData]:
         user_id: int = int(payload.get("sub"))
         username: str = payload.get("username")
         role: str = payload.get("role")
+        session_id: str = payload.get("jti")
 
-        if user_id is None or username is None or role is None:
+        if user_id is None or username is None or role is None or not session_id:
             return None
 
         return TokenData(
             user_id=user_id,
             username=username,
             role=UserRole(role),
+            session_id=session_id,
         )
-    except (JWTError, ValueError):
+    except (JWTError, TypeError, ValueError):
         return None

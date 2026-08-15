@@ -5,7 +5,12 @@ from datetime import datetime, timezone
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from ..models.aircraft import Anomaly, AnomalySeverity, AnomalyType
+from ..models.aircraft import (
+    Anomaly,
+    AnomalyCategory,
+    AnomalySeverity,
+    AnomalyType,
+)
 from ..models.kinematics import (
     KinematicEvaluationRecord,
     WindowKinematicEvaluationRecord,
@@ -184,6 +189,7 @@ def evaluation_to_anomaly(
         callsign=current.callsign,
         anomaly_type=AnomalyType.KINEMATIC_PLAUSIBILITY,
         severity=severity,
+        category=AnomalyCategory.INTEGRITY_EVIDENCE,
         latitude=current.latitude,
         longitude=current.longitude,
         altitude=current.altitude_ft,
