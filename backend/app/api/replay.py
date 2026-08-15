@@ -3,10 +3,15 @@
 from typing import Literal
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
+from ..auth.audit import record_audit_event
+from ..auth.dependencies import require_operator
 from ..core.config import get_settings
+from ..core.database import get_db
+from ..models.user import User
 
 router = APIRouter(prefix="/replay", tags=["replay"])
 settings = get_settings()
@@ -67,6 +72,21 @@ async def replay_status() -> dict:
 
 
 @router.post("/commands", response_model=ReplayStatus)
-async def replay_command(command: ReplayCommand) -> dict:
-    """Apply one validated playback command."""
-    return await request_replay("POST", "/commands", command.model_dump())
+async def replay_command(
+    command: ReplayCommand,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_operator),
+) -> dict:
+    """Apply one validated playback command (requires operator or admin role)."""
+    result = await request_replay("POST", "/commands", command.model_dump())
+    record_audit_event(
+        db,
+        event_type="replay.command",
+        success=True,
+        actor_user_id=current_user.id,
+        target_type="replay",
+        target_id=command.action,
+        details={"action": command.action},
+    )
+    db.commit()
+    return result

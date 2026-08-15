@@ -8,6 +8,7 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
+from app.auth.dependencies import require_operator
 from app.api.trust_events import router
 from app.core.database import get_db
 from app.models.trust import TrustAssessmentRecord, TrustOperatorActionRecord
@@ -52,6 +53,9 @@ class FakeSession:
     def execute(self, _statement):
         return SimpleNamespace(rowcount=1)
 
+    def add(self, _record: object) -> None:
+        return None
+
     def commit(self) -> None:
         self.committed = True
 
@@ -83,6 +87,9 @@ def build_app(session: FakeSession) -> FastAPI:
     app = FastAPI()
     app.include_router(router)
     app.dependency_overrides[get_db] = lambda: session
+    app.dependency_overrides[require_operator] = lambda: SimpleNamespace(
+        id=7, username="local-operator", role="operator"
+    )
     return app
 
 
@@ -97,7 +104,7 @@ async def test_filters_and_inspects_persisted_events_with_actions():
     assert listed.status_code == 200
     assert listed.json()[0]["assessment_id"] == str(ASSESSMENT_ID)
     assert detail.status_code == 200
-    assert detail.json()["actions"][0]["identity_assurance"] == "SELF_ASSERTED"
+    assert detail.json()["actions"][0]["identity_assurance"] == "AUTHENTICATED"
 
 
 @pytest.mark.asyncio
@@ -172,4 +179,4 @@ async def test_annotation_requires_note_and_export_warns_about_identity():
     assert blank_actor.status_code == 422
     assert exported.status_code == 200
     assert exported.headers["content-disposition"].startswith("attachment;")
-    assert exported.json()["identity_warning"].startswith("Operator labels")
+    assert exported.json()["identity_warning"].startswith("Operator identity")

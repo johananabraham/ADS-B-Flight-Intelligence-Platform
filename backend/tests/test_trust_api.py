@@ -8,6 +8,7 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
+from app.auth.dependencies import require_operator
 from app.api.corroboration import get_corroboration_service
 from app.api.trust import router
 from app.core.database import get_db
@@ -43,6 +44,9 @@ class FakeSession:
 
     def execute(self, _statement):
         return SimpleNamespace(rowcount=1)
+
+    def add(self, _record: object) -> None:
+        return None
 
     def commit(self) -> None:
         return None
@@ -93,6 +97,9 @@ def build_app() -> FastAPI:
     app.include_router(router)
     app.dependency_overrides[get_db] = lambda: FakeSession(records)
     app.dependency_overrides[get_corroboration_service] = lambda: None
+    app.dependency_overrides[require_operator] = lambda: SimpleNamespace(
+        id=7, username="local-operator", role="operator"
+    )
     return app
 
 

@@ -16,6 +16,7 @@ import type {
 
 const api = axios.create({
   baseURL: '/api/v1',
+  withCredentials: true,
 });
 
 export async function fetchAircraft(): Promise<Aircraft[]> {

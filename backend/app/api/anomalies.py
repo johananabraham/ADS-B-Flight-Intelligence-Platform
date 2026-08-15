@@ -5,8 +5,11 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from ..core.database import get_db
-from ..models import Anomaly, AnomalyType, AnomalySeverity
+from ..models import Anomaly, AnomalyCategory, AnomalySeverity, AnomalyType
+from ..models.user import User
 from ..schemas import AnomalyResponse, AnomalyAcknowledge
+from ..auth.audit import record_audit_event
+from ..auth.dependencies import require_operator
 
 router = APIRouter(prefix="/anomalies", tags=["anomalies"])
 
@@ -15,6 +18,7 @@ router = APIRouter(prefix="/anomalies", tags=["anomalies"])
 def get_anomalies(
     anomaly_type: Optional[AnomalyType] = None,
     severity: Optional[AnomalySeverity] = None,
+    category: Optional[AnomalyCategory] = None,
     hours: int = Query(default=24, description="Anomalies from last N hours"),
     limit: int = Query(default=100, le=500),
     unacknowledged_only: bool = False,
@@ -30,6 +34,9 @@ def get_anomalies(
 
     if severity:
         query = query.filter(Anomaly.severity == severity)
+
+    if category:
+        query = query.filter(Anomaly.category == category)
 
     if unacknowledged_only:
         query = query.filter(Anomaly.acknowledged == 0)
@@ -99,6 +106,7 @@ def acknowledge_anomaly(
     anomaly_id: int,
     ack: AnomalyAcknowledge,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_operator),
 ):
     """Acknowledge or dismiss an anomaly."""
     anomaly = db.query(Anomaly).filter(Anomaly.id == anomaly_id).first()
@@ -109,6 +117,15 @@ def acknowledge_anomaly(
     if ack.acknowledged > 0 and anomaly.resolved_at is None:
         anomaly.resolved_at = datetime.utcnow()
 
+    record_audit_event(
+        db,
+        event_type="anomaly.acknowledged",
+        success=True,
+        actor_user_id=current_user.id,
+        target_type="anomaly",
+        target_id=str(anomaly.id),
+        details={"acknowledged": ack.acknowledged},
+    )
     db.commit()
     db.refresh(anomaly)
     return anomaly

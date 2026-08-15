@@ -37,7 +37,7 @@ The verifier proves that:
 2. recalculating identical evidence returns the same assessment ID and one row;
 3. retrying the same annotation returns one action row;
 4. filtered history, detail, and export contain the assessment;
-5. the export discloses that operator identity is `SELF_ASSERTED`.
+5. the export discloses that operator identity is `AUTHENTICATED`.
 
 The full application route contract is covered by
 `backend/tests/test_route_registration.py`; it checks every product router on the
@@ -58,7 +58,7 @@ changes. This checkpoint has not yet completed that human review.
 
 ## Security and evidence boundaries
 
-- Actor labels are user-supplied and explicitly marked `SELF_ASSERTED`.
+- Actor labels are derived from the authenticated session and marked `AUTHENTICATED`.
 - Authentication, authorization, rate limiting, and retention policy are required
   before public deployment.
 - The event means the stored evidence matched a deterministic policy. It does not

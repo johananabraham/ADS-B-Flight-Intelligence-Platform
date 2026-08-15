@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional, List
-from ..models.aircraft import AnomalyType, AnomalySeverity
+from ..models.aircraft import AnomalyCategory, AnomalySeverity, AnomalyType
 
 
 class AircraftBase(BaseModel):
@@ -53,6 +53,7 @@ class AnomalyResponse(BaseModel):
     callsign: Optional[str] = None
     anomaly_type: AnomalyType
     severity: AnomalySeverity
+    category: AnomalyCategory
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     altitude: Optional[int] = None

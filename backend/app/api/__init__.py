@@ -9,8 +9,10 @@ from .corroboration import router as corroboration_router
 from .stations import router as stations_router
 from .trust import router as trust_router
 from .trust_events import router as trust_events_router
+from .auth import router as auth_router
 
 API_ROUTERS = (
+    auth_router,
     aircraft_router,
     anomalies_router,
     websocket_router,

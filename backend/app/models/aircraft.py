@@ -73,7 +73,8 @@ class AnomalyType(str, enum.Enum):
     SQUAWK_7500 = "SQUAWK_7500"  # Hijack
     SQUAWK_7600 = "SQUAWK_7600"  # Radio failure
     SQUAWK_7700 = "SQUAWK_7700"  # Emergency
-    GHOST_FLIGHT = "GHOST_FLIGHT"
+    TRACK_LOSS = "TRACK_LOSS"
+    GHOST_FLIGHT = "GHOST_FLIGHT"  # Legacy persisted value; never emit for live data.
     RESTRICTED_AIRSPACE = "RESTRICTED_AIRSPACE"
     ALTITUDE_DEVIATION = "ALTITUDE_DEVIATION"
     KINEMATIC_PLAUSIBILITY = "KINEMATIC_PLAUSIBILITY"
@@ -86,6 +87,11 @@ class AnomalySeverity(str, enum.Enum):
     CRITICAL = "CRITICAL"
 
 
+class AnomalyCategory(str, enum.Enum):
+    OPERATIONAL_EVENT = "OPERATIONAL_EVENT"
+    INTEGRITY_EVIDENCE = "INTEGRITY_EVIDENCE"
+
+
 class Anomaly(Base):
     """Detected anomalies in flight behavior."""
     __tablename__ = "anomalies"
@@ -96,6 +102,16 @@ class Anomaly(Base):
 
     anomaly_type = Column(SQLEnum(AnomalyType), nullable=False)
     severity = Column(SQLEnum(AnomalySeverity), nullable=False)
+    category = Column(
+        SQLEnum(
+            AnomalyCategory,
+            values_callable=lambda enum_type: [item.value for item in enum_type],
+            native_enum=False,
+            length=32,
+        ),
+        default=AnomalyCategory.OPERATIONAL_EVENT,
+        nullable=False,
+    )
 
     # Position at time of anomaly
     latitude = Column(Float, nullable=True)

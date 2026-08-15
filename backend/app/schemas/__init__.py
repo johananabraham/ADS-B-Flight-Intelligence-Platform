@@ -16,6 +16,14 @@ from .observation import (
     ObservationSourceType,
     TrackObservation,
 )
+from .auth import (
+    UserBase,
+    UserCreate,
+    UserLogin,
+    UserResponse,
+    SessionResponse,
+    TokenData,
+)
 
 __all__ = [
     "AircraftBase",
@@ -32,4 +40,10 @@ __all__ = [
     "ObservationQualityFlag",
     "ObservationSourceType",
     "TrackObservation",
+    "UserBase",
+    "UserCreate",
+    "UserLogin",
+    "UserResponse",
+    "SessionResponse",
+    "TokenData",
 ]

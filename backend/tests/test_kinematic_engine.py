@@ -18,7 +18,7 @@ from app.services.kinematics import (
     KinematicRule,
     evaluate_pair,
 )
-from app.models.aircraft import AnomalySeverity, AnomalyType
+from app.models.aircraft import AnomalyCategory, AnomalySeverity, AnomalyType
 from app.services import kinematic_persistence
 from app.services.kinematic_persistence import (
     build_evaluation_insert_statement,
@@ -201,6 +201,7 @@ def test_flagged_evaluation_becomes_explainable_operator_alert() -> None:
     anomaly = evaluation_to_anomaly(evaluation, current)
 
     assert anomaly.anomaly_type is AnomalyType.KINEMATIC_PLAUSIBILITY
+    assert anomaly.category is AnomalyCategory.INTEGRITY_EVIDENCE
     assert anomaly.severity is AnomalySeverity.HIGH
     assert anomaly.details["evaluation_id"] == str(evaluation.evaluation_id)
     assert len(anomaly.details["failed_rules"]) >= 2

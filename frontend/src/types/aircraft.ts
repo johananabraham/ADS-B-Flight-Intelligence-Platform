@@ -37,11 +37,14 @@ export type AnomalyType =
   | 'SQUAWK_7500'
   | 'SQUAWK_7600'
   | 'SQUAWK_7700'
+  | 'TRACK_LOSS'
   | 'GHOST_FLIGHT'
   | 'RESTRICTED_AIRSPACE'
-  | 'ALTITUDE_DEVIATION';
+  | 'ALTITUDE_DEVIATION'
+  | 'KINEMATIC_PLAUSIBILITY';
 
 export type AnomalySeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type AnomalyCategory = 'OPERATIONAL_EVENT' | 'INTEGRITY_EVIDENCE';
 
 export interface Anomaly {
   id: number;
@@ -49,6 +52,7 @@ export interface Anomaly {
   callsign: string | null;
   anomaly_type: AnomalyType;
   severity: AnomalySeverity;
+  category: AnomalyCategory;
   latitude: number | null;
   longitude: number | null;
   altitude: number | null;
@@ -174,7 +178,7 @@ export interface TrustOperatorAction {
   actor: string;
   note: string | null;
   created_at: string;
-  identity_assurance: 'SELF_ASSERTED';
+  identity_assurance: 'AUTHENTICATED';
 }
 
 export interface Stats {
