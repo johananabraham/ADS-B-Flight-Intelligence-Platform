@@ -252,6 +252,17 @@ jobs:
         run: docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build --renew-anon-volumes -d
       - name: Apply database migration
         run: docker compose exec -T backend alembic -c alembic.ini upgrade head
+      - name: Bootstrap ephemeral replay operator
+        run: |
+          demo_password="$(openssl rand -hex 24)"
+          echo "::add-mask::$demo_password"
+          echo "DEMO_OPERATOR_USERNAME=ci-replay-admin" >> "$GITHUB_ENV"
+          echo "DEMO_OPERATOR_PASSWORD=$demo_password" >> "$GITHUB_ENV"
+          docker compose exec -T \
+            -e ADSB_BOOTSTRAP_USERNAME=ci-replay-admin \
+            -e ADSB_BOOTSTRAP_EMAIL=ci-replay-admin@example.invalid \
+            -e ADSB_BOOTSTRAP_PASSWORD="$demo_password" \
+            backend python -m app.auth.bootstrap --from-env
       - name: Verify idempotent safety-source persistence
         run: >-
           docker compose exec -T -e PYTHONPATH=/app backend
