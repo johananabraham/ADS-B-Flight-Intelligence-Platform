@@ -6,6 +6,7 @@ import argparse
 import getpass
 import os
 
+from pydantic import ValidationError
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -13,12 +14,23 @@ from .audit import record_audit_event
 from .utils import get_password_hash
 from ..core.config import get_settings
 from ..models.user import User, UserRole
+from ..schemas.auth import UserCreate
 
 
 def create_admin(username: str, email: str, password: str) -> bool:
     """Create the first administrator without publishing default credentials."""
-    if not username.strip() or not email.strip() or len(password) < 12:
-        print("Error: username, email, and a password of at least 12 characters are required.")
+    try:
+        requested = UserCreate(
+            username=username.strip(),
+            email=email.strip(),
+            password=password,
+            role=UserRole.ADMIN,
+        )
+    except ValidationError:
+        print("Error: bootstrap credentials failed username, email, or password validation.")
+        return False
+    if len(password) < 12:
+        print("Error: bootstrap administrator passwords require at least 12 characters.")
         return False
 
     engine = create_engine(get_settings().database_url)
@@ -27,7 +39,10 @@ def create_admin(username: str, email: str, password: str) -> bool:
     try:
         existing = (
             db.query(User)
-            .filter((User.username == username) | (User.email == email))
+            .filter(
+                (User.username == requested.username)
+                | (User.email == str(requested.email))
+            )
             .first()
         )
         if existing:
@@ -35,9 +50,9 @@ def create_admin(username: str, email: str, password: str) -> bool:
             return False
 
         admin = User(
-            username=username,
-            email=email,
-            hashed_password=get_password_hash(password),
+            username=requested.username,
+            email=str(requested.email),
+            hashed_password=get_password_hash(requested.password),
             role=UserRole.ADMIN,
             is_active=True,
         )
