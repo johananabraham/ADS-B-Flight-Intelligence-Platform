@@ -147,6 +147,7 @@ jobs:
           --tmpfs /data/events:uid=10001,gid=10001,mode=0700
           --cap-drop ALL --security-opt no-new-privileges:true
           -e RECEIVER_ID=ci-feeder -e ADSB_INPUT_HOST=127.0.0.1
+          -e SIDECAR_BIND_HOST=0.0.0.0
           -p 127.0.0.1:8090:8090 feeder-integrity:test
       - name: Wait for the read-only health endpoint
         run: |
@@ -154,6 +155,7 @@ jobs:
             curl --fail --silent http://127.0.0.1:8090/api/v1/integrity/health && exit 0
             sleep 1
           done
+          docker logs feeder-integrity-smoke
           exit 1
       - name: Stop smoke container
         if: always()
