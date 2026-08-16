@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+import pytest
 
 from sidecar.app import create_app
 from sidecar.config import SidecarConfig
@@ -173,6 +174,8 @@ def test_ui_is_read_only_and_has_permanent_claim_boundary(tmp_path: Path) -> Non
 
 
 def test_accelerated_soak_has_no_hidden_drops_and_meets_latency_memory_targets() -> None:
+    if os.getenv("RUN_SIDECAR_SOAK_GATE") != "1":
+        pytest.skip("deployment memory gate requires the minimal sidecar environment")
     root = Path(__file__).parents[2]
     completed = subprocess.run(
         [
