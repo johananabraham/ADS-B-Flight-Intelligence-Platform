@@ -125,11 +125,15 @@ jobs:
           cache: pip
           cache-dependency-path: sidecar/requirements.txt
       - name: Install sidecar test dependencies
-        run: pip install -r sidecar/requirements.txt pytest==9.1.1
+        run: pip install -r sidecar/requirements.txt pytest==9.1.1 httpx2==2.9.0
       - name: Run core, transport, storage, and accelerated load gates
         env:
           PYTHONPATH: backend:.
-        run: pytest -q backend/tests/test_integrity_core.py backend/tests/test_feeder_sidecar.py
+        run: >-
+          pytest -q
+          backend/tests/test_integrity_core.py
+          backend/tests/test_feeder_sidecar.py
+          backend/tests/test_schema_import_boundary.py
       - name: Validate one-command Compose contract
         env:
           RECEIVER_ID: ci-feeder
