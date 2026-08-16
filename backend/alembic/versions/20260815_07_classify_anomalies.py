@@ -1,7 +1,7 @@
 """Separate operational events from integrity evidence.
 
 Revision ID: 20260815_07
-Revises: 20260815_06
+Revises: 20260815_06b
 """
 
 from alembic import op
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 
 
 revision = "20260815_07"
-down_revision = "20260815_06"
+down_revision = "20260815_06b"
 branch_labels = None
 depends_on = None
 
