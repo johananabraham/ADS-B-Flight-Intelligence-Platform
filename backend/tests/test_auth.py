@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.auth.bootstrap import create_admin
 from app.auth.rate_limiter import rate_limiter
 from app.auth.utils import (
     create_access_token,
@@ -312,6 +313,29 @@ def test_login_inactive_user(client, db_session):
 
     assert response.status_code == 403
     assert "inactive" in response.json()["detail"].lower()
+
+
+def test_login_rate_limit_returns_429_response(client):
+    for _ in range(rate_limiter.login_requests_per_minute):
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "missing", "password": "not-the-password"},
+            headers=ORIGIN_HEADERS,
+        )
+        assert response.status_code == 401
+
+    limited = client.post(
+        "/api/v1/auth/login",
+        json={"username": "missing", "password": "not-the-password"},
+        headers=ORIGIN_HEADERS,
+    )
+    assert limited.status_code == 429
+    assert limited.headers["retry-after"] == "60"
+    assert limited.headers["x-ratelimit-remaining"] == "0"
+
+
+def test_bootstrap_rejects_invalid_email_before_database_access():
+    assert create_admin("valid-name", "admin@example.invalid", "long-enough-password") is False
 
 
 # ==================== Registration Tests ====================

@@ -260,7 +260,7 @@ jobs:
           echo "DEMO_OPERATOR_PASSWORD=$demo_password" >> "$GITHUB_ENV"
           docker compose exec -T \
             -e ADSB_BOOTSTRAP_USERNAME=ci-replay-admin \
-            -e ADSB_BOOTSTRAP_EMAIL=ci-replay-admin@example.invalid \
+            -e ADSB_BOOTSTRAP_EMAIL=ci-replay-admin@example.com \
             -e ADSB_BOOTSTRAP_PASSWORD="$demo_password" \
             backend python -m app.auth.bootstrap --from-env
       - name: Verify idempotent safety-source persistence

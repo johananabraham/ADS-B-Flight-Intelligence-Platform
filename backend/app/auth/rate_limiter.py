@@ -2,8 +2,9 @@
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Tuple
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 import asyncio
 
 
@@ -119,10 +120,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )
 
         if not is_allowed:
-            raise HTTPException(
+            return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Rate limit exceeded. Please try again later.",
-                headers={"Retry-After": "60"},
+                content={"detail": "Rate limit exceeded. Please try again later."},
+                headers={
+                    "Retry-After": "60",
+                    "X-RateLimit-Remaining": "0",
+                    "X-RateLimit-Limit": str(
+                        rate_limiter.login_requests_per_minute
+                        if is_login
+                        else rate_limiter.requests_per_minute
+                    ),
+                },
             )
 
         # Process request
