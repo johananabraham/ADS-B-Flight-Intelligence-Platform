@@ -129,6 +129,7 @@ jobs:
       - name: Run core, transport, storage, and accelerated load gates
         env:
           PYTHONPATH: backend:.
+          RUN_SIDECAR_SOAK_GATE: "1"
         run: >-
           pytest -q
           backend/tests/test_integrity_core.py
