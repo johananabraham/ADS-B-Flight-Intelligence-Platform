@@ -5,24 +5,32 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
-from urllib.request import Request, urlopen
+from urllib.request import OpenerDirector, Request
 
 from verify_demo import fetch_json
+from verify_recorded_replay import authenticate
 
 
 ACTION_ID = "00000000-0000-4000-8000-000000000401"
 
 
-def post_json(url: str, payload: dict[str, object] | None = None) -> object:
+def post_json(
+    opener: OpenerDirector,
+    url: str,
+    *,
+    origin: str,
+    payload: dict[str, object] | None = None,
+) -> object:
     body = json.dumps(payload or {}).encode("utf-8")
     request = Request(
         url,
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "Origin": origin},
         method="POST",
     )
-    with urlopen(request, timeout=10) as response:  # noqa: S310 - explicit local URL
+    with opener.open(request, timeout=10) as response:  # noqa: S310 - local API
         return json.load(response)
 
 
@@ -54,10 +62,23 @@ def query_counts(container: str, assessment_id: str) -> tuple[int, int]:
     return int(assessment_count), int(action_count)
 
 
-def verify(api_url: str, database_container: str) -> dict[str, object]:
+def verify(
+    api_url: str,
+    database_container: str,
+    *,
+    username: str,
+    password: str,
+    origin: str,
+) -> dict[str, object]:
+    opener = authenticate(
+        api_url,
+        username=username,
+        password=password,
+        origin=origin,
+    )
     assessment_url = f"{api_url}/api/v1/trust/A0B0C0/assessments"
-    first = post_json(assessment_url)
-    retry = post_json(assessment_url)
+    first = post_json(opener, assessment_url, origin=origin)
+    retry = post_json(opener, assessment_url, origin=origin)
     if not isinstance(first, dict) or not isinstance(retry, dict):
         raise RuntimeError("assessment endpoint did not return objects")
     if first.get("assessment", {}).get("state") != "QUESTIONABLE":
@@ -71,12 +92,12 @@ def verify(api_url: str, database_container: str) -> dict[str, object]:
     action = {
         "action_id": ACTION_ID,
         "action_type": "ANNOTATE",
-        "actor": "ci-verifier",
+        "actor": username,
         "note": "Reviewed deterministic kinematic attack evidence.",
     }
     action_url = f"{api_url}/api/v1/trust-events/{assessment_id}/actions"
-    first_action = post_json(action_url, action)
-    retry_action = post_json(action_url, action)
+    first_action = post_json(opener, action_url, origin=origin, payload=action)
+    retry_action = post_json(opener, action_url, origin=origin, payload=action)
     if first_action.get("inserted") is not True or retry_action.get("inserted") is not False:
         raise RuntimeError("operator action retry was not idempotent")
 
@@ -89,9 +110,12 @@ def verify(api_url: str, database_container: str) -> dict[str, object]:
         event.get("assessment_id") for event in events
     }:
         raise RuntimeError("filtered event history omitted the persisted assessment")
-    if detail.get("actions", [{}])[0].get("identity_assurance") != "SELF_ASSERTED":
-        raise RuntimeError("operator identity evidence boundary is missing")
-    if not str(exported.get("identity_warning", "")).startswith("Operator labels"):
+    actions = detail.get("actions", [])
+    if not actions or actions[0].get("identity_assurance") != "AUTHENTICATED":
+        raise RuntimeError("authenticated operator identity evidence is missing")
+    if actions[0].get("actor") != username:
+        raise RuntimeError("operator action was not attributed to the authenticated user")
+    if not str(exported.get("identity_warning", "")).startswith("Operator identity"):
         raise RuntimeError("export omitted the identity warning")
 
     assessment_count, action_count = query_counts(database_container, assessment_id)
@@ -105,7 +129,8 @@ def verify(api_url: str, database_container: str) -> dict[str, object]:
         "state": "QUESTIONABLE",
         "assessment_rows": assessment_count,
         "operator_action_rows": action_count,
-        "identity_assurance": "SELF_ASSERTED",
+        "identity_assurance": "AUTHENTICATED",
+        "operator": username,
     }
 
 
@@ -113,13 +138,28 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--api-url", default="http://127.0.0.1:8000")
     parser.add_argument("--database-container", default="adsb-postgres")
+    parser.add_argument(
+        "--operator-username",
+        default=os.getenv("DEMO_OPERATOR_USERNAME", ""),
+    )
+    parser.add_argument(
+        "--operator-password",
+        default=os.getenv("DEMO_OPERATOR_PASSWORD", ""),
+    )
+    parser.add_argument("--operator-origin", default="http://localhost:5173")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     try:
-        result = verify(args.api_url.rstrip("/"), args.database_container)
+        result = verify(
+            args.api_url.rstrip("/"),
+            args.database_container,
+            username=args.operator_username,
+            password=args.operator_password,
+            origin=args.operator_origin,
+        )
     except Exception as error:
         print(json.dumps({"status": "failed", "error": str(error)}, indent=2))
         return 1
