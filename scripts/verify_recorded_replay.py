@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+from http.cookiejar import CookieJar
 import json
+import os
 import subprocess
 import time
 from dataclasses import asdict, dataclass
-from urllib.request import Request, urlopen
+from urllib.request import HTTPCookieProcessor, OpenerDirector, Request, build_opener
 
 from verify_demo import fetch_json, fetch_text
 
@@ -27,30 +29,72 @@ class RecordedReplayEvidence:
     kinematic_flags: int
 
 
-def send_command(api_url: str, action: str, value: float | None = None) -> dict:
+def authenticate(
+    api_url: str,
+    *,
+    username: str,
+    password: str,
+    origin: str,
+) -> OpenerDirector:
+    if not username or not password:
+        raise RuntimeError("operator credentials are required to verify replay controls")
+    opener = build_opener(HTTPCookieProcessor(CookieJar()))
+    request = Request(
+        f"{api_url}/api/v1/auth/login",
+        data=json.dumps({"username": username, "password": password}).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Origin": origin},
+        method="POST",
+    )
+    with opener.open(request, timeout=5) as response:  # noqa: S310 - local API
+        result = json.load(response)
+    if not isinstance(result, dict) or not isinstance(result.get("user"), dict):
+        raise RuntimeError("operator login returned an invalid session response")
+    return opener
+
+
+def send_command(
+    opener: OpenerDirector,
+    api_url: str,
+    action: str,
+    *,
+    origin: str,
+    value: float | None = None,
+) -> dict:
     request = Request(
         f"{api_url}/api/v1/replay/commands",
         data=json.dumps({"action": action, "value": value}).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "Origin": origin},
         method="POST",
     )
-    with urlopen(request, timeout=5) as response:  # noqa: S310 - local API is explicit input
+    with opener.open(request, timeout=5) as response:  # noqa: S310 - local API
         result = json.load(response)
     if not isinstance(result, dict):
         raise RuntimeError("replay command returned invalid status")
     return result
 
 
-def verify_controls(api_url: str) -> None:
-    restarted = send_command(api_url, "restart")
+def verify_controls(
+    api_url: str,
+    *,
+    username: str,
+    password: str,
+    origin: str,
+) -> None:
+    opener = authenticate(
+        api_url,
+        username=username,
+        password=password,
+        origin=origin,
+    )
+    restarted = send_command(opener, api_url, "restart", origin=origin)
     if restarted.get("state") != "PLAYING" or restarted.get("position_ms", 1) > 50:
         raise RuntimeError("restart did not reset and start playback")
 
-    speed = send_command(api_url, "speed", 2)
+    speed = send_command(opener, api_url, "speed", origin=origin, value=2)
     if speed.get("speed") != 2:
         raise RuntimeError("speed command was not applied")
 
-    paused = send_command(api_url, "pause")
+    paused = send_command(opener, api_url, "pause", origin=origin)
     time.sleep(0.1)
     paused_status = fetch_json(f"{api_url}/api/v1/replay/status")
     if paused_status.get("state") != "PAUSED":
@@ -58,16 +102,16 @@ def verify_controls(api_url: str) -> None:
     if paused_status.get("position_ms") != paused.get("position_ms"):
         raise RuntimeError("playback position changed while paused")
 
-    sought = send_command(api_url, "seek", 1)
+    sought = send_command(opener, api_url, "seek", origin=origin, value=1)
     if sought.get("position_ms") != 1_000 or sought.get("state") != "PAUSED":
         raise RuntimeError("seek did not preserve paused state at the requested position")
 
-    resumed = send_command(api_url, "resume")
+    resumed = send_command(opener, api_url, "resume", origin=origin)
     if resumed.get("state") != "PLAYING":
         raise RuntimeError("resume command was not applied")
 
-    send_command(api_url, "speed", 1)
-    send_command(api_url, "restart")
+    send_command(opener, api_url, "speed", origin=origin, value=1)
+    send_command(opener, api_url, "restart", origin=origin)
 
 
 def query_recording(
@@ -145,7 +189,12 @@ def verify_once(args: argparse.Namespace) -> RecordedReplayEvidence:
     if flags or alerts:
         raise RuntimeError("clean fixture produced a kinematic flag or operator alert")
 
-    verify_controls(args.frontend_url)
+    verify_controls(
+        args.api_url,
+        username=args.operator_username,
+        password=args.operator_password,
+        origin=args.operator_origin,
+    )
 
     return RecordedReplayEvidence(
         recording_id=args.recording_id,
@@ -174,6 +223,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--expected-start", default="2026-07-19 12:00:00")
     parser.add_argument("--expected-end", default="2026-07-19 12:00:02")
     parser.add_argument("--timeout", type=float, default=60)
+    parser.add_argument(
+        "--operator-username",
+        default=os.getenv("DEMO_OPERATOR_USERNAME", ""),
+    )
+    parser.add_argument(
+        "--operator-password",
+        default=os.getenv("DEMO_OPERATOR_PASSWORD", ""),
+    )
+    parser.add_argument("--operator-origin", default="http://localhost:5173")
     return parser.parse_args()
 
 
