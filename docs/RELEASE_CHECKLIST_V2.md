@@ -14,11 +14,11 @@ gate remains.
 | Shared deterministic core and policy validation | PASS | Core golden, compatibility, expiry, unit, ordering, duplicate tests |
 | Database-free sidecar | PASS | Strict SBS parser, bounded runtime/store, REST/WS/metrics/UI tests |
 | 100 msg/s for 30 minutes, p95 <250 ms, no unbounded growth | PASS | 180,000 messages, 0 drops, p95 1.699 ms, 95.781 MB; `evaluation/results/feeder-soak-v1.json` |
-| Non-root/read-only container and Compose contract | UNVERIFIED | Compose config passes; local Docker daemon unavailable, so build/smoke/image scan require CI or Docker Desktop |
+| Non-root/read-only container and Compose contract | PASS | Compose contract, container build, hardened startup, and read-only health check passed in [CI run 31948219688](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/runs/31948219688) |
 | AMD64/ARM64 image workflow with SBOM/provenance | PASS (workflow) | `.github/workflows/feeder-image.yml`; publication intentionally tag-gated |
 | Python lint/type/tests and migrations | PASS | Ruff clean; mypy clean across 22 v2 sources; 268 backend tests; one Alembic head and offline upgrade pass |
 | TypeScript lint/type/live/static builds | PASS | ESLint, `tsc`, Vite live build, Vite static build, and static verifier pass |
-| C++ decoder build/tests | UNVERIFIED | CMake/CTest are unavailable locally; blocking CI job is configured |
+| C++ decoder build/tests | PASS | CMake build and CTest passed in [CI run 31948219688](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/runs/31948219688) |
 | Seven-day chronological benign benchmark | BLOCKED | Physical authorized capture not collected; see `acceptance/phase2-benign-field-status.md` |
 | Privacy sanitizer and allow-list tests | PASS | Field privacy tests and private-data ignore/history rules |
 | Frozen synthetic abrupt/gradual recall | PASS | 20/20 and 20/20 in `frozen_policy_synthetic_v1.json` |
@@ -30,7 +30,7 @@ gate remains.
 | Independent feeder pilot | READY TO RECRUIT | Privacy-safe summary/readiness tooling and protocol complete; requires 3–5 external operators |
 | Reachable-history restricted-artifact scan | PASS | `scripts/audit_release_history.py`; dedicated Gitleaks CI scans secrets |
 | Python and npm dependency scans | PASS | pip-audit 2.10.1 reports no known backend/sidecar findings; npm reports zero vulnerabilities after the nanoid fix |
-| Static/configuration and container scans | UNVERIFIED | Blocking Trivy CI is configured; local Trivy/Docker unavailable and remote CI has not run on this commit |
+| Static/configuration and container scans | PASS | Trivy source/configuration scan and sidecar critical-vulnerability image scan passed in [CI run 31948219688](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/runs/31948219688) |
 | Sample environment placeholders | PASS | `.env.example` reviewed; no tracked `.env`/keys/database/raw captures |
 | Asset/data redistribution inventory | PASS with blockers | `THIRD_PARTY_NOTICES.md`; unresolved data sources remain excluded |
 | Repository software license | BLOCKED | No `LICENSE` exists; owner must choose terms before public distribution |
