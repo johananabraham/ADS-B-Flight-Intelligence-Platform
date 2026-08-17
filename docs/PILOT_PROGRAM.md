@@ -48,6 +48,46 @@ decisions.
    clock, network, or feed. Do not ask the operator to identify the aircraft.
 5. At the end, collect the sanitized summaries and conduct the interview in
    `PILOT_INTERVIEW.md`. Keep raw operational data local.
+6. Ask the participant to build a validated, enumeration-only evidence bundle.
+   The command refuses unknown summary fields and requires explicit consent and
+   privacy-review confirmations:
+
+   ```bash
+   python scripts/build_pilot_evidence_bundle.py \
+     --participant-id pilot-01 \
+     --summary pilot-summary-day-1.json \
+     --summary pilot-summary-day-2.json \
+     --summary pilot-summary-day-3.json \
+     --summary pilot-summary-day-4.json \
+     --summary pilot-summary-day-5.json \
+     --summary pilot-summary-day-6.json \
+     --summary pilot-summary-day-7.json \
+     --installation-minutes 12 \
+     --readiness-status READY \
+     --state-meanings-explained-correctly \
+     --useful-outcome OPERATIONAL_FINDING \
+     --keep-installed YES \
+     --outcome-code OPERATIONAL_FINDING \
+     --confirm-consent \
+     --confirm-privacy-review \
+     --output pilot-01-evidence.json
+   ```
+
+   Add `--assisted-installation`, `--drops-investigated`, or `--withdrawn` only
+   when applicable. Do not encode interview prose in the bundle.
+7. After receiving reviewed bundles, generate the deterministic aggregate report:
+
+   ```bash
+   python scripts/build_pilot_report.py \
+     --input pilot-01-evidence.json \
+     --input pilot-02-evidence.json \
+     --input pilot-03-evidence.json \
+     --json-output pilot-report.json \
+     --markdown-output pilot-report.md
+   ```
+
+   The command exits nonzero and reports `PILOT_INCOMPLETE` until every success
+   criterion passes. See `PILOT_EVIDENCE.md` for the schema and claim boundary.
 
 ## Success criteria
 
@@ -62,6 +102,8 @@ The first pilot is successful only when:
 - At least one participant reports either a useful operational finding or a
   concrete usability change backed by their run evidence.
 - No shared artifact fails privacy review.
+- Every completed run used one frozen policy version and passed the readiness
+  check before its field period.
 
 A pilot with no detected evidence can still be useful, but it cannot support a
 claim that the detector caught a real anomaly. Publish participant counts,

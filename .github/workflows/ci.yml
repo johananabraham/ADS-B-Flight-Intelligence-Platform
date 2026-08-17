@@ -40,7 +40,8 @@ jobs:
           PYTHONPATH: backend:.
         run: >-
           mypy --ignore-missing-imports
-          backend/integrity_core sidecar evaluation/field evaluation/public_replay
+          backend/integrity_core sidecar evaluation/field evaluation/pilot
+          evaluation/public_replay
       - name: Run backend tests
         env:
           PYTHONPATH: backend:.

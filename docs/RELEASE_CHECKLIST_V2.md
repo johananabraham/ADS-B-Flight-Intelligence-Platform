@@ -27,7 +27,7 @@ gate remains.
 | Browser-only static evidence build | PASS | Static build verifier and desktop/mobile interaction review; no live network capabilities |
 | Static public deployment | BLOCKED | Publication awaits privacy, license, security, and repository-license decisions |
 | Hardware demo video | BLOCKED | Requires physical dongle/capture and manual privacy review |
-| Independent feeder pilot | READY TO RECRUIT | Privacy-safe summary/readiness tooling and protocol complete; requires 3–5 external operators |
+| Independent feeder pilot | READY TO RECRUIT | Summary, readiness, strict evidence bundles, deterministic success report, and protocol complete; requires 3–5 external operators |
 | Reachable-history restricted-artifact scan | PASS | `scripts/audit_release_history.py`; dedicated Gitleaks CI scans secrets |
 | Python and npm dependency scans | PASS | pip-audit 2.10.1 reports no known backend/sidecar findings; npm reports zero vulnerabilities after the nanoid fix |
 | Static/configuration and container scans | PASS | Trivy source/configuration scan and sidecar critical-vulnerability image scan passed in [CI run 31948219688](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/runs/31948219688) |
