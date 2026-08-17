@@ -55,6 +55,9 @@ data/
 # Local RF captures may contain sensitive receiver/aircraft location data
 /calibration/local/
 
+# Local pilot summaries/bundles require participant privacy review before publication
+/pilot/local/
+
 # Generated edge credentials and private keys
 /edge/mosquitto/secrets/*
 !/edge/mosquitto/secrets/README.md

@@ -89,6 +89,10 @@ can verify useful progress without sharing aircraft or receiver identifiers:
 python scripts/check_pilot_readiness.py --sample-seconds 10
 ```
 
+The [pilot evidence workflow](docs/PILOT_EVIDENCE.md) validates reviewed daily
+summaries, aggregates several independent runs without raw traffic, and refuses a
+success claim until every published pilot criterion passes.
+
 ### Demo mode (no SDR hardware required)
 
 Run the complete platform with a deterministic six-aircraft replay feed:
