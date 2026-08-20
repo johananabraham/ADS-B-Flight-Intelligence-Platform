@@ -25,7 +25,7 @@ gate remains.
 | Public candidate selection/replay workflow | PASS | Deterministic tests cover detected/missed/insufficient/blocked outcomes |
 | Real public anomaly replay | BLOCKED | Source license identifier/trace publication requirements unresolved; checked result is `BLOCKED_REPLICATION` |
 | Browser-only static evidence build | PASS | Static build verifier and desktop/mobile interaction review; no live network capabilities |
-| Static public deployment | BLOCKED | Publication awaits privacy, license, security, and repository-license decisions |
+| Static public deployment | PASS | [Production Vercel demo](https://adsb-feeder-integrity-evidence.vercel.app/) verified at desktop and 390px mobile widths after static-bundle, privacy-history, and credential scans |
 | Hardware demo video | BLOCKED | Requires physical dongle/capture and manual privacy review |
 | Independent feeder pilot | READY TO RECRUIT | Summary, readiness, strict evidence bundles, deterministic success report, and protocol complete; requires 3–5 external operators |
 | Reachable-history restricted-artifact scan | PASS | `scripts/audit_release_history.py`; dedicated Gitleaks CI scans secrets |

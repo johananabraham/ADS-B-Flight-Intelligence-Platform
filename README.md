@@ -4,6 +4,9 @@ An open, self-hosted integrity monitor for untrusted real-time ADS-B telemetry. 
 
 [![CI](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/workflows/ci.yml)
 
+[Open the recorded-evidence demo](https://adsb-feeder-integrity-evidence.vercel.app/)
+— a browser-only synthetic research demo, not live traffic.
+
 ## Metrics Summary
 
 | Metric | Value | Evidence |

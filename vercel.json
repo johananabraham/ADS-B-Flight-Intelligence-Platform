@@ -1,7 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd frontend && npm ci && npm run build:static",
-  "outputDirectory": "frontend/dist",
-  "cleanUrls": true,
-  "trailingSlash": false
-}
