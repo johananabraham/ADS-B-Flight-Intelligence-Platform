@@ -8,7 +8,7 @@ An open, self-hosted integrity monitor for untrusted real-time ADS-B telemetry. 
 
 | Metric | Value | Evidence |
 |--------|-------|----------|
-| Backend regression suite | 268 tests passing | CI `backend` job |
+| Backend regression suite | 278 tests passing, 1 skipped | CI `backend` job |
 | Feeder sidecar paced soak | 100 msg/s for 30 min, 0 drops, 1.699 ms p95 | Checked-in soak result |
 | Kinematic detection (abrupt) | 100% | Held-out 22 sessions |
 | Kinematic detection (gradual) | 100% with window | Held-out 22 sessions |
@@ -92,6 +92,8 @@ python scripts/check_pilot_readiness.py --sample-seconds 10
 The [pilot evidence workflow](docs/PILOT_EVIDENCE.md) validates reviewed daily
 summaries, aggregates several independent runs without raw traffic, and refuses a
 success claim until every published pilot criterion passes.
+Recruitment requirements and ready-to-post outreach copy are in the
+[pilot recruitment guide](docs/PILOT_RECRUITMENT.md).
 
 ### Demo mode (no SDR hardware required)
 
@@ -471,7 +473,7 @@ published dependency advisories.
 
 | Claim | Evidence | Verification |
 |-------|----------|--------------|
-| 170+ backend tests pass | `pytest backend/tests/` | CI `backend` job |
+| 278 backend tests pass, 1 skipped | `pytest backend/tests/` | CI `backend` job |
 | C++ decoder matches dump1090 | `decoder/docs/validation-results.md` | CI `decoder` job |
 | Zero dependency vulnerabilities | pip-audit + npm audit | CI `security` job |
 | Kinematic rules detect 100% abrupt attacks | `evaluation/results/kinematic_rules_baseline_v1.json` | CI baseline gate |
