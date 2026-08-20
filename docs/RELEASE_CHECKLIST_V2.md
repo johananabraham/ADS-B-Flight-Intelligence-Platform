@@ -33,7 +33,7 @@ gate remains.
 | Static/configuration and container scans | PASS | Trivy source/configuration scan and sidecar critical-vulnerability image scan passed in [CI run 31948219688](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/runs/31948219688) |
 | Sample environment placeholders | PASS | `.env.example` reviewed; no tracked `.env`/keys/database/raw captures |
 | Asset/data redistribution inventory | PASS with blockers | `THIRD_PARTY_NOTICES.md`; unresolved data sources remain excluded |
-| Repository software license | BLOCKED | No `LICENSE` exists; owner must choose terms before public distribution |
+| Repository software license | PASS | Root `LICENSE`, README scope statement, and frontend package metadata consistently declare Apache-2.0 |
 | Tagged v2 release/checksums/images | BLOCKED | Intentionally not created until every blocking gate passes |
 
 ## Required documentation
@@ -49,7 +49,8 @@ gate remains.
 
 ## Promotion procedure
 
-1. Resolve the repository software license and every third-party `BLOCKED` item.
+1. Keep repository license metadata consistent and resolve every third-party
+   `BLOCKED` item.
 2. Complete the untouched day-7 benchmark and publish only sanitized reviewed
    aggregates.
 3. Complete the real candidate replay or retain a fully documented, licensed
