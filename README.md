@@ -549,4 +549,9 @@ models, and the UI states that inconsistency is not proof of spoofing.
 
 ## License
 
-MIT
+Copyright 2026 Johanan Abraham.
+
+Unless otherwise noted, the source code and project documentation are licensed
+under the [Apache License 2.0](LICENSE). Third-party dependencies, datasets,
+fixtures, and assets retain the licenses identified in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and associated manifests.
