@@ -1,6 +1,10 @@
 # Static recorded-evidence demo
 
-Build status: implemented and locally verifiable. Public Vercel deployment is intentionally pending the physical benchmark/privacy gate and explicit release authorization.
+Deployment status: live at
+[adsb-feeder-integrity-evidence.vercel.app](https://adsb-feeder-integrity-evidence.vercel.app/).
+The production build, privacy/history scans, desktop interaction check, and 390px
+mobile layout check passed on 2026-08-20. The demo continues to show physical
+benchmark and public-replay blockers honestly while those gates are incomplete.
 
 ```bash
 cd frontend
@@ -14,4 +18,9 @@ python scripts/verify_static_demo.py
 
 Every rendered view permanently states `RECORDED RESEARCH DEMO — NOT LIVE TRAFFIC`. The fixture includes a routine synthetic control, synthetic abrupt evidence, synthetic gradual evidence, the measured frozen-policy synthetic results, the honestly blocked physical benchmark, and the honestly blocked public-candidate replication. A blocked result is not shown as zero, nominal, or successful.
 
-The root `vercel.json` runs the static build and serves `frontend/dist`. Vercel hosts only these immutable files; it does not host FastAPI, PostgreSQL, the SBS sidecar, or persistent WebSockets. The authoritative operational demo remains the local feeder Compose deployment.
+Configure `frontend/` as the Vercel project root. Its `vercel.json` runs the
+static-evidence build and serves only `dist`. Keeping the deployment boundary at
+`frontend/` prevents Vercel's monorepo service detection from selecting the
+FastAPI or replay services. Vercel hosts only the generated immutable files; it
+does not host FastAPI, PostgreSQL, the SBS sidecar, or persistent WebSockets. The
+authoritative operational demo remains the local feeder Compose deployment.
