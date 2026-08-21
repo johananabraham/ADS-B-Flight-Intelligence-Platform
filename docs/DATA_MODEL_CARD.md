@@ -13,7 +13,7 @@ classifier.
 |---|---|---|
 | Fictional SBS recordings and generated trajectories | Regression/demo | Checked in with provenance |
 | Private seven-day RF capture | Benign calibration | Not collected; publication blocked |
-| Zenodo 2023 GPS anomalies index | Candidate selection | License review required; not redistributed |
+| Zenodo 2023 GPS anomalies and NOTAM indexes | Candidate selection | CC BY 4.0 processing approved; not redistributed |
 | ADSB.lol historical traces | Candidate replay option | ODbL obligations recorded; no trace committed |
 
 Train/evaluation sessions are split before variants are generated. Frozen-policy

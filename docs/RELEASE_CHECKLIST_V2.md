@@ -23,7 +23,7 @@ gate remains.
 | Privacy sanitizer and allow-list tests | PASS | Field privacy tests and private-data ignore/history rules |
 | Frozen synthetic abrupt/gradual recall | PASS | 20/20 and 20/20 in `frozen_policy_synthetic_v1.json` |
 | Public candidate selection/replay workflow | PASS | Deterministic tests cover detected/missed/insufficient/blocked outcomes |
-| Real public anomaly replay | BLOCKED | Source license identifier/trace publication requirements unresolved; checked result is `BLOCKED_REPLICATION` |
+| Real public anomaly replay | BLOCKED | Zenodo indexes are CC BY 4.0 and approved for processing; compliant surrounding trace not yet acquired; checked result is `BLOCKED_REPLICATION` |
 | Browser-only static evidence build | PASS | Static build verifier and desktop/mobile interaction review; no live network capabilities |
 | Static public deployment | PASS | [Production Vercel demo](https://adsb-feeder-integrity-evidence.vercel.app/) verified at desktop and 390px mobile widths after static-bundle, privacy-history, and credential scans |
 | Hardware demo video | BLOCKED | Requires physical dongle/capture and manual privacy review |
@@ -32,7 +32,7 @@ gate remains.
 | Python and npm dependency scans | PASS | pip-audit 2.10.1 reports no known backend/sidecar findings; npm reports zero vulnerabilities after the nanoid fix |
 | Static/configuration and container scans | PASS | Trivy source/configuration scan and sidecar critical-vulnerability image scan passed in [CI run 31948219688](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/runs/31948219688) |
 | Sample environment placeholders | PASS | `.env.example` reviewed; no tracked `.env`/keys/database/raw captures |
-| Asset/data redistribution inventory | PASS with blockers | `THIRD_PARTY_NOTICES.md`; unresolved data sources remain excluded |
+| Asset/data redistribution inventory | PASS with blockers | `THIRD_PARTY_NOTICES.md`; licensed Zenodo indexes remain excluded and the unacquired ODbL trace remains blocked |
 | Repository software license | PASS | Root `LICENSE`, README scope statement, and frontend package metadata consistently declare Apache-2.0 |
 | Tagged v2 release/checksums/images | BLOCKED | Intentionally not created until every blocking gate passes |
 

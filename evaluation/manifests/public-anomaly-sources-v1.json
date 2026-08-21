@@ -1,22 +1,27 @@
 {
   "schema_version": "1.0",
-  "access_checked_at": "2026-08-15",
+  "access_checked_at": "2026-08-21",
   "candidate_index": {
     "record_id": "11420433",
     "concept_doi": "10.5281/zenodo.11411991",
     "version": "v2",
     "record_url": "https://zenodo.org/records/11420433",
+    "license": "CC-BY-4.0",
+    "license_evidence_url": "https://zenodo.org/api/records/11420433",
     "filename": "GPS_Jumps_from_Routes-2023.csv.zip",
     "md5": "5a8df29f8b289ba9c17b3ec8a5569ab9",
-    "license_status": "REVIEW_REQUIRED",
-    "redistribution_status": "BLOCKED"
+    "license_status": "APPROVED_FOR_PROCESSING",
+    "redistribution_status": "ALLOWED_WITH_ATTRIBUTION"
   },
   "notam_index": {
     "record_id": "11420433",
+    "record_url": "https://zenodo.org/records/11420433",
+    "license": "CC-BY-4.0",
+    "license_evidence_url": "https://zenodo.org/api/records/11420433",
     "filename": "NOTAM_ICAO_GPS-2023.csv.zip",
     "md5": "dddee46a925f6f55788377dcd0d6f157",
-    "license_status": "REVIEW_REQUIRED",
-    "redistribution_status": "BLOCKED"
+    "license_status": "APPROVED_FOR_PROCESSING",
+    "redistribution_status": "ALLOWED_WITH_ATTRIBUTION"
   },
   "surrounding_trace": {
     "provider": "ADSB.lol historical data",
