@@ -43,7 +43,9 @@ signals without suitable RF hardware and receiver software.
    ```
 
 Under `ADS-B edge station`, set the Wi-Fi credentials, `mqtts://` broker URI,
-node ID, username, and generated node password. `sdkconfig` and the provisioned
+node ID, username, and generated node password. The node ID must be 1–63
+lowercase letters, digits, or hyphens, begin with a letter or digit, and exactly
+match the MQTT username. `sdkconfig` and the provisioned
 CA are ignored by Git because they contain deployment-specific material.
 
 Physical RF coexistence, power stability, long-duration reconnect behavior,

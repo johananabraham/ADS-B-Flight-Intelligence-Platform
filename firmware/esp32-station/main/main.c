@@ -66,15 +66,14 @@ static void make_uuid(char output[37])
 static bool node_id_is_safe(const char *node_id)
 {
     size_t length = strlen(node_id);
-    if (length == 0 || length > 64) {
+    if (length == 0 || length > 63) {
         return false;
     }
     for (size_t index = 0; index < length; ++index) {
         char value = node_id[index];
-        bool allowed = (value >= 'a' && value <= 'z') ||
-                       (value >= 'A' && value <= 'Z') ||
-                       (value >= '0' && value <= '9') || value == '-' ||
-                       value == '_';
+        bool alphanumeric = (value >= 'a' && value <= 'z') ||
+                            (value >= '0' && value <= '9');
+        bool allowed = alphanumeric || (index > 0 && value == '-');
         if (!allowed) {
             return false;
         }
@@ -153,8 +152,8 @@ static bool build_telemetry(telemetry_message_t *message)
         "\"node_id\":\"%s\",\"firmware_version\":\"%s\","
         "\"boot_id\":\"%s\",\"sequence\":%llu,"
         "\"observed_at\":\"%s\",\"uptime_seconds\":%llu,"
-        "\"reconnect_count\":%lu,\"wifi_rssi_dbm\":%d,"
-        "\"free_heap_bytes\":%lu,\"queue_depth\":%u,"
+        "\"reconnect_count\":%lu,\"rssi_dbm\":%d,"
+        "\"free_heap_bytes\":%lu,\"offline_queue_depth\":%u,"
         "\"watchdog_reset_count\":%u}",
         message_id, CONFIG_EDGE_NODE_ID, CONFIG_EDGE_FIRMWARE_VERSION, boot_id,
         (unsigned long long)sequence, observed_at,
