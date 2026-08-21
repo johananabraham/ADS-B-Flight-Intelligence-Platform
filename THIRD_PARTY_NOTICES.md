@@ -9,7 +9,7 @@ records assets/data with separate publication obligations; it is not legal advic
 | Leaflet | Live map library/CSS | Dependency license retained through package distribution |
 | Lucide React | Interface icons | Dependency license retained; icons are rendered from package code |
 | Fictional recorded SBS fixture | Demo/regression | Project-authored CC0 fixture with provenance in recording docs |
-| Zenodo “2023 GPS Anomalies, NOTAMs, and Aircraft Traffic” v2 | Candidate index metadata | Exact license identifier unresolved; redistribution and replay blocked |
+| Zenodo “2023 GPS Anomalies, NOTAMs, and Aircraft Traffic” v2 | Candidate and NOTAM index metadata | CC BY 4.0; processing approved; attribution required for redistribution |
 | ADSB.lol historical data | Optional surrounding trace | ODbL 1.0; attribution/share-alike review required before publication |
 | Static evidence demo | Checked-in synthetic/aggregate fixture | No map tiles, screenshots, fonts, remote scripts, or third-party datasets bundled |
 

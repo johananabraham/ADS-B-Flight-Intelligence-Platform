@@ -143,3 +143,21 @@ def test_checked_in_result_is_an_honest_block_not_a_synthetic_substitute() -> No
     assert result["outcome"] == "BLOCKED_REPLICATION"
     assert "license" in result["reason"]
     assert "confirmed spoofing" in result["claim_boundary"]
+
+
+def test_checked_in_source_manifest_records_reviewed_license_evidence() -> None:
+    manifest_path = (
+        Path(__file__).parents[2]
+        / "evaluation/manifests/public-anomaly-sources-v1.json"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    for section in ("candidate_index", "notam_index"):
+        source = manifest[section]
+        assert source["license"] == "CC-BY-4.0"
+        assert source["license_status"] == "APPROVED_FOR_PROCESSING"
+        assert source["license_evidence_url"] == (
+            "https://zenodo.org/api/records/11420433"
+        )
+
+    assert manifest["surrounding_trace"]["local_trace_acquired"] is False
