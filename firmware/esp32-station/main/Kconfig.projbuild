@@ -4,7 +4,8 @@ config EDGE_NODE_ID
     string "Station node ID"
     default "roof-node-1"
     help
-        Must match the station's MQTT username and broker ACL entry.
+        Must be 1-63 lowercase letters, digits, or hyphens, beginning with a
+        letter or digit. Must match the MQTT username and broker ACL entry.
 
 config EDGE_FIRMWARE_VERSION
     string "Firmware version reported in telemetry"
