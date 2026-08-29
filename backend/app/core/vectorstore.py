@@ -44,7 +44,7 @@ def get_chroma_client() -> chromadb.ClientAPI:
             path=str(persist_dir),
             settings=ChromaSettings(
                 anonymized_telemetry=False,
-                allow_reset=True,
+                allow_reset=False,
             ),
         )
         logger.info(f"ChromaDB client initialized with persistence at {persist_dir}")

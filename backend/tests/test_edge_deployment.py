@@ -35,6 +35,18 @@ def test_compose_uses_pinned_broker_and_runtime_secrets():
     assert "${MQTT_BIND_ADDRESS:-127.0.0.1}:8883:8883" in compose
 
 
+def test_physical_deployment_docs_require_exact_private_bind_and_preflight():
+    firmware_readme = (ROOT / "firmware/esp32-station/README.md").read_text()
+    preflight = (ROOT / "scripts/check_edge_hardware_readiness.py").read_text()
+
+    assert "check_edge_hardware_readiness.py" in firmware_readme
+    assert "MQTT_BIND_ADDRESS" in firmware_readme
+    assert "0.0.0.0" in firmware_readme
+    assert "address.is_loopback" in preflight
+    assert "address.is_unspecified" in preflight
+    assert "not address.is_private" in preflight
+
+
 def test_firmware_emits_exact_backend_contract_names_and_enum_values():
     source = (ROOT / "firmware/esp32-station/main/main.c").read_text()
 

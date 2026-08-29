@@ -11,7 +11,7 @@ An open, self-hosted integrity monitor for untrusted real-time ADS-B telemetry. 
 
 | Metric | Value | Evidence |
 |--------|-------|----------|
-| Backend regression suite | 278 tests passing, 1 skipped | CI `backend` job |
+| Backend regression suite | 296 tests passing, 1 skipped | CI `backend` job |
 | Feeder sidecar paced soak | 100 msg/s for 30 min, 0 drops, 1.699 ms p95 | Checked-in soak result |
 | Kinematic detection (abrupt) | 100% | Held-out 22 sessions |
 | Kinematic detection (gradual) | 100% with window | Held-out 22 sessions |
@@ -19,7 +19,7 @@ An open, self-hosted integrity monitor for untrusted real-time ADS-B telemetry. 
 | ML baseline F1 | 0.9333 | Held-out evaluation |
 | FAA Part 91 retrieval Recall@5 | 0.9333 | 15 reviewed official-source cases |
 | Versioned FAA corpus | 1,025 sections | Parts 61/91/121/135, zero lineage errors |
-| Known dependency vulnerabilities | 0 | pip-audit 2.10.1 + npm audit, checked 2026-08-15 |
+| Unmitigated dependency vulnerabilities | 0 | pip-audit 2.10.1 + npm audit; two embedded-only Chroma advisories have an expiring exception |
 
 ## Architecture
 
@@ -270,6 +270,22 @@ scripts/provision_edge_mqtt.sh mqtt
 docker compose -f docker-compose.yml -f docker-compose.edge.yml up --build -d
 ```
 
+That localhost-default setup is for simulation. A physical ESP32 requires a
+certificate generated for the host's exact private LAN address, a LAN-only firewall
+rule, and an explicit `MQTT_BIND_ADDRESS`. Run the fail-closed preflight before
+starting it:
+
+```bash
+scripts/provision_edge_mqtt.sh <exact-private-lan-ip>
+MQTT_BIND_ADDRESS=<exact-private-lan-ip> \
+  scripts/check_edge_hardware_readiness.py --broker-host <exact-private-lan-ip>
+MQTT_BIND_ADDRESS=<exact-private-lan-ip> \
+  docker compose -f docker-compose.yml -f docker-compose.edge.yml up --build -d
+```
+
+Do not use `0.0.0.0`, a public address, or router port forwarding. See the firmware
+README for provisioning, flashing, and verification details.
+
 For a hardware-free transport demo, publish correctly labeled simulator heartbeats:
 
 ```bash
@@ -476,9 +492,9 @@ published dependency advisories.
 
 | Claim | Evidence | Verification |
 |-------|----------|--------------|
-| 278 backend tests pass, 1 skipped | `pytest backend/tests/` | CI `backend` job |
+| 296 backend tests pass, 1 skipped | `pytest backend/tests/` | CI `backend` job |
 | C++ decoder matches dump1090 | `decoder/docs/validation-results.md` | CI `decoder` job |
-| Zero dependency vulnerabilities | pip-audit + npm audit | CI `security` job |
+| No unmitigated dependency vulnerabilities | pip-audit + npm audit | CI `security` job; see `SECURITY.md` for the expiring Chroma exception |
 | Kinematic rules detect 100% abrupt attacks | `evaluation/results/kinematic_rules_baseline_v1.json` | CI baseline gate |
 | Window rule closes gradual-drift gap | `evaluation/results/windowed_trajectory_baseline_v1.json` | CI baseline gate |
 | Cross-source corroboration 6 states verified | `evaluation/results/corroboration_offline_v1.json` | CI baseline gate |

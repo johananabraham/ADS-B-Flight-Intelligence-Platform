@@ -76,3 +76,5 @@ docker run --rm --user 0:0 -v "${secret_dir}:/work" \
 
 echo "Generated local MQTT credentials in ${secret_dir}"
 echo "Copy ca.crt and roof-node-1.password to the station through a secure channel."
+echo "Before physical use, provision for the broker's exact private IPv4 LAN address, then run:"
+echo "  MQTT_BIND_ADDRESS=<private-ip> scripts/check_edge_hardware_readiness.py --broker-host <private-ip>"
