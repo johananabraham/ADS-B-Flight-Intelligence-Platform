@@ -101,7 +101,7 @@ The system can replay the same recording indefinitely without data duplication:
 ### CI as Source of Truth
 
 Every claim has a corresponding CI job:
-- 322 backend tests passing, 1 skipped
+- 326 backend tests passing, 1 skipped
 - 6 evaluation baselines with `--check` gates
 - Complete Docker demo verification
 - MQTT TLS/ACL proof script

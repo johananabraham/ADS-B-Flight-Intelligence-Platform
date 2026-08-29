@@ -357,7 +357,7 @@ For a 90-second demo video:
 - Mention future capability with real NTSB/FAA data
 
 **1:15-1:30** - Closing
-- Show metrics: 322 backend tests passing, 1 skipped, authentication complete
+- Show metrics: 326 backend tests passing, 1 skipped, authentication complete
 - Show role-based access control
 - GitHub link
 
