@@ -1,8 +1,8 @@
 # Phase 2 acceptance status
 
-Status: **BLOCKED_CAPTURE_PENDING** as of 2026-08-15.
+Status: **BLOCKED_CAPTURE_PENDING** as of 2026-08-29.
 
-The capture, checksum, freeze, sanitization, privacy, episode, reviewer, and report tooling is implemented and covered by automated tests. The frozen development policy detected 20/20 abrupt and 20/20 gradual targeted synthetic cases (`1.0` recall for each family); the checked-in result is bound to policy SHA-256 `b1ea0ec365b757e3077d24609835ba98466221b9d55ec38a047d98378f47f52d`.
+The capture, checksum, freeze, sanitization, privacy, episode, reviewer, and report tooling is implemented and covered by automated tests. Capture startup now proves that the source emits SBS data before allocating a file; progress metadata is private and atomic; retries cannot replace earlier attempts; interruptions preserve a checksummed, unusable manifest entry. The frozen development policy detected 20/20 abrupt and 20/20 gradual targeted synthetic cases (`1.0` recall for each family); the checked-in result is bound to policy SHA-256 `b1ea0ec365b757e3077d24609835ba98466221b9d55ec38a047d98378f47f52d`.
 
 The following release gates are intentionally not claimed:
 
