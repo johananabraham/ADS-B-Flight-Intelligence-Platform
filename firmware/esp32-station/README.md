@@ -20,19 +20,41 @@ signals without suitable RF hardware and receiver software.
 
 ## Build and flash
 
-1. Generate broker credentials from the repository root:
+1. Choose the host's exact private LAN address. Do not expose the MQTT port on a
+   public address or use `0.0.0.0`. Generate a certificate for the same address:
 
    ```bash
    scripts/provision_edge_mqtt.sh <broker-hostname-or-lan-ip>
    ```
 
-2. Copy the generated public CA into the firmware project:
+2. Run the physical-deployment preflight. It verifies the private bind, certificate
+   SAN and expiry, credential permissions, and least-privilege station ACL without
+   printing any secrets:
+
+   ```bash
+   MQTT_BIND_ADDRESS=<exact-private-lan-ip> \
+     scripts/check_edge_hardware_readiness.py \
+     --broker-host <same-lan-ip-or-certificate-hostname>
+   ```
+
+   A numeric broker host must equal `MQTT_BIND_ADDRESS`. If using a hostname, it
+   must resolve to that interface for the ESP32 and appear in the certificate SAN.
+   Restrict TCP 8883 to the trusted LAN in the host firewall.
+
+3. Copy the generated public CA into the firmware project:
 
    ```bash
    cp edge/mosquitto/secrets/ca.crt firmware/esp32-station/certs/broker_ca.pem
    ```
 
-3. With ESP-IDF 6.0.2 installed, configure secrets locally and build:
+4. Start the broker on only that interface:
+
+   ```bash
+   MQTT_BIND_ADDRESS=<exact-private-lan-ip> \
+     docker compose -f docker-compose.yml -f docker-compose.edge.yml up --build -d
+   ```
+
+5. With ESP-IDF 6.0.2 installed, configure secrets locally and build:
 
    ```bash
    cd firmware/esp32-station
@@ -47,6 +69,11 @@ node ID, username, and generated node password. The node ID must be 1–63
 lowercase letters, digits, or hyphens, begin with a letter or digit, and exactly
 match the MQTT username. `sdkconfig` and the provisioned
 CA are ignored by Git because they contain deployment-specific material.
+
+The broker's compose default remains `127.0.0.1` for simulator-only use. A physical
+station therefore requires the explicit private `MQTT_BIND_ADDRESS` above. Never
+forward port 8883 from an internet router and never commit `sdkconfig`, passwords,
+private keys, or the provisioned CA.
 
 Physical RF coexistence, power stability, long-duration reconnect behavior,
 and watchdog recovery still require testing on the user's exact ESP32 board.
