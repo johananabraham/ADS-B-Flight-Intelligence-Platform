@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "exceptions": [
+    {
+      "package": "chromadb",
+      "version": "0.4.22",
+      "vulnerability_ids": [
+        "CVE-2026-45830",
+        "CVE-2026-45833"
+      ],
+      "expires_on": "2026-09-30",
+      "deployment_boundary": "Embedded PersistentClient only; no Chroma server or Chroma HTTP API is deployed.",
+      "compensating_controls": [
+        "Chroma allow_reset is disabled.",
+        "No Chroma port, container, HttpClient, or tenant API is exposed.",
+        "The application API remains behind its own authentication and RBAC boundary."
+      ],
+      "remediation": "Upgrade to the first audited stable Chroma release that fixes both advisories, or replace the embedded vector store before expiry."
+    }
+  ]
+}

@@ -28,5 +28,19 @@ status updates until remediation or documented closure.
 - CI blocks on dependency, secret, repository/configuration, and image critical
   findings. Release promotion additionally requires human review.
 
+## Temporary dependency exception
+
+ChromaDB 0.4.22 currently has two published server-authorization advisories with no
+patched stable release: CVE-2026-45830 and CVE-2026-45833. This repository uses only
+the embedded `PersistentClient`; it does not deploy a Chroma server, HTTP client,
+port, container, or tenant API, and reset is disabled. The affected authenticated
+server endpoints are therefore outside the deployed boundary.
+
+The exact package/version/IDs and compensating controls are machine checked in
+`security/pip-audit-exceptions.json`. The exception expires on 2026-09-30; CI fails
+closed after that date or if the dependency pin changes. Before expiry, upgrade to
+the first audited fixed stable release or replace the embedded store. This exception
+is not a claim that the dependency has no vulnerability.
+
 Never expose the sidecar directly to the public Internet. Put remote access behind
 an authenticated TLS reverse proxy and network allow-list.

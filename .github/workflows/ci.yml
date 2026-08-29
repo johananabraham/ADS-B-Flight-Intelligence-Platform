@@ -198,14 +198,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Audit backend Python dependencies
-        uses: pypa/gh-action-pip-audit@v1.1.0
-        with:
-          inputs: backend/requirements.txt
+      - name: Install pinned dependency auditor
+        run: python -m pip install pip-audit==2.10.1
+      - name: Audit backend Python dependencies with expiring exceptions
+        run: >-
+          python scripts/audit_python_dependencies.py
+          --requirements backend/requirements.txt
+          --exceptions security/pip-audit-exceptions.json
       - name: Audit sidecar Python dependencies
-        uses: pypa/gh-action-pip-audit@v1.1.0
-        with:
-          inputs: sidecar/requirements.txt
+        run: >-
+          python scripts/audit_python_dependencies.py
+          --requirements sidecar/requirements.txt
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
