@@ -66,6 +66,24 @@ def test_sanitizer_enforces_relative_nonreversible_chronological_export(tmp_path
     assert verify_public_export(output, known_private_values=["A1B2C3", "PRIVATE1"]) == 42
 
 
+def test_sanitizer_rejects_multiple_usable_attempts_for_one_day(tmp_path: Path) -> None:
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "captures": [
+                    {"day": 1, "usable": True, "capture_state": "COMPLETED"},
+                    {"day": 1, "usable": True, "capture_state": "COMPLETED"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="multiple usable"):
+        sanitize_capture(manifest, POLICY, tmp_path / "public.jsonl")
+
+
 @pytest.mark.parametrize(
     "payload,match",
     [

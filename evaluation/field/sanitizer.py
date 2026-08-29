@@ -15,6 +15,7 @@ from app.services.observation_adapters import sbs_state_to_observation
 from integrity_core import IntegrityEngine, load_policy
 from sidecar.sbs import merge_state, parse_sbs_line
 
+from .capture import usable_captures_by_day
 from .privacy import verify_public_export
 
 
@@ -61,10 +62,8 @@ def sanitize_capture(
     rows: list[dict[str, Any]] = []
     public_sessions: list[dict[str, Any]] = []
 
-    for capture in sorted(manifest.get("captures", []), key=lambda item: item["day"]):
-        day = int(capture["day"])
-        if day not in SPLITS or not capture.get("usable", False):
-            continue
+    usable_captures = usable_captures_by_day(manifest)
+    for day, capture in sorted(usable_captures.items()):
         capture_path = Path(capture["path"])
         if not capture_path.is_absolute():
             capture_path = manifest_file.parent / capture_path

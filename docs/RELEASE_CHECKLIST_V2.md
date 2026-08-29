@@ -16,10 +16,10 @@ gate remains.
 | 100 msg/s for 30 minutes, p95 <250 ms, no unbounded growth | PASS | 180,000 messages, 0 drops, p95 1.699 ms, 95.781 MB; `evaluation/results/feeder-soak-v1.json` |
 | Non-root/read-only container and Compose contract | PASS | Compose contract, container build, hardened startup, and read-only health check passed in [CI run 31948219688](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/runs/31948219688) |
 | AMD64/ARM64 image workflow with SBOM/provenance | PASS (workflow) | `.github/workflows/feeder-image.yml`; publication intentionally tag-gated |
-| Python lint/type/tests and migrations | PASS | Ruff clean; mypy clean across 22 v2 sources; 308 backend tests pass and 1 is skipped; one Alembic head and offline upgrade pass |
+| Python lint/type/tests and migrations | PASS | Ruff clean; mypy clean across 22 v2 sources; 326 backend tests pass and 1 is skipped; one Alembic head and offline upgrade pass |
 | TypeScript lint/type/live/static builds | PASS | ESLint, `tsc`, Vite live build, Vite static build, and static verifier pass |
 | C++ decoder build/tests | PASS | CMake build and CTest passed in [CI run 31948219688](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/runs/31948219688) |
-| Seven-day chronological benign benchmark | BLOCKED | Physical authorized capture not collected; see `acceptance/phase2-benign-field-status.md` |
+| Seven-day chronological benign benchmark | BLOCKED | Physical authorized capture not collected; fail-closed preflight, private atomic progress, non-overwriting retries, and interrupted-attempt preservation are implemented; see `acceptance/phase2-benign-field-status.md` |
 | Privacy sanitizer and allow-list tests | PASS | Field privacy tests and private-data ignore/history rules |
 | Frozen synthetic abrupt/gradual recall | PASS | 20/20 and 20/20 in `frozen_policy_synthetic_v1.json` |
 | Public candidate selection/replay workflow | PASS | Deterministic tests cover detected/missed/insufficient/blocked outcomes |

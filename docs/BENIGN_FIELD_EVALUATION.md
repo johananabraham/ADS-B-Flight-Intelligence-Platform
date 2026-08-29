@@ -14,7 +14,21 @@ PYTHONPATH=backend:. python scripts/capture_benign_sbs.py \
   --receiver-configuration "documented-private-config-v1"
 ```
 
+The command fails before creating a capture unless the source both accepts a
+connection and emits a bounded SBS `MSG` record. During capture it atomically updates
+`.private/benign-capture-v1/capture-status.private.json` with aggregate-only health
+(bytes, lines, connection state, and outage count). Existing captures are never
+overwritten: a retry receives an `attempt-NN` filename and a distinct manifest entry.
+The capture and all metadata files are owner-only. An interrupted attempt is preserved,
+checksummed, recorded as `INTERRUPTED`, and remains unusable pending review.
+The source address must be numeric loopback (`127.0.0.0/8` or `::1`) so raw receiver
+traffic is not collected from or exposed through a remote network endpoint.
+
 Repeat until seven usable calendar days exist. Inspect each capture and set its private manifest entry to `"usable": true`; document outages, restarts, software versions, antenna/configuration changes, and reasons for any unusable interval. Never delete a difficult interval merely to improve a metric.
+
+Before marking an attempt usable, verify its recorded checksum, byte/line counts,
+elapsed and connected durations, outage intervals, `capture_state`, and unchanged
+receiver configuration. Keep failed attempts in the manifest with `usable: false`.
 
 - Days 1–4: development/calibration.
 - Days 5–6: validation and one permitted freeze.

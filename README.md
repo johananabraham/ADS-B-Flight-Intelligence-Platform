@@ -11,7 +11,7 @@ An open, self-hosted integrity monitor for untrusted real-time ADS-B telemetry. 
 
 | Metric | Value | Evidence |
 |--------|-------|----------|
-| Backend regression suite | 308 tests passing, 1 skipped | CI `backend` job |
+| Backend regression suite | 326 tests passing, 1 skipped | CI `backend` job |
 | Feeder sidecar paced soak | 100 msg/s for 30 min, 0 drops, 1.699 ms p95 | Checked-in soak result |
 | Kinematic detection (abrupt) | 100% | Held-out 22 sessions |
 | Kinematic detection (gradual) | 100% with window | Held-out 22 sessions |
@@ -507,7 +507,7 @@ published dependency advisories.
 
 | Claim | Evidence | Verification |
 |-------|----------|--------------|
-| 308 backend tests pass, 1 skipped | `pytest backend/tests/` | CI `backend` job |
+| 326 backend tests pass, 1 skipped | `pytest backend/tests/` | CI `backend` job |
 | C++ decoder matches dump1090 | `decoder/docs/validation-results.md` | CI `decoder` job |
 | No unmitigated dependency vulnerabilities | pip-audit + npm audit | CI `security` job; see `SECURITY.md` for the expiring Chroma exception |
 | Kinematic rules detect 100% abrupt attacks | `evaluation/results/kinematic_rules_baseline_v1.json` | CI baseline gate |

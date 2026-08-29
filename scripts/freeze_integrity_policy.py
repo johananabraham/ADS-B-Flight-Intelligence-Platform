@@ -7,6 +7,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from evaluation.field.capture import usable_captures_by_day
+
 
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
@@ -23,19 +25,22 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     manifest = json.loads(args.capture_manifest.read_text(encoding="utf-8"))
-    usable = {int(item["day"]) for item in manifest["captures"] if item.get("usable")}
-    if not set(range(1, 7)) <= usable:
+    try:
+        usable = usable_captures_by_day(manifest)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    if not set(range(1, 7)) <= set(usable):
         raise SystemExit("days 1-6 must be captured, inspected, and marked usable before freeze")
     if manifest.get("day_7_results_viewed", False):
         raise SystemExit("refusing to freeze after day 7 results were viewed")
-    for item in manifest["captures"]:
-        if int(item["day"]) not in range(1, 7) or not item.get("usable"):
+    for day, item in usable.items():
+        if day not in range(1, 7):
             continue
         capture_path = Path(item["path"])
         if not capture_path.is_absolute():
             capture_path = args.capture_manifest.parent / capture_path
         if not item.get("sha256") or sha256(capture_path) != item["sha256"]:
-            raise SystemExit(f"capture checksum mismatch for day {item['day']}")
+            raise SystemExit(f"capture checksum mismatch for day {day}")
     digest = sha256(args.policy)
     payload = {
         "schema_version": "1.0",
