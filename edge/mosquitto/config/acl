@@ -5,8 +5,14 @@ user roof-node-1
 topic write adsb/stations/v1/roof-node-1/telemetry
 topic write adsb/stations/v1/roof-node-1/presence
 
+# The host bridge can publish aggregate receiver health only. It cannot publish
+# firmware telemetry/presence or impersonate another station.
+user roof-node-1-bridge
+topic write adsb/stations/v1/roof-node-1/pipeline
+
 # The backend consumer has read-only fleet access and broker health visibility.
 user station-consumer
 topic read adsb/stations/v1/+/telemetry
 topic read adsb/stations/v1/+/presence
+topic read adsb/stations/v1/+/pipeline
 topic read $SYS/broker/uptime

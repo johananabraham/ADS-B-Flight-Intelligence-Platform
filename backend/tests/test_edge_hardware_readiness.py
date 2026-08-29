@@ -70,6 +70,7 @@ def test_secret_permissions_and_acl_are_fail_closed(tmp_path: Path) -> None:
         "passwords",
         "station-consumer.password",
         f"{node_id}.password",
+        f"{node_id}-bridge.password",
     ):
         path = tmp_path / filename
         path.write_text("fixture", encoding="utf-8")
@@ -85,9 +86,12 @@ def test_secret_permissions_and_acl_are_fail_closed(tmp_path: Path) -> None:
             f"user {node_id}",
             f"topic write adsb/stations/v1/{node_id}/telemetry",
             f"topic write adsb/stations/v1/{node_id}/presence",
+            f"user {node_id}-bridge",
+            f"topic write adsb/stations/v1/{node_id}/pipeline",
             "user station-consumer",
             "topic read adsb/stations/v1/+/telemetry",
             "topic read adsb/stations/v1/+/presence",
+            "topic read adsb/stations/v1/+/pipeline",
         )
     )
     validate_acl(valid_acl, node_id)

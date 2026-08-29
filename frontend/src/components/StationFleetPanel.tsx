@@ -72,7 +72,7 @@ export function StationFleetPanel({ onClose }: StationFleetPanelProps) {
       </div>
 
       <p className="border-b border-surface-3 bg-accent-primary/5 px-4 py-2 text-xs leading-5 text-slate-400">
-        This panel reports station compute and connectivity health. It does not measure ADS-B RF quality.
+        Device heartbeats are correlated with privacy-safe receiver pipeline health. This is operational evidence, not proof of RF authenticity.
       </p>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-3" aria-live="polite">
@@ -134,6 +134,15 @@ function StationCard({ station }: { station: Station }) {
         <Metric label="Uptime" value={formatDuration(station.uptime_seconds)} />
         <Metric label="Reconnects" value={station.reconnect_count ?? '—'} />
         <Metric label="Age" value={age == null ? '—' : `${Math.max(0, Math.round(age))}s`} />
+        <Metric label="Receiver" value={station.receiver_connection ?? 'NO DATA'} />
+        <Metric
+          label="RF age"
+          value={station.receiver_last_message_age_seconds == null ? '—' : `${Math.round(station.receiver_last_message_age_seconds)}s`}
+        />
+        <Metric
+          label="RX queue"
+          value={station.receiver_queue_depth == null ? '—' : `${station.receiver_queue_depth}/${station.receiver_queue_capacity}`}
+        />
       </dl>
 
       <details className="mt-3 border-t border-surface-3 pt-2 text-xs">
@@ -148,6 +157,9 @@ function StationCard({ station }: { station: Station }) {
           </p>
           <p className="break-all font-mono text-2xs text-slate-500">
             Presence: {station.health.presence_message_id ?? 'none'}
+          </p>
+          <p className="break-all font-mono text-2xs text-slate-500">
+            Pipeline: {station.health.pipeline_message_id ?? 'none'} · policy {station.receiver_policy_version ?? 'none'}
           </p>
         </div>
       </details>

@@ -11,7 +11,7 @@ An open, self-hosted integrity monitor for untrusted real-time ADS-B telemetry. 
 
 | Metric | Value | Evidence |
 |--------|-------|----------|
-| Backend regression suite | 296 tests passing, 1 skipped | CI `backend` job |
+| Backend regression suite | 308 tests passing, 1 skipped | CI `backend` job |
 | Feeder sidecar paced soak | 100 msg/s for 30 min, 0 drops, 1.699 ms p95 | Checked-in soak result |
 | Kinematic detection (abrupt) | 100% | Held-out 22 sessions |
 | Kinematic detection (gradual) | 100% with window | Held-out 22 sessions |
@@ -301,6 +301,21 @@ The ESP-IDF firmware and flashing instructions are in
 `firmware/esp32-station/README.md`. Run the broker authorization proof with
 `scripts/test_edge_mqtt_security.sh`; it requires Docker.
 
+To correlate the ESP32 heartbeat with the actual dump1090/sidecar path, run the
+loopback-only receiver bridge on the feeder host:
+
+```bash
+STATION_NODE_ID=roof-node-1 \
+PIPELINE_MQTT_PASSWORD_FILE=edge/mosquitto/secrets/roof-node-1-bridge.password \
+MQTT_CA_CERT=edge/mosquitto/secrets/ca.crt \
+MQTT_HOST=<exact-private-lan-ip> \
+PYTHONPATH=backend:. python3 -m services.edge_telemetry.receiver_bridge
+```
+
+The bridge has a separate least-privilege broker account and publishes aggregate
+operational metrics only—never aircraft identifiers, callsigns, coordinates, raw SBS
+frames, receiver labels, or receiver location.
+
 The checked-in station-health artifact is an offline 7/7 classification regression,
 not physical outage evidence. ESP32 power/Wi-Fi loss and queue recovery still need
 to be measured on hardware before making a resilience claim.
@@ -492,7 +507,7 @@ published dependency advisories.
 
 | Claim | Evidence | Verification |
 |-------|----------|--------------|
-| 296 backend tests pass, 1 skipped | `pytest backend/tests/` | CI `backend` job |
+| 308 backend tests pass, 1 skipped | `pytest backend/tests/` | CI `backend` job |
 | C++ decoder matches dump1090 | `decoder/docs/validation-results.md` | CI `decoder` job |
 | No unmitigated dependency vulnerabilities | pip-audit + npm audit | CI `security` job; see `SECURITY.md` for the expiring Chroma exception |
 | Kinematic rules detect 100% abrupt attacks | `evaluation/results/kinematic_rules_baseline_v1.json` | CI baseline gate |

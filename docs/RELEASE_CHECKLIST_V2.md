@@ -16,7 +16,7 @@ gate remains.
 | 100 msg/s for 30 minutes, p95 <250 ms, no unbounded growth | PASS | 180,000 messages, 0 drops, p95 1.699 ms, 95.781 MB; `evaluation/results/feeder-soak-v1.json` |
 | Non-root/read-only container and Compose contract | PASS | Compose contract, container build, hardened startup, and read-only health check passed in [CI run 31948219688](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/runs/31948219688) |
 | AMD64/ARM64 image workflow with SBOM/provenance | PASS (workflow) | `.github/workflows/feeder-image.yml`; publication intentionally tag-gated |
-| Python lint/type/tests and migrations | PASS | Ruff clean; mypy clean across 22 v2 sources; 296 backend tests pass and 1 is skipped; one Alembic head and offline upgrade pass |
+| Python lint/type/tests and migrations | PASS | Ruff clean; mypy clean across 22 v2 sources; 308 backend tests pass and 1 is skipped; one Alembic head and offline upgrade pass |
 | TypeScript lint/type/live/static builds | PASS | ESLint, `tsc`, Vite live build, Vite static build, and static verifier pass |
 | C++ decoder build/tests | PASS | CMake build and CTest passed in [CI run 31948219688](https://github.com/johananabraham/ADS-B-Flight-Intelligence-Platform/actions/runs/31948219688) |
 | Seven-day chronological benign benchmark | BLOCKED | Physical authorized capture not collected; see `acceptance/phase2-benign-field-status.md` |
@@ -28,6 +28,7 @@ gate remains.
 | Static public deployment | PASS | [Production Vercel demo](https://adsb-feeder-integrity-evidence.vercel.app/) verified at desktop and 390px mobile widths after static-bundle, privacy-history, and credential scans |
 | Hardware demo video | BLOCKED | Requires physical dongle/capture and manual privacy review |
 | ESP32 private-LAN deployment preflight | PASS (software) | Exact private bind, certificate SAN/expiry, secret permissions, and ACL checks; physical outage/recovery remains blocked |
+| Receiver pipeline / ESP32 health correlation | PASS (software) | Loopback-only bridge, separate pipeline-only MQTT principal, strict aggregate schema, immutable persistence, and dashboard evidence; physical validation remains blocked |
 | Independent feeder pilot | READY TO RECRUIT | Summary, readiness, strict evidence bundles, deterministic success report, and protocol complete; requires 3–5 external operators |
 | Reachable-history restricted-artifact scan | PASS | `scripts/audit_release_history.py`; dedicated Gitleaks CI scans secrets |
 | Python and npm dependency scans | PASS WITH EXPIRING EXCEPTION | Chroma CVE-2026-45830/45833 affect server endpoints that are not deployed; exact 0.4.22 exception expires 2026-09-30 and reset is disabled. Sidecar and npm have no known findings |

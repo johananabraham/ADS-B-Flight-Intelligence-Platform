@@ -12,11 +12,12 @@ from sqlalchemy.orm import Session
 
 from ..schemas.edge import (
     PresenceStatus,
+    ReceiverPipelineTelemetry,
     StationPresence,
     StationTelemetry,
     node_id_from_topic,
 )
-from .station_persistence import persist_presence, persist_telemetry
+from .station_persistence import persist_pipeline, persist_presence, persist_telemetry
 
 
 MAX_PAYLOAD_BYTES = 4_096
@@ -28,7 +29,7 @@ class StationMessageError(ValueError):
 
 @dataclass(frozen=True)
 class ProcessedStationMessage:
-    kind: Literal["telemetry", "presence"]
+    kind: Literal["telemetry", "presence", "pipeline"]
     node_id: str
     message_id: str
     inserted: bool
@@ -56,12 +57,16 @@ def process_station_message(
             message = StationTelemetry.model_validate(document)
             _require_topic_identity(topic, message.node_id, kind)
             inserted = persist_telemetry(db, message, received_at)
-        else:
+        elif kind == "presence":
             message = StationPresence.model_validate(document)
             _require_topic_identity(topic, message.node_id, kind)
             if message.status is PresenceStatus.OFFLINE:
                 message = message.model_copy(update={"observed_at": received_at})
             inserted = persist_presence(db, message, received_at)
+        else:
+            message = ReceiverPipelineTelemetry.model_validate(document)
+            _require_topic_identity(topic, message.node_id, kind)
+            inserted = persist_pipeline(db, message, received_at)
     except ValidationError as exc:
         raise StationMessageError("station payload failed schema validation") from exc
     return ProcessedStationMessage(
@@ -72,16 +77,20 @@ def process_station_message(
     )
 
 
-def _message_kind(topic: str) -> Literal["telemetry", "presence"]:
+def _message_kind(topic: str) -> Literal["telemetry", "presence", "pipeline"]:
     if topic.endswith("/telemetry"):
         return "telemetry"
     if topic.endswith("/presence"):
         return "presence"
+    if topic.endswith("/pipeline"):
+        return "pipeline"
     raise StationMessageError("unsupported station topic")
 
 
 def _require_topic_identity(
-    topic: str, node_id: str, kind: Literal["telemetry", "presence"]
+    topic: str,
+    node_id: str,
+    kind: Literal["telemetry", "presence", "pipeline"],
 ) -> None:
     try:
         topic_node_id = node_id_from_topic(topic, kind)

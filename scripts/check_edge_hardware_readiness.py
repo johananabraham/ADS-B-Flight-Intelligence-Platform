@@ -87,12 +87,18 @@ def validate_certificate(
 
 
 def validate_secret_files(secret_dir: Path, node_id: str) -> None:
-    required = (*SECRET_FILENAMES, f"{node_id}.password")
+    required = (*SECRET_FILENAMES, f"{node_id}.password", f"{node_id}-bridge.password")
     for filename in required:
         path = secret_dir / filename
         if not path.is_file():
             raise ValueError(f"missing required edge credential file: {filename}")
-    for filename in ("server.key", "passwords", "station-consumer.password", f"{node_id}.password"):
+    for filename in (
+        "server.key",
+        "passwords",
+        "station-consumer.password",
+        f"{node_id}.password",
+        f"{node_id}-bridge.password",
+    ):
         mode = stat.S_IMODE((secret_dir / filename).stat().st_mode)
         if mode & 0o077:
             raise ValueError(f"credential file is group/world accessible: {filename}")
@@ -103,9 +109,12 @@ def validate_acl(acl_text: str, node_id: str) -> None:
         f"user {node_id}",
         f"topic write adsb/stations/v1/{node_id}/telemetry",
         f"topic write adsb/stations/v1/{node_id}/presence",
+        f"user {node_id}-bridge",
+        f"topic write adsb/stations/v1/{node_id}/pipeline",
         "user station-consumer",
         "topic read adsb/stations/v1/+/telemetry",
         "topic read adsb/stations/v1/+/presence",
+        "topic read adsb/stations/v1/+/pipeline",
     )
     missing = [line for line in required if line not in acl_text.splitlines()]
     if missing:

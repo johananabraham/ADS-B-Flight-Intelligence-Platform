@@ -21,9 +21,12 @@ def test_acl_is_explicit_and_consumer_has_no_write_grant():
 
     assert "user roof-node-1" in acl
     assert "topic write adsb/stations/v1/roof-node-1/telemetry" in acl
+    assert "user roof-node-1-bridge" in acl
+    assert "topic write adsb/stations/v1/roof-node-1/pipeline" in acl
     assert "pattern write" not in acl
     assert "topic write" not in consumer_block
     assert "topic read adsb/stations/v1/+/telemetry" in consumer_block
+    assert "topic read adsb/stations/v1/+/pipeline" in consumer_block
 
 
 def test_compose_uses_pinned_broker_and_runtime_secrets():

@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Literal
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 NODE_ID_PATTERN = r"^[a-z0-9][a-z0-9-]{0,62}$"
@@ -17,6 +17,12 @@ FIRMWARE_VERSION_PATTERN = r"^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$"
 class PresenceStatus(str, Enum):
     ONLINE = "ONLINE"
     OFFLINE = "OFFLINE"
+
+
+class ReceiverConnection(str, Enum):
+    CONNECTED = "CONNECTED"
+    DEGRADED = "DEGRADED"
+    DISCONNECTED = "DISCONNECTED"
 
 
 class StationTelemetry(BaseModel):
@@ -68,6 +74,37 @@ class StationPresence(BaseModel):
         return value
 
 
+class ReceiverPipelineTelemetry(BaseModel):
+    """Privacy-safe aggregate health from the host feeder sidecar."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["1.0"] = "1.0"
+    message_id: UUID = Field(default_factory=uuid4)
+    node_id: str = Field(pattern=NODE_ID_PATTERN)
+    observed_at: datetime
+    connection: ReceiverConnection
+    policy_version: str = Field(min_length=1, max_length=50)
+    last_message_age_seconds: float | None = Field(default=None, ge=0, le=604_800)
+    queue_depth: int = Field(ge=0, le=1_000_000)
+    queue_capacity: int = Field(ge=1, le=1_000_000)
+    dropped_messages_total: int = Field(ge=0)
+    reconnects_total: int = Field(ge=0)
+
+    @field_validator("observed_at")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("observed_at must include a timezone")
+        return value
+
+    @model_validator(mode="after")
+    def require_bounded_queue(self) -> "ReceiverPipelineTelemetry":
+        if self.queue_depth > self.queue_capacity:
+            raise ValueError("queue_depth cannot exceed queue_capacity")
+        return self
+
+
 def telemetry_topic(node_id: str) -> str:
     validated = _validated_node_id(node_id)
     return f"adsb/stations/v1/{validated}/telemetry"
@@ -78,7 +115,14 @@ def presence_topic(node_id: str) -> str:
     return f"adsb/stations/v1/{validated}/presence"
 
 
-def node_id_from_topic(topic: str, kind: Literal["telemetry", "presence"]) -> str:
+def pipeline_topic(node_id: str) -> str:
+    validated = _validated_node_id(node_id)
+    return f"adsb/stations/v1/{validated}/pipeline"
+
+
+def node_id_from_topic(
+    topic: str, kind: Literal["telemetry", "presence", "pipeline"]
+) -> str:
     parts = topic.split("/")
     if len(parts) != 5 or parts[:3] != ["adsb", "stations", "v1"] or parts[4] != kind:
         raise ValueError(f"invalid station {kind} topic")

@@ -3,23 +3,25 @@
 ## Scope
 
 Station health answers whether an edge node is reporting fresh operational
-telemetry. It deliberately does not describe ADS-B RF reception quality,
-aircraft-message correctness, or sensor coverage. Those require receiver-side
-RF metrics and field measurements that the ESP32 sidecar does not have.
+telemetry. When the loopback host bridge is present, it also correlates aggregate
+dump1090/sidecar connection, message freshness, queue, drop, and reconnect evidence.
+It deliberately does not claim ADS-B authenticity, aircraft-message correctness,
+RF sensitivity, antenna coverage, or true aircraft position.
 
 Policy 1.0 produces five explainable states:
 
 | State | Meaning |
 |---|---|
 | `HEALTHY` | The heartbeat is at most 45 seconds old and reported limits pass. |
-| `DEGRADED` | The heartbeat is fresh, but Wi-Fi, heap, queue, or watchdog evidence is outside policy. |
+| `DEGRADED` | The heartbeat is fresh, but device or known receiver-pipeline evidence is outside policy. |
 | `STALE` | The heartbeat is late or has an invalid future timestamp. |
 | `OFFLINE` | A broker Last Will or graceful presence event is newer than telemetry. |
 | `NO_DATA` | The backend lacks enough station telemetry to evaluate health. |
 
 Every API result includes the policy version, exact reasons, evaluation time,
-telemetry age, and source message IDs. This keeps operator-visible state tied to
-immutable evidence.
+telemetry age, optional pipeline age, and source message IDs. This keeps
+operator-visible state tied to immutable evidence. Missing pipeline telemetry does
+not retroactively degrade ESP32-only nodes; the API/UI show that evidence as absent.
 
 ## Reproducible offline result
 
@@ -54,6 +56,18 @@ curl http://localhost:8000/api/v1/stations/
 
 The simulator is clearly identified by firmware version `0.1.0+simulator`; it is
 not evidence that physical firmware or RF hardware was exercised.
+
+With the local feeder sidecar running, publish aggregate pipeline health through its
+separate pipeline-only MQTT account:
+
+```bash
+export PIPELINE_MQTT_PASSWORD_FILE=edge/mosquitto/secrets/roof-node-1-bridge.password
+PYTHONPATH=backend:. python -m services.edge_telemetry.receiver_bridge --count 5
+```
+
+The bridge accepts only an HTTP loopback sidecar URL, rejects redirects, validates a
+strict aggregate schema, and never forwards raw messages or aircraft/receiver
+identifiers.
 
 ## Field promotion gate
 

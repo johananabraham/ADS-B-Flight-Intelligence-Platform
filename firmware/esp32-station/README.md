@@ -75,5 +75,26 @@ station therefore requires the explicit private `MQTT_BIND_ADDRESS` above. Never
 forward port 8883 from an internet router and never commit `sdkconfig`, passwords,
 private keys, or the provisioned CA.
 
+## Correlate the receiver pipeline
+
+The ESP32 cannot directly observe the USB SDR, dump1090, or the feeder sidecar. Run
+the host bridge on the same computer as the sidecar to publish only aggregate
+connection, freshness, queue, drop, and reconnect metrics. Its HTTP input is
+fail-closed to loopback and its separate MQTT account can write only the station's
+`pipeline` topic:
+
+```bash
+STATION_NODE_ID=roof-node-1 \
+PIPELINE_MQTT_PASSWORD_FILE=edge/mosquitto/secrets/roof-node-1-bridge.password \
+MQTT_CA_CERT=edge/mosquitto/secrets/ca.crt \
+MQTT_HOST=<exact-private-lan-ip> \
+PYTHONPATH=backend:. python3 -m services.edge_telemetry.receiver_bridge
+```
+
+The bridge never publishes SBS frames, aircraft identifiers, callsigns, coordinates,
+receiver labels, or receiver location. If the local sidecar cannot be reached or its
+health response is invalid, it publishes `DISCONNECTED` rather than inventing a
+healthy result.
+
 Physical RF coexistence, power stability, long-duration reconnect behavior,
 and watchdog recovery still require testing on the user's exact ESP32 board.
