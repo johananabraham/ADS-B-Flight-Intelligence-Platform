@@ -186,6 +186,7 @@ async def capture(
             os.fsync(handle.fileno())
 
     elapsed_seconds = max(0.0, loop.time() - started_monotonic)
+    capture_state = "INTERRUPTED" if interrupted else "COMPLETED"
     result = {
         "started_at": started.isoformat(),
         "ended_at": _now().isoformat(),
@@ -196,9 +197,9 @@ async def capture(
         "connected_seconds": round(min(connected_seconds, elapsed_seconds), 3),
         "outage_seconds": round(max(0.0, elapsed_seconds - connected_seconds), 3),
         "outages": outages,
-        "capture_state": "INTERRUPTED" if interrupted else "COMPLETED",
+        "capture_state": capture_state,
     }
-    write_status(result["capture_state"], "DISCONNECTED")
+    write_status(capture_state, "DISCONNECTED")
     return result
 
 
