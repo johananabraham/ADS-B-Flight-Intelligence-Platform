@@ -21,7 +21,7 @@ secret_dir="${EDGE_SECRET_DIR:-${project_root}/edge/mosquitto/secrets}"
 image="eclipse-mosquitto:2.0.22-openssl"
 runtime_uid="${EDGE_RUNTIME_UID:-1883}"
 runtime_gid="${EDGE_RUNTIME_GID:-1883}"
-generated=(ca.key ca.crt ca.srl server.key server.csr server.crt server.ext passwords station-consumer.password roof-node-1.password)
+generated=(ca.key ca.crt ca.srl server.key server.csr server.crt server.ext passwords station-consumer.password roof-node-1.password roof-node-1-bridge.password)
 
 mkdir -p "$secret_dir"
 umask 077
@@ -57,8 +57,10 @@ openssl x509 -req -sha256 -days 365 \
 
 openssl rand -base64 32 > "${secret_dir}/station-consumer.password"
 openssl rand -base64 32 > "${secret_dir}/roof-node-1.password"
+openssl rand -base64 32 > "${secret_dir}/roof-node-1-bridge.password"
 consumer_password="$(tr -d '\r\n' < "${secret_dir}/station-consumer.password")"
 node_password="$(tr -d '\r\n' < "${secret_dir}/roof-node-1.password")"
+bridge_password="$(tr -d '\r\n' < "${secret_dir}/roof-node-1-bridge.password")"
 
 docker run --rm --user "$(id -u):$(id -g)" \
   -v "${secret_dir}:/work" --entrypoint mosquitto_passwd "$image" \
@@ -66,6 +68,9 @@ docker run --rm --user "$(id -u):$(id -g)" \
 docker run --rm --user "$(id -u):$(id -g)" \
   -v "${secret_dir}:/work" --entrypoint mosquitto_passwd "$image" \
   -b /work/passwords roof-node-1 "$node_password"
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v "${secret_dir}:/work" --entrypoint mosquitto_passwd "$image" \
+  -b /work/passwords roof-node-1-bridge "$bridge_password"
 chmod 0600 "${secret_dir}"/*.key "${secret_dir}"/*.password "${secret_dir}/passwords"
 chmod 0755 "${secret_dir}"
 chmod 0644 "${secret_dir}/ca.crt" "${secret_dir}/server.crt"
@@ -76,5 +81,6 @@ docker run --rm --user 0:0 -v "${secret_dir}:/work" \
 
 echo "Generated local MQTT credentials in ${secret_dir}"
 echo "Copy ca.crt and roof-node-1.password to the station through a secure channel."
+echo "Keep roof-node-1-bridge.password on the receiver host for the local health bridge."
 echo "Before physical use, provision for the broker's exact private IPv4 LAN address, then run:"
 echo "  MQTT_BIND_ADDRESS=<private-ip> scripts/check_edge_hardware_readiness.py --broker-host <private-ip>"

@@ -28,6 +28,8 @@ class StationHealthResponse(BaseModel):
     reasons: tuple[str, ...]
     telemetry_message_id: str | None
     presence_message_id: str | None
+    pipeline_message_id: str | None
+    pipeline_age_seconds: float | None
 
 
 class StationResponse(BaseModel):
@@ -44,6 +46,13 @@ class StationResponse(BaseModel):
     watchdog_reset_count: int | None
     temperature_c: float | None
     supply_voltage_v: float | None
+    receiver_connection: str | None
+    receiver_policy_version: str | None
+    receiver_last_message_age_seconds: float | None
+    receiver_queue_depth: int | None
+    receiver_queue_capacity: int | None
+    receiver_dropped_messages_total: int | None
+    receiver_reconnects_total: int | None
     health: StationHealthResponse
 
 
@@ -138,5 +147,12 @@ def _station_response(record: SensorNodeRecord, now: datetime) -> StationRespons
         watchdog_reset_count=record.watchdog_reset_count,
         temperature_c=record.temperature_c,
         supply_voltage_v=record.supply_voltage_v,
+        receiver_connection=record.receiver_connection,
+        receiver_policy_version=record.receiver_policy_version,
+        receiver_last_message_age_seconds=record.receiver_last_message_age_seconds,
+        receiver_queue_depth=record.receiver_queue_depth,
+        receiver_queue_capacity=record.receiver_queue_capacity,
+        receiver_dropped_messages_total=record.receiver_dropped_messages_total,
+        receiver_reconnects_total=record.receiver_reconnects_total,
         health=StationHealthResponse(**asdict(health)),
     )

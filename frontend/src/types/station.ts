@@ -14,6 +14,8 @@ export interface StationHealth {
   reasons: string[];
   telemetry_message_id: string | null;
   presence_message_id: string | null;
+  pipeline_message_id: string | null;
+  pipeline_age_seconds: number | null;
 }
 
 export interface Station {
@@ -30,5 +32,12 @@ export interface Station {
   watchdog_reset_count: number | null;
   temperature_c: number | null;
   supply_voltage_v: number | null;
+  receiver_connection: 'CONNECTED' | 'DEGRADED' | 'DISCONNECTED' | null;
+  receiver_policy_version: string | null;
+  receiver_last_message_age_seconds: number | null;
+  receiver_queue_depth: number | null;
+  receiver_queue_capacity: number | null;
+  receiver_dropped_messages_total: number | null;
+  receiver_reconnects_total: number | null;
   health: StationHealth;
 }

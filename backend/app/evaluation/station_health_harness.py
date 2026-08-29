@@ -8,8 +8,18 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import UUID
 
-from ..schemas.edge import PresenceStatus, StationPresence, StationTelemetry
-from ..services.station_health import StationHealthState, evaluate_station_health
+from ..schemas.edge import (
+    PresenceStatus,
+    ReceiverConnection,
+    ReceiverPipelineTelemetry,
+    StationPresence,
+    StationTelemetry,
+)
+from ..services.station_health import (
+    StationHealthPolicy,
+    StationHealthState,
+    evaluate_station_health,
+)
 
 
 EVALUATED_AT = datetime(2026, 8, 4, 12, 0, tzinfo=timezone.utc)
@@ -24,10 +34,11 @@ def run_station_health_evaluation(*, implementation_revision: str) -> dict[str, 
     samples = []
     mismatches = []
     state_counts: Counter[str] = Counter()
-    for name, expected, telemetry, presence in scenarios:
+    for name, expected, telemetry, presence, pipeline in scenarios:
         result = evaluate_station_health(
             telemetry=telemetry,
             presence=presence,
+            pipeline=pipeline,
             evaluated_at=EVALUATED_AT,
         )
         state_counts[result.state.value] += 1
@@ -42,14 +53,14 @@ def run_station_health_evaluation(*, implementation_revision: str) -> dict[str, 
             mismatches.append(sample)
 
     return {
-        "suite_version": "1.0-offline-synthetic",
+        "suite_version": "1.1-offline-synthetic",
         "evidence_class": "OFFLINE_SYNTHETIC_ONLY",
         "implementation_revision": implementation_revision,
         "implementation_sha256": _implementation_hash(),
         "configuration": {
             "evaluated_at": EVALUATED_AT.isoformat(),
             "scenario_count": len(scenarios),
-            "policy_version": "1.0",
+            "policy_version": StationHealthPolicy().version,
         },
         "results": {
             "exact_match_accuracy": (len(scenarios) - len(mismatches)) / len(scenarios),
@@ -61,6 +72,7 @@ def run_station_health_evaluation(*, implementation_revision: str) -> dict[str, 
             "physical_esp32_sessions": 0,
             "live_mqtt_messages": 0,
             "rf_health_claim_permitted": False,
+            "receiver_pipeline_reliability_claim_permitted": False,
             "field_reliability_claim_permitted": False,
             "next_required_evidence": (
                 "Run the firmware on the target ESP32, interrupt Wi-Fi and broker "
@@ -86,36 +98,41 @@ def _scenarios() -> (
             StationHealthState,
             StationTelemetry | None,
             StationPresence | None,
+            ReceiverPipelineTelemetry | None,
         ]
     ]
 ):
     fresh = _telemetry()
     return [
-        ("no_data", StationHealthState.NO_DATA, None, None),
-        ("fresh_nominal", StationHealthState.HEALTHY, fresh, _presence()),
+        ("no_data", StationHealthState.NO_DATA, None, None, None),
+        ("fresh_nominal", StationHealthState.HEALTHY, fresh, _presence(), None),
         (
             "weak_wifi",
             StationHealthState.DEGRADED,
             _telemetry(rssi_dbm=-85),
             _presence(),
+            None,
         ),
         (
             "offline_backpressure",
             StationHealthState.DEGRADED,
             _telemetry(offline_queue_depth=4),
             _presence(),
+            None,
         ),
         (
             "watchdog_recovery",
             StationHealthState.DEGRADED,
             _telemetry(watchdog_reset_count=1),
             _presence(),
+            None,
         ),
         (
             "heartbeat_timeout",
             StationHealthState.STALE,
             _telemetry(observed_at=EVALUATED_AT - timedelta(seconds=46)),
             _presence(observed_at=EVALUATED_AT - timedelta(seconds=46)),
+            None,
         ),
         (
             "broker_last_will",
@@ -126,6 +143,35 @@ def _scenarios() -> (
                 observed_at=EVALUATED_AT - timedelta(seconds=1),
                 reason="mqtt-last-will",
             ),
+            None,
+        ),
+        (
+            "receiver_disconnected",
+            StationHealthState.DEGRADED,
+            fresh,
+            _presence(),
+            _pipeline(connection=ReceiverConnection.DISCONNECTED),
+        ),
+        (
+            "receiver_pipeline_stale",
+            StationHealthState.DEGRADED,
+            fresh,
+            _presence(),
+            _pipeline(observed_at=EVALUATED_AT - timedelta(seconds=46)),
+        ),
+        (
+            "receiver_queue_full",
+            StationHealthState.DEGRADED,
+            fresh,
+            _presence(),
+            _pipeline(queue_depth=128),
+        ),
+        (
+            "receiver_source_silent",
+            StationHealthState.DEGRADED,
+            fresh,
+            _presence(),
+            _pipeline(last_message_age_seconds=301),
         ),
     ]
 
@@ -159,6 +205,23 @@ def _presence(**updates: object) -> StationPresence:
     }
     values.update(updates)
     return StationPresence.model_validate(values)
+
+
+def _pipeline(**updates: object) -> ReceiverPipelineTelemetry:
+    values: dict[str, object] = {
+        "message_id": UUID("00000000-0000-4000-8000-000000000004"),
+        "node_id": "roof-node-1",
+        "observed_at": EVALUATED_AT - timedelta(seconds=5),
+        "connection": ReceiverConnection.CONNECTED,
+        "policy_version": "feeder-v1",
+        "last_message_age_seconds": 5,
+        "queue_depth": 0,
+        "queue_capacity": 128,
+        "dropped_messages_total": 0,
+        "reconnects_total": 0,
+    }
+    values.update(updates)
+    return ReceiverPipelineTelemetry.model_validate(values)
 
 
 def _implementation_hash() -> str:

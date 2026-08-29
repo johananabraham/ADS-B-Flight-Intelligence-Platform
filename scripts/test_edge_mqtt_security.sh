@@ -19,6 +19,8 @@ EDGE_SECRET_DIR="$scratch_dir" \
 docker network create "$network_name" >/dev/null
 node_password="$(docker run --rm --user 0:0 -v "${scratch_dir}:/work:ro" \
   --entrypoint /bin/cat "$image" /work/roof-node-1.password | tr -d '\r\n')"
+bridge_password="$(docker run --rm --user 0:0 -v "${scratch_dir}:/work:ro" \
+  --entrypoint /bin/cat "$image" /work/roof-node-1-bridge.password | tr -d '\r\n')"
 consumer_password="$(docker run --rm --user 0:0 -v "${scratch_dir}:/work:ro" \
   --entrypoint /bin/cat "$image" /work/station-consumer.password | tr -d '\r\n')"
 client=(docker run --rm --network "$network_name" -v "${scratch_dir}/ca.crt:/ca.crt:ro" "$image")
@@ -77,6 +79,23 @@ fi
 if ! publish_is_visible roof-node-1 "$node_password" \
   adsb/stations/v1/roof-node-1/telemetry; then
   echo "authorized station publish was not delivered" >&2
+  exit 1
+fi
+
+# The host bridge can publish only privacy-safe aggregate pipeline health.
+if ! publish_is_visible roof-node-1-bridge "$bridge_password" \
+  adsb/stations/v1/roof-node-1/pipeline; then
+  echo "authorized receiver bridge publish was not delivered" >&2
+  exit 1
+fi
+if publish_is_visible roof-node-1-bridge "$bridge_password" \
+  adsb/stations/v1/roof-node-1/telemetry; then
+  echo "receiver bridge unexpectedly published firmware telemetry" >&2
+  exit 1
+fi
+if publish_is_visible roof-node-1 "$node_password" \
+  adsb/stations/v1/roof-node-1/pipeline; then
+  echo "firmware station unexpectedly published receiver pipeline health" >&2
   exit 1
 fi
 

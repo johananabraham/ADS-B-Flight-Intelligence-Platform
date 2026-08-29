@@ -5,7 +5,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from ..models.edge import SensorNodeRecord
-from ..schemas.edge import PresenceStatus, StationPresence, StationTelemetry
+from ..schemas.edge import (
+    PresenceStatus,
+    ReceiverConnection,
+    ReceiverPipelineTelemetry,
+    StationPresence,
+    StationTelemetry,
+)
 from .station_health import StationHealthResult, evaluate_station_health
 
 
@@ -60,6 +66,33 @@ def record_to_presence(record: SensorNodeRecord) -> StationPresence | None:
     )
 
 
+def record_to_pipeline(record: SensorNodeRecord) -> ReceiverPipelineTelemetry | None:
+    required = (
+        record.pipeline_message_id,
+        record.pipeline_observed_at,
+        record.receiver_connection,
+        record.receiver_policy_version,
+        record.receiver_queue_depth,
+        record.receiver_queue_capacity,
+        record.receiver_dropped_messages_total,
+        record.receiver_reconnects_total,
+    )
+    if any(value is None for value in required):
+        return None
+    return ReceiverPipelineTelemetry(
+        message_id=record.pipeline_message_id,
+        node_id=record.node_id,
+        observed_at=_as_utc(record.pipeline_observed_at),
+        connection=ReceiverConnection(record.receiver_connection),
+        policy_version=record.receiver_policy_version,
+        last_message_age_seconds=record.receiver_last_message_age_seconds,
+        queue_depth=record.receiver_queue_depth,
+        queue_capacity=record.receiver_queue_capacity,
+        dropped_messages_total=record.receiver_dropped_messages_total,
+        reconnects_total=record.receiver_reconnects_total,
+    )
+
+
 def evaluate_station_record(
     record: SensorNodeRecord, *, evaluated_at: datetime
 ) -> StationHealthResult:
@@ -67,6 +100,7 @@ def evaluate_station_record(
         telemetry=record_to_telemetry(record),
         presence=record_to_presence(record),
         evaluated_at=evaluated_at,
+        pipeline=record_to_pipeline(record),
     )
 
 

@@ -18,6 +18,7 @@ LOGGER = logging.getLogger("edge-telemetry-consumer")
 SUBSCRIPTIONS = (
     ("adsb/stations/v1/+/telemetry", 1),
     ("adsb/stations/v1/+/presence", 1),
+    ("adsb/stations/v1/+/pipeline", 1),
 )
 
 

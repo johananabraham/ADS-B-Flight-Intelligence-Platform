@@ -8,15 +8,24 @@ from uuid import UUID
 import pytest
 from sqlalchemy.dialects import postgresql
 
-from app.schemas.edge import PresenceStatus, StationPresence, StationTelemetry
+from app.schemas.edge import (
+    PresenceStatus,
+    ReceiverConnection,
+    ReceiverPipelineTelemetry,
+    StationPresence,
+    StationTelemetry,
+)
 from app.services import station_mqtt
 from app.services.station_mqtt import StationMessageError, process_station_message
 from app.services.station_persistence import (
     build_presence_event_insert,
     build_presence_node_upsert,
+    build_pipeline_event_insert,
+    build_pipeline_node_upsert,
     build_telemetry_event_insert,
     build_telemetry_node_upsert,
     persist_presence,
+    persist_pipeline,
     persist_telemetry,
 )
 
@@ -50,6 +59,21 @@ def presence(status: PresenceStatus = PresenceStatus.ONLINE) -> StationPresence:
     )
 
 
+def pipeline() -> ReceiverPipelineTelemetry:
+    return ReceiverPipelineTelemetry(
+        message_id=UUID("00000000-0000-4000-8000-000000000030"),
+        node_id="roof-node-1",
+        observed_at=NOW,
+        connection=ReceiverConnection.CONNECTED,
+        policy_version="feeder-v1",
+        last_message_age_seconds=2,
+        queue_depth=0,
+        queue_capacity=128,
+        dropped_messages_total=0,
+        reconnects_total=1,
+    )
+
+
 def compiled(statement) -> str:
     return str(statement.compile(dialect=postgresql.dialect()))
 
@@ -57,18 +81,22 @@ def compiled(statement) -> str:
 def test_event_inserts_ignore_duplicate_message_or_boot_sequence():
     telemetry_sql = compiled(build_telemetry_event_insert(telemetry(), NOW))
     presence_sql = compiled(build_presence_event_insert(presence(), NOW))
+    pipeline_sql = compiled(build_pipeline_event_insert(pipeline(), NOW))
 
     assert "ON CONFLICT DO NOTHING" in telemetry_sql
     assert "ON CONFLICT DO NOTHING" in presence_sql
+    assert "ON CONFLICT DO NOTHING" in pipeline_sql
 
 
 def test_current_state_upserts_only_newer_backend_receipts():
     telemetry_sql = compiled(build_telemetry_node_upsert(telemetry(), NOW))
     presence_sql = compiled(build_presence_node_upsert(presence(), NOW))
+    pipeline_sql = compiled(build_pipeline_node_upsert(pipeline(), NOW))
 
     assert "ON CONFLICT (node_id) DO UPDATE" in telemetry_sql
     assert "excluded.last_received_at > sensor_nodes.last_received_at" in telemetry_sql
     assert "sensor_nodes.presence_received_at IS NULL" in presence_sql
+    assert "sensor_nodes.pipeline_received_at IS NULL" in pipeline_sql
 
 
 def test_persistence_reports_idempotent_event_insertion():
@@ -80,6 +108,10 @@ def test_persistence_reports_idempotent_event_insertion():
     db.reset_mock()
     db.execute.side_effect = [Mock(rowcount=0), Mock(rowcount=0)]
     assert persist_presence(db, presence(), NOW) is False
+
+    db.reset_mock()
+    db.execute.side_effect = [Mock(rowcount=1), Mock(rowcount=1)]
+    assert persist_pipeline(db, pipeline(), NOW) is True
 
 
 def test_received_time_must_be_timezone_aware():
@@ -125,6 +157,25 @@ def test_last_will_uses_broker_receive_time(monkeypatch):
     )
 
     assert captured["message"].observed_at == received_at
+
+
+def test_mqtt_boundary_validates_and_persists_pipeline(monkeypatch):
+    captured = {}
+
+    def fake_persist(_db, message, received_at):
+        captured.update(message=message, received_at=received_at)
+        return True
+
+    monkeypatch.setattr(station_mqtt, "persist_pipeline", fake_persist)
+    result = process_station_message(
+        Mock(),
+        topic="adsb/stations/v1/roof-node-1/pipeline",
+        payload=pipeline().model_dump_json().encode(),
+        received_at=NOW,
+    )
+    assert result.kind == "pipeline"
+    assert result.inserted is True
+    assert captured["message"].connection is ReceiverConnection.CONNECTED
 
 
 @pytest.mark.parametrize(

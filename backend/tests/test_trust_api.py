@@ -71,6 +71,7 @@ def station() -> SimpleNamespace:
         boot_id=UUID("00000000-0000-4000-8000-000000000103"),
         telemetry_message_id=UUID("00000000-0000-4000-8000-000000000104"),
         presence_message_id=UUID("00000000-0000-4000-8000-000000000105"),
+        pipeline_message_id=None,
         last_sequence=7,
         last_observed_at=now,
         presence_status="ONLINE",
@@ -83,6 +84,15 @@ def station() -> SimpleNamespace:
         watchdog_reset_count=0,
         temperature_c=None,
         supply_voltage_v=None,
+        pipeline_observed_at=None,
+        pipeline_received_at=None,
+        receiver_connection=None,
+        receiver_policy_version=None,
+        receiver_last_message_age_seconds=None,
+        receiver_queue_depth=None,
+        receiver_queue_capacity=None,
+        receiver_dropped_messages_total=None,
+        receiver_reconnects_total=None,
     )
 
 

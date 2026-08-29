@@ -9,11 +9,12 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from ..models.edge import (
+    ReceiverPipelineTelemetryRecord,
     SensorNodeRecord,
     StationPresenceRecord,
     StationTelemetryRecord,
 )
-from ..schemas.edge import StationPresence, StationTelemetry
+from ..schemas.edge import ReceiverPipelineTelemetry, StationPresence, StationTelemetry
 
 
 def telemetry_values(
@@ -36,6 +37,16 @@ def presence_values(
     return values
 
 
+def pipeline_values(
+    pipeline: ReceiverPipelineTelemetry, received_at: datetime
+) -> dict[str, object]:
+    _require_aware(received_at)
+    values = pipeline.model_dump()
+    values["connection"] = pipeline.connection.value
+    values["received_at"] = received_at
+    return values
+
+
 def build_telemetry_event_insert(telemetry: StationTelemetry, received_at: datetime):
     return (
         insert(StationTelemetryRecord)
@@ -48,6 +59,16 @@ def build_presence_event_insert(presence: StationPresence, received_at: datetime
     return (
         insert(StationPresenceRecord)
         .values(**presence_values(presence, received_at))
+        .on_conflict_do_nothing()
+    )
+
+
+def build_pipeline_event_insert(
+    pipeline: ReceiverPipelineTelemetry, received_at: datetime
+):
+    return (
+        insert(ReceiverPipelineTelemetryRecord)
+        .values(**pipeline_values(pipeline, received_at))
         .on_conflict_do_nothing()
     )
 
@@ -119,6 +140,47 @@ def build_presence_node_upsert(presence: StationPresence, received_at: datetime)
     )
 
 
+def build_pipeline_node_upsert(
+    pipeline: ReceiverPipelineTelemetry, received_at: datetime
+):
+    statement = insert(SensorNodeRecord).values(
+        node_id=pipeline.node_id,
+        pipeline_message_id=pipeline.message_id,
+        first_seen_at=received_at,
+        last_received_at=received_at,
+        pipeline_observed_at=pipeline.observed_at,
+        pipeline_received_at=received_at,
+        receiver_connection=pipeline.connection.value,
+        receiver_policy_version=pipeline.policy_version,
+        receiver_last_message_age_seconds=pipeline.last_message_age_seconds,
+        receiver_queue_depth=pipeline.queue_depth,
+        receiver_queue_capacity=pipeline.queue_capacity,
+        receiver_dropped_messages_total=pipeline.dropped_messages_total,
+        receiver_reconnects_total=pipeline.reconnects_total,
+    )
+    excluded = statement.excluded
+    return statement.on_conflict_do_update(
+        index_elements=["node_id"],
+        set_={
+            "pipeline_message_id": excluded.pipeline_message_id,
+            "last_received_at": excluded.last_received_at,
+            "pipeline_observed_at": excluded.pipeline_observed_at,
+            "pipeline_received_at": excluded.pipeline_received_at,
+            "receiver_connection": excluded.receiver_connection,
+            "receiver_policy_version": excluded.receiver_policy_version,
+            "receiver_last_message_age_seconds": excluded.receiver_last_message_age_seconds,
+            "receiver_queue_depth": excluded.receiver_queue_depth,
+            "receiver_queue_capacity": excluded.receiver_queue_capacity,
+            "receiver_dropped_messages_total": excluded.receiver_dropped_messages_total,
+            "receiver_reconnects_total": excluded.receiver_reconnects_total,
+        },
+        where=or_(
+            SensorNodeRecord.pipeline_received_at.is_(None),
+            excluded.pipeline_received_at > SensorNodeRecord.pipeline_received_at,
+        ),
+    )
+
+
 def persist_telemetry(
     db: Session, telemetry: StationTelemetry, received_at: datetime
 ) -> bool:
@@ -132,6 +194,14 @@ def persist_presence(
 ) -> bool:
     db.execute(build_presence_node_upsert(presence, received_at))
     result = db.execute(build_presence_event_insert(presence, received_at))
+    return result.rowcount == 1
+
+
+def persist_pipeline(
+    db: Session, pipeline: ReceiverPipelineTelemetry, received_at: datetime
+) -> bool:
+    db.execute(build_pipeline_node_upsert(pipeline, received_at))
+    result = db.execute(build_pipeline_event_insert(pipeline, received_at))
     return result.rowcount == 1
 
 

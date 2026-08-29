@@ -54,6 +54,7 @@ def station_record(**updates) -> SimpleNamespace:
         "boot_id": BOOT_ID,
         "telemetry_message_id": TELEMETRY_ID,
         "presence_message_id": PRESENCE_ID,
+        "pipeline_message_id": None,
         "last_sequence": 42,
         "first_seen_at": current_time,
         "last_received_at": current_time,
@@ -68,6 +69,15 @@ def station_record(**updates) -> SimpleNamespace:
         "watchdog_reset_count": 0,
         "temperature_c": 24.5,
         "supply_voltage_v": 5.0,
+        "pipeline_observed_at": None,
+        "pipeline_received_at": None,
+        "receiver_connection": None,
+        "receiver_policy_version": None,
+        "receiver_last_message_age_seconds": None,
+        "receiver_queue_depth": None,
+        "receiver_queue_capacity": None,
+        "receiver_dropped_messages_total": None,
+        "receiver_reconnects_total": None,
     }
     values.update(updates)
     return SimpleNamespace(**values)

@@ -6,10 +6,13 @@ from pydantic import ValidationError
 
 from app.schemas.edge import (
     PresenceStatus,
+    ReceiverConnection,
+    ReceiverPipelineTelemetry,
     StationPresence,
     StationTelemetry,
     node_id_from_topic,
     presence_topic,
+    pipeline_topic,
     telemetry_topic,
 )
 from app.services.station_health import StationHealthState, evaluate_station_health
@@ -46,6 +49,22 @@ def presence(status: PresenceStatus, **updates) -> StationPresence:
     return StationPresence(**values)
 
 
+def pipeline(**updates) -> ReceiverPipelineTelemetry:
+    values = {
+        "node_id": "roof-node-1",
+        "observed_at": NOW,
+        "connection": ReceiverConnection.CONNECTED,
+        "policy_version": "feeder-v1",
+        "last_message_age_seconds": 5,
+        "queue_depth": 0,
+        "queue_capacity": 128,
+        "dropped_messages_total": 0,
+        "reconnects_total": 0,
+    }
+    values.update(updates)
+    return ReceiverPipelineTelemetry(**values)
+
+
 def test_station_contract_rejects_naive_time_and_invalid_node_id():
     with pytest.raises(ValidationError, match="timezone"):
         telemetry(observed_at=datetime(2026, 8, 4, 12))
@@ -58,6 +77,7 @@ def test_station_contract_rejects_naive_time_and_invalid_node_id():
 def test_topics_are_versioned_and_reject_wildcard_injection():
     assert telemetry_topic("roof-node-1") == "adsb/stations/v1/roof-node-1/telemetry"
     assert presence_topic("roof-node-1") == "adsb/stations/v1/roof-node-1/presence"
+    assert pipeline_topic("roof-node-1") == "adsb/stations/v1/roof-node-1/pipeline"
     assert (
         node_id_from_topic("adsb/stations/v1/roof-node-1/telemetry", "telemetry")
         == "roof-node-1"
@@ -75,6 +95,27 @@ def test_fresh_nominal_telemetry_is_healthy():
 
     assert result.state is StationHealthState.HEALTHY
     assert result.telemetry_age_seconds == 10
+
+
+@pytest.mark.parametrize(
+    ("pipeline_value", "reason"),
+    [
+        (pipeline(connection=ReceiverConnection.DISCONNECTED), "DISCONNECTED"),
+        (pipeline(queue_depth=128), "capacity"),
+        (pipeline(last_message_age_seconds=301), "produced a message"),
+        (pipeline(observed_at=NOW - timedelta(seconds=46)), "freshness"),
+    ],
+)
+def test_receiver_pipeline_evidence_degrades_station_health(pipeline_value, reason):
+    result = evaluate_station_health(
+        telemetry=telemetry(),
+        presence=presence(PresenceStatus.ONLINE),
+        pipeline=pipeline_value,
+        evaluated_at=NOW + timedelta(seconds=10),
+    )
+    assert result.state is StationHealthState.DEGRADED
+    assert reason.lower() in " ".join(result.reasons).lower()
+    assert result.pipeline_message_id is not None
 
 
 @pytest.mark.parametrize(
@@ -130,10 +171,29 @@ def test_online_presence_without_telemetry_is_no_data():
     assert result.state is StationHealthState.NO_DATA
 
 
+def test_pipeline_without_device_heartbeat_is_explicit_no_data():
+    result = evaluate_station_health(
+        telemetry=None,
+        presence=None,
+        pipeline=pipeline(),
+        evaluated_at=NOW,
+    )
+    assert result.state is StationHealthState.NO_DATA
+    assert result.node_id == "roof-node-1"
+    assert "pipeline is known" in result.reasons[0]
+
+
 def test_station_sources_must_match():
     with pytest.raises(ValueError, match="same node"):
         evaluate_station_health(
             telemetry=telemetry(),
             presence=presence(PresenceStatus.ONLINE, node_id="other-node"),
+            evaluated_at=NOW,
+        )
+    with pytest.raises(ValueError, match="pipeline and telemetry"):
+        evaluate_station_health(
+            telemetry=telemetry(),
+            presence=None,
+            pipeline=pipeline(node_id="other-node"),
             evaluated_at=NOW,
         )
