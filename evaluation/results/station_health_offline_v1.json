@@ -1,12 +1,12 @@
 {
   "configuration": {
     "evaluated_at": "2026-08-04T12:00:00+00:00",
-    "policy_version": "1.0",
-    "scenario_count": 7
+    "policy_version": "1.1",
+    "scenario_count": 11
   },
   "evidence_class": "OFFLINE_SYNTHETIC_ONLY",
-  "implementation_revision": "9a0938c",
-  "implementation_sha256": "36efc9b5c48198598ac4846ef1aed366f187db774bc395510c848cb21c690acc",
+  "implementation_revision": "6d4aa33",
+  "implementation_sha256": "1ed1b3c5adb1e15c8ceea3737549199b55c5fd07184019444530c8c4a0755dd8",
   "results": {
     "classification_mismatches": [],
     "exact_match_accuracy": 1.0,
@@ -66,22 +66,55 @@
           "Broker presence reports OFFLINE: mqtt-last-will."
         ],
         "scenario": "broker_last_will"
+      },
+      {
+        "actual_state": "DEGRADED",
+        "expected_state": "DEGRADED",
+        "reasons": [
+          "Receiver pipeline reports DISCONNECTED."
+        ],
+        "scenario": "receiver_disconnected"
+      },
+      {
+        "actual_state": "DEGRADED",
+        "expected_state": "DEGRADED",
+        "reasons": [
+          "Receiver-pipeline telemetry exceeded the freshness limit."
+        ],
+        "scenario": "receiver_pipeline_stale"
+      },
+      {
+        "actual_state": "DEGRADED",
+        "expected_state": "DEGRADED",
+        "reasons": [
+          "Receiver processing queue is at capacity."
+        ],
+        "scenario": "receiver_queue_full"
+      },
+      {
+        "actual_state": "DEGRADED",
+        "expected_state": "DEGRADED",
+        "reasons": [
+          "Receiver source has not produced a message within the policy limit."
+        ],
+        "scenario": "receiver_source_silent"
       }
     ],
     "state_counts": {
-      "DEGRADED": 3,
+      "DEGRADED": 7,
       "HEALTHY": 1,
       "NO_DATA": 1,
       "OFFLINE": 1,
       "STALE": 1
     }
   },
-  "suite_version": "1.0-offline-synthetic",
+  "suite_version": "1.1-offline-synthetic",
   "verification_boundaries": {
     "field_reliability_claim_permitted": false,
     "live_mqtt_messages": 0,
     "next_required_evidence": "Run the firmware on the target ESP32, interrupt Wi-Fi and broker connectivity, and record recovery plus long-duration stability.",
     "physical_esp32_sessions": 0,
+    "receiver_pipeline_reliability_claim_permitted": false,
     "rf_health_claim_permitted": false
   }
 }

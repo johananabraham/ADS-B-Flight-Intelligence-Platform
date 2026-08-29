@@ -25,7 +25,7 @@ class StationHealthState(str, Enum):
 
 @dataclass(frozen=True)
 class StationHealthPolicy:
-    version: str = "1.0"
+    version: str = "1.1"
     stale_after_seconds: float = 45.0
     weak_rssi_dbm: int = -80
     minimum_free_heap_bytes: int = 50_000

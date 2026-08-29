@@ -8,7 +8,7 @@ dump1090/sidecar connection, message freshness, queue, drop, and reconnect evide
 It deliberately does not claim ADS-B authenticity, aircraft-message correctness,
 RF sensitivity, antenna coverage, or true aircraft position.
 
-Policy 1.0 produces five explainable states:
+Policy 1.1 produces five explainable states:
 
 | State | Meaning |
 |---|---|
@@ -25,9 +25,9 @@ not retroactively degrade ESP32-only nodes; the API/UI show that evidence as abs
 
 ## Reproducible offline result
 
-`evaluation/results/station_health_offline_v1.json` covers seven deterministic
-scenarios: no data, nominal, weak Wi-Fi, queued backpressure, watchdog recovery,
-heartbeat timeout, and broker Last Will. All seven match their controlled
+`evaluation/results/station_health_offline_v1.json` covers eleven deterministic
+scenarios: the original device/presence cases plus receiver disconnect, stale bridge,
+full receiver queue, and receiver-source silence. All eleven match their controlled
 expectations, for synthetic exact-match accuracy of 1.0.
 
 Reproduce the checked-in artifact:
