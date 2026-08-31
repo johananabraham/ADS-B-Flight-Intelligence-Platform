@@ -31,3 +31,15 @@ including policy SHA-256. Public source archives are never assumed: follow
 blocked result when inputs cannot be lawfully reproduced. Private RF reproduction
 requires an authorized local capture and the workflow in
 `BENIGN_FIELD_EVALUATION.md`; raw data must stay outside Git.
+
+Reproduce the aggregate hardware-free rehearsal with:
+
+```bash
+PYTHONPATH=backend:. python scripts/run_hardware_free_rehearsal.py --check \
+  --baseline evaluation/results/hardware_free_rehearsal_v1.json
+```
+
+This gate combines frozen-policy synthetic recall, deterministic station-health
+classification, and a simulated receiver outage/recovery policy sequence. It is
+development evidence only and cannot replace physical RF calibration or ESP32
+recovery measurements.

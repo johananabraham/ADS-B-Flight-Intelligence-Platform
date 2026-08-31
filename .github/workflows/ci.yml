@@ -87,6 +87,12 @@ jobs:
         run: >-
           python scripts/run_station_health_evaluation.py --check
           --baseline evaluation/results/station_health_offline_v1.json
+      - name: Enforce aggregate hardware-free rehearsal baseline
+        env:
+          PYTHONPATH: backend:.
+        run: >-
+          python scripts/run_hardware_free_rehearsal.py --check
+          --baseline evaluation/results/hardware_free_rehearsal_v1.json
       - name: Validate migration SQL
         working-directory: backend
         env:

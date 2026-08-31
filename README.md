@@ -121,6 +121,21 @@ The verifier checks the API, rendered frontend shell, active aircraft, recent
 simulation observations in PostgreSQL, unique observation IDs, and all six demo
 aircraft. It exits nonzero when any part of that path is unavailable.
 
+Run the aggregate offline evidence rehearsal when SDR or ESP32 hardware is not
+available:
+
+```bash
+PYTHONPATH=backend:. python3 scripts/run_hardware_free_rehearsal.py --check \
+  --baseline evaluation/results/hardware_free_rehearsal_v1.json
+```
+
+This reproduces the frozen abrupt/gradual integrity checks, all controlled
+station-health classifications, and the simulated receiver transition
+`HEALTHY → DEGRADED → STALE → HEALTHY`. It deliberately reports zero physical
+SDR messages, ESP32 sessions, and live MQTT messages. See the
+[hardware-free rehearsal guide](docs/HARDWARE_FREE_REHEARSAL.md) for the evidence
+contract and its field-claim boundary.
+
 ### Recorded replay mode
 
 The repository also contains a versioned, fictional six-event SBS recording with
