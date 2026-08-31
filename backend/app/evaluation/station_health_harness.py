@@ -91,6 +91,92 @@ def passes_offline_gate(report: dict[str, object]) -> bool:
     )
 
 
+def run_receiver_recovery_rehearsal() -> dict[str, object]:
+    """Exercise receiver-health policy transitions without claiming field timing."""
+    expected_states = (
+        StationHealthState.HEALTHY,
+        StationHealthState.DEGRADED,
+        StationHealthState.STALE,
+        StationHealthState.HEALTHY,
+    )
+    steps = (
+        (
+            "nominal",
+            0,
+            _telemetry(),
+            _presence(),
+            _pipeline(),
+        ),
+        (
+            "receiver_disconnected",
+            10,
+            _telemetry(observed_at=EVALUATED_AT + timedelta(seconds=5)),
+            _presence(observed_at=EVALUATED_AT + timedelta(seconds=5)),
+            _pipeline(
+                observed_at=EVALUATED_AT + timedelta(seconds=9),
+                connection=ReceiverConnection.DISCONNECTED,
+            ),
+        ),
+        (
+            "telemetry_timeout",
+            60,
+            _telemetry(observed_at=EVALUATED_AT + timedelta(seconds=5)),
+            _presence(observed_at=EVALUATED_AT + timedelta(seconds=5)),
+            _pipeline(
+                observed_at=EVALUATED_AT + timedelta(seconds=9),
+                connection=ReceiverConnection.DISCONNECTED,
+            ),
+        ),
+        (
+            "fresh_telemetry_recovered",
+            65,
+            _telemetry(observed_at=EVALUATED_AT + timedelta(seconds=64)),
+            _presence(observed_at=EVALUATED_AT + timedelta(seconds=64)),
+            _pipeline(observed_at=EVALUATED_AT + timedelta(seconds=64)),
+        ),
+    )
+
+    timeline = []
+    for expected, (name, offset, telemetry, presence, pipeline) in zip(
+        expected_states, steps, strict=True
+    ):
+        result = evaluate_station_health(
+            telemetry=telemetry,
+            presence=presence,
+            pipeline=pipeline,
+            evaluated_at=EVALUATED_AT + timedelta(seconds=offset),
+        )
+        timeline.append(
+            {
+                "step": name,
+                "simulated_offset_seconds": offset,
+                "expected_state": expected.value,
+                "actual_state": result.state.value,
+                "reasons": list(result.reasons),
+            }
+        )
+
+    return {
+        "suite_version": "1.0-offline-policy-transition",
+        "evidence_class": "OFFLINE_SYNTHETIC_ONLY",
+        "policy_version": StationHealthPolicy().version,
+        "timeline": timeline,
+        "exact_sequence_match": all(
+            item["expected_state"] == item["actual_state"] for item in timeline
+        ),
+        "verification_boundaries": {
+            "physical_receiver_disconnects": 0,
+            "physical_esp32_sessions": 0,
+            "measured_recovery_time_permitted": False,
+            "field_reliability_claim_permitted": False,
+        },
+    }
+
+
+def passes_receiver_recovery_gate(report: dict[str, object]) -> bool:
+    return report.get("exact_sequence_match") is True
+
+
 def _scenarios() -> (
     list[
         tuple[
