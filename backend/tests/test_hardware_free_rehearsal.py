@@ -1,6 +1,7 @@
 """Hardware-free evidence rehearsal contract tests."""
 
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -15,15 +16,17 @@ POLICY = Path("backend/integrity_core/policies/feeder-v1.json")
 
 def test_receiver_recovery_rehearsal_matches_expected_policy_sequence() -> None:
     report = run_receiver_recovery_rehearsal()
+    timeline = cast(list[dict[str, object]], report["timeline"])
+    boundaries = cast(dict[str, object], report["verification_boundaries"])
 
     assert report["exact_sequence_match"] is True
-    assert [item["actual_state"] for item in report["timeline"]] == [
+    assert [item["actual_state"] for item in timeline] == [
         "HEALTHY",
         "DEGRADED",
         "STALE",
         "HEALTHY",
     ]
-    assert report["verification_boundaries"] == {
+    assert boundaries == {
         "physical_receiver_disconnects": 0,
         "physical_esp32_sessions": 0,
         "measured_recovery_time_permitted": False,
@@ -37,12 +40,14 @@ def test_aggregate_rehearsal_passes_without_granting_field_claims() -> None:
         cases=2,
         implementation_revision="test-revision",
     )
+    checks = cast(dict[str, bool], report["checks"])
+    boundaries = cast(dict[str, object], report["claim_boundaries"])
 
     assert report["status"] == "PASSED"
-    assert all(report["checks"].values())
-    assert report["claim_boundaries"]["physical_sdr_messages"] == 0
-    assert report["claim_boundaries"]["field_calibration_claim_permitted"] is False
-    assert report["claim_boundaries"]["real_attack_detection_claim_permitted"] is False
+    assert all(checks.values())
+    assert boundaries["physical_sdr_messages"] == 0
+    assert boundaries["field_calibration_claim_permitted"] is False
+    assert boundaries["real_attack_detection_claim_permitted"] is False
 
 
 @pytest.mark.parametrize("cases", [0, 10_001])

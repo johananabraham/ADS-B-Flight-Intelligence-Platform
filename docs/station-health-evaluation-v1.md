@@ -41,6 +41,16 @@ This is synthetic state-machine evidence, not field reliability evidence. The
 artifact explicitly records zero physical ESP32 sessions and zero live MQTT
 messages.
 
+The aggregate hardware-free rehearsal additionally evaluates the deterministic
+policy transition `HEALTHY → DEGRADED → STALE → HEALTHY` for a simulated receiver
+disconnect, timeout, and fresh recovery heartbeat. Its timeline offsets are inputs
+to the policy, not measured recovery latency. Reproduce it with:
+
+```bash
+PYTHONPATH=backend:. python scripts/run_hardware_free_rehearsal.py --check \
+  --baseline evaluation/results/hardware_free_rehearsal_v1.json
+```
+
 ## Hardware-free transport demo
 
 After provisioning and starting the edge Compose stack, publish schema-valid

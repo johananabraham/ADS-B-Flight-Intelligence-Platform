@@ -29,6 +29,7 @@ gate remains.
 | Hardware demo video | BLOCKED | Requires physical dongle/capture and manual privacy review |
 | ESP32 private-LAN deployment preflight | PASS (software) | Exact private bind, certificate SAN/expiry, secret permissions, and ACL checks; physical outage/recovery remains blocked |
 | Receiver pipeline / ESP32 health correlation | PASS (software) | Loopback-only bridge, separate pipeline-only MQTT principal, strict aggregate schema, immutable persistence, and dashboard evidence; physical validation remains blocked |
+| Aggregate hardware-free evidence rehearsal | PASS (software) | Frozen abrupt/gradual recall, 11 station-health classifications, and simulated `HEALTHY → DEGRADED → STALE → HEALTHY` receiver recovery pass in `hardware_free_rehearsal_v1.json`; artifact explicitly forbids field and measured-recovery claims |
 | Independent feeder pilot | READY TO RECRUIT | Summary, readiness, strict evidence bundles, deterministic success report, and protocol complete; requires 3–5 external operators |
 | Reachable-history restricted-artifact scan | PASS | `scripts/audit_release_history.py`; dedicated Gitleaks CI scans secrets |
 | Python and npm dependency scans | PASS WITH EXPIRING EXCEPTION | Chroma CVE-2026-45830/45833 affect server endpoints that are not deployed; exact 0.4.22 exception expires 2026-09-30 and reset is disabled. Sidecar and npm have no known findings |

@@ -1,0 +1,201 @@
+{
+  "checks": {
+    "abrupt_targeted_recall_at_least_0_95": true,
+    "gradual_targeted_recall_at_least_0_95": true,
+    "receiver_recovery_sequence_match": true,
+    "station_health_exact_match": true
+  },
+  "claim_boundaries": {
+    "field_calibration_claim_permitted": false,
+    "live_mqtt_messages": 0,
+    "measured_recovery_time_claim_permitted": false,
+    "next_required_evidence": "Use an authorized live receiver or consenting independent feeder for field calibration, then exercise the target ESP32 physically.",
+    "physical_esp32_sessions": 0,
+    "physical_sdr_messages": 0,
+    "real_attack_detection_claim_permitted": false
+  },
+  "components": {
+    "frozen_policy_synthetic": {
+      "abrupt_detected": 20,
+      "abrupt_targeted_recall": 1.0,
+      "cases_per_family": 20,
+      "gradual_detected": 20,
+      "gradual_targeted_recall": 1.0,
+      "policy_sha256": "b1ea0ec365b757e3077d24609835ba98466221b9d55ec38a047d98378f47f52d",
+      "schema_version": "1.0"
+    },
+    "receiver_recovery": {
+      "evidence_class": "OFFLINE_SYNTHETIC_ONLY",
+      "exact_sequence_match": true,
+      "policy_version": "1.1",
+      "suite_version": "1.0-offline-policy-transition",
+      "timeline": [
+        {
+          "actual_state": "HEALTHY",
+          "expected_state": "HEALTHY",
+          "reasons": [
+            "The latest heartbeat is fresh and all reported limits pass."
+          ],
+          "simulated_offset_seconds": 0,
+          "step": "nominal"
+        },
+        {
+          "actual_state": "DEGRADED",
+          "expected_state": "DEGRADED",
+          "reasons": [
+            "Receiver pipeline reports DISCONNECTED."
+          ],
+          "simulated_offset_seconds": 10,
+          "step": "receiver_disconnected"
+        },
+        {
+          "actual_state": "STALE",
+          "expected_state": "STALE",
+          "reasons": [
+            "The latest telemetry heartbeat exceeded the freshness limit."
+          ],
+          "simulated_offset_seconds": 60,
+          "step": "telemetry_timeout"
+        },
+        {
+          "actual_state": "HEALTHY",
+          "expected_state": "HEALTHY",
+          "reasons": [
+            "The latest heartbeat is fresh and all reported limits pass."
+          ],
+          "simulated_offset_seconds": 65,
+          "step": "fresh_telemetry_recovered"
+        }
+      ],
+      "verification_boundaries": {
+        "field_reliability_claim_permitted": false,
+        "measured_recovery_time_permitted": false,
+        "physical_esp32_sessions": 0,
+        "physical_receiver_disconnects": 0
+      }
+    },
+    "station_health": {
+      "configuration": {
+        "evaluated_at": "2026-08-04T12:00:00+00:00",
+        "policy_version": "1.1",
+        "scenario_count": 11
+      },
+      "evidence_class": "OFFLINE_SYNTHETIC_ONLY",
+      "implementation_revision": "c30d57e",
+      "implementation_sha256": "1ed1b3c5adb1e15c8ceea3737549199b55c5fd07184019444530c8c4a0755dd8",
+      "results": {
+        "classification_mismatches": [],
+        "exact_match_accuracy": 1.0,
+        "samples": [
+          {
+            "actual_state": "NO_DATA",
+            "expected_state": "NO_DATA",
+            "reasons": [
+              "No station telemetry or presence message has been received."
+            ],
+            "scenario": "no_data"
+          },
+          {
+            "actual_state": "HEALTHY",
+            "expected_state": "HEALTHY",
+            "reasons": [
+              "The latest heartbeat is fresh and all reported limits pass."
+            ],
+            "scenario": "fresh_nominal"
+          },
+          {
+            "actual_state": "DEGRADED",
+            "expected_state": "DEGRADED",
+            "reasons": [
+              "Wi-Fi RSSI is weak at -85 dBm."
+            ],
+            "scenario": "weak_wifi"
+          },
+          {
+            "actual_state": "DEGRADED",
+            "expected_state": "DEGRADED",
+            "reasons": [
+              "The bounded offline queue contains 4 message(s)."
+            ],
+            "scenario": "offline_backpressure"
+          },
+          {
+            "actual_state": "DEGRADED",
+            "expected_state": "DEGRADED",
+            "reasons": [
+              "The node reports 1 watchdog reset(s)."
+            ],
+            "scenario": "watchdog_recovery"
+          },
+          {
+            "actual_state": "STALE",
+            "expected_state": "STALE",
+            "reasons": [
+              "The latest telemetry heartbeat exceeded the freshness limit."
+            ],
+            "scenario": "heartbeat_timeout"
+          },
+          {
+            "actual_state": "OFFLINE",
+            "expected_state": "OFFLINE",
+            "reasons": [
+              "Broker presence reports OFFLINE: mqtt-last-will."
+            ],
+            "scenario": "broker_last_will"
+          },
+          {
+            "actual_state": "DEGRADED",
+            "expected_state": "DEGRADED",
+            "reasons": [
+              "Receiver pipeline reports DISCONNECTED."
+            ],
+            "scenario": "receiver_disconnected"
+          },
+          {
+            "actual_state": "DEGRADED",
+            "expected_state": "DEGRADED",
+            "reasons": [
+              "Receiver-pipeline telemetry exceeded the freshness limit."
+            ],
+            "scenario": "receiver_pipeline_stale"
+          },
+          {
+            "actual_state": "DEGRADED",
+            "expected_state": "DEGRADED",
+            "reasons": [
+              "Receiver processing queue is at capacity."
+            ],
+            "scenario": "receiver_queue_full"
+          },
+          {
+            "actual_state": "DEGRADED",
+            "expected_state": "DEGRADED",
+            "reasons": [
+              "Receiver source has not produced a message within the policy limit."
+            ],
+            "scenario": "receiver_source_silent"
+          }
+        ],
+        "state_counts": {
+          "DEGRADED": 7,
+          "HEALTHY": 1,
+          "NO_DATA": 1,
+          "OFFLINE": 1,
+          "STALE": 1
+        }
+      },
+      "suite_version": "1.1-offline-synthetic",
+      "verification_boundaries": {
+        "field_reliability_claim_permitted": false,
+        "live_mqtt_messages": 0,
+        "next_required_evidence": "Run the firmware on the target ESP32, interrupt Wi-Fi and broker connectivity, and record recovery plus long-duration stability.",
+        "physical_esp32_sessions": 0,
+        "receiver_pipeline_reliability_claim_permitted": false,
+        "rf_health_claim_permitted": false
+      }
+    }
+  },
+  "evidence_class": "HARDWARE_FREE_REHEARSAL_ONLY",
+  "schema_version": "1.0",
+  "status": "PASSED"
+}
